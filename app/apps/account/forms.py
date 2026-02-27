@@ -5,7 +5,7 @@ class LoginForm(forms.Form):
     username = forms.CharField(max_length=100)
     password = forms.CharField(widget=forms.PasswordInput)
 
-class UserRegistrationForm(forms.Form):
+class UserRegistrationForm(forms.ModelForm):
     password = forms.CharField(max_length=100, label='Password', widget=forms.PasswordInput)
     password2 = forms.CharField(max_length=100, label='Repeat password', widget=forms.PasswordInput)
 
