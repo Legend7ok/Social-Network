@@ -27,3 +27,26 @@ def test_login_page_loads(client):
 
     assert response.status_code == 200
 
+
+@pytest.mark.django_db
+def test_logout_requires_post(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("logout"))
+
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_logout_post_logs_out(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("logout"))
+
+    assert response.status_code == 200
+
+    dashboard_response = client.get(reverse("dashboard"))
+    assert dashboard_response.status_code == 302
+
