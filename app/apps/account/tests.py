@@ -1,5 +1,8 @@
+from datetime import date
+
 import pytest
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from .models import Profile
 
@@ -16,3 +19,11 @@ def user(db):
     )
     Profile.objects.create(user=user_obj)
     return user_obj, password
+
+
+@pytest.mark.django_db
+def test_login_page_loads(client):
+    response = client.get(reverse("login"))
+
+    assert response.status_code == 200
+
