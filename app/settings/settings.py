@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import environ
@@ -9,7 +10,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
 )
-environ.Env.read_env(BASE_DIR / ".env")
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"), overwrite=False)
 
 
 # Quick-start development settings - unsuitable for production
