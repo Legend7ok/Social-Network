@@ -3,6 +3,7 @@
 {% block title %}Log-in{% endblock %}
 
 {% block content %}
+
     <h1>Log-in</h1>
     {% if form.errors %}
         <p>
@@ -16,6 +17,7 @@
             <a href="{% url 'register' %}">register here</a>.
         </p>
     {% endif %}
+
     <div class="login-form">
         <form action="{% url 'login' %}" method="post">
             {{ form.as_p }}
@@ -29,4 +31,15 @@
             </a>
         </p>
     </div>
+
+    <div class="social">
+        <ul>
+            <li class="google">
+                <a href="{% url 'social:begin' 'google-oauth2' %}">
+                    Sign in with Google
+                </a>
+            </li>
+        </ul>
+    </div>
+
 {% endblock %}
