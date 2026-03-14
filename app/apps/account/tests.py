@@ -45,7 +45,7 @@ def test_logout_post_logs_out(client, user):
 
     response = client.post(reverse("logout"))
 
-    assert response.status_code == 200
+    assert response.status_code == 302
 
     dashboard_response = client.get(reverse("dashboard"))
     assert dashboard_response.status_code == 302

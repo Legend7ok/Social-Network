@@ -38,4 +38,6 @@ jobs:
           SECRET_KEY: "ci-test-key-only"
           DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
+          PYTHONPATH: app
+          DJANGO_SETTINGS_MODULE: app.settings.settings
         run: uv run pytest
