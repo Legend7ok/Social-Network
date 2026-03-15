@@ -11,6 +11,21 @@ jobs:
     name: Run Tests and Linters
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: socialnetwork
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: 1. Checkout code
         uses: actions/checkout@v4
@@ -38,6 +53,7 @@ jobs:
           SECRET_KEY: "ci-test-key-only"
           DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/socialnetwork"
           PYTHONPATH: app
           DJANGO_SETTINGS_MODULE: app.settings.settings
         run: uv run pytest
