@@ -1,5 +1,8 @@
 from django import forms
 from .models import Image
+from django.core.files.base import ContentFile
+from django.utils.text import slugify
+import requests
 
 class ImageCreateForm(forms.ModelForm):
     class Meta:
@@ -20,3 +23,24 @@ class ImageCreateForm(forms.ModelForm):
             )
 
         return url
+
+
+    def save(self, force_insert=False, force_update=False, commit=True):
+        image = super().save(commit=False)
+        image_url = self.cleaned_data['url']
+        name = slugify(image.title)
+        extension = image_url.rsplit('.', 1)[1].lower()
+        image_name = f'{name}.{extension}'
+
+        try:
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            raise forms.ValidationError('Could not download image from the given URL.')
+
+        image.image.save(image_name, ContentFile(response.content), save=False)
+
+        if commit:
+            image.save()
+
+        return image
