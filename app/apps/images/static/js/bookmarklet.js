@@ -28,16 +28,22 @@ function bookmarkletLaunch() {
     const bookmarklet = document.getElementById('bookmarklet');
     const imagesFound = bookmarklet.querySelector('.images');
 
-    // очистить найденные изображения
     imagesFound.innerHTML = '';
-    // показать букмарклет
     bookmarklet.style.display = 'block';
-    // событие закрытия
     bookmarklet.querySelector('#close')
         .addEventListener('click', () => {
             bookmarklet.style.display = 'none';
         });
+
+    // find images in DOM with minimum dimensions
+    const images = document.querySelectorAll('img[src$=".jpg"], img[src$=".jpeg"], img[src$=".png"], img[src$=".webp"]');
+    images.forEach(image => {
+        if (image.naturalWidth >= minWidth && image.naturalHeight >= minHeight) {
+            const imageFound = document.createElement('img');
+            imageFound.src = image.src;
+            imagesFound.append(imageFound);
+        }
+    });
 }
 
-// запустить букмарклет
 bookmarkletLaunch();
