@@ -36,13 +36,28 @@ function bookmarkletLaunch() {
         });
 
     // find images in DOM with minimum dimensions
-    const images = document.querySelectorAll('img[src$=".jpg"], img[src$=".jpeg"], img[src$=".png"], img[src$=".webp"]');
+    const images = document.querySelectorAll(
+        'img[src$=".jpg"], img[src$=".jpeg"], img[src$=".png"], img[src$=".webp"]'
+    );
     images.forEach(image => {
         if (image.naturalWidth >= minWidth && image.naturalHeight >= minHeight) {
             const imageFound = document.createElement('img');
             imageFound.src = image.src;
             imagesFound.append(imageFound);
         }
+    });
+
+    // image selection event
+    imagesFound.querySelectorAll('img').forEach(image => {
+        image.addEventListener('click', (event) => {
+            const imageSelected = event.target;
+            bookmarklet.style.display = 'none';
+            const params = new URLSearchParams({
+                url: imageSelected.src,
+                title: document.title,
+            });
+            window.open(`${siteUrl}images/create/?${params}`, '_blank');
+        });
     });
 }
 
