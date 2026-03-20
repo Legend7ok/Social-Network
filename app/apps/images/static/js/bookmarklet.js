@@ -1,4 +1,4 @@
-const siteUrl = '//127.0.0.1:8000/';
+const siteUrl = window.bookmarkletSiteUrl;
 const styleUrl = siteUrl + 'static/css/bookmarklet.css';
 const minWidth = 250;
 const minHeight = 250;
@@ -21,7 +21,7 @@ const boxHtml = `
         <h1>Select an image to bookmark:</h1>
         <div class="images"></div>
     </div>`;
-body.innerHTML += boxHtml;
+body.insertAdjacentHTML('beforeend', boxHtml);
 
 
 function bookmarkletLaunch() {
@@ -61,4 +61,3 @@ function bookmarkletLaunch() {
     });
 }
 
-bookmarkletLaunch();
