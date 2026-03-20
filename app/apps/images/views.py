@@ -1,7 +1,14 @@
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import HttpResponse
 from .forms import ImageCreateForm
+
+
+def bookmarklet_launcher(request):
+    js = render(request, 'bookmarklet_launcher.js', {'site_url': settings.SITE_URL})
+    return HttpResponse(js, content_type='application/javascript')
 
 @login_required
 def image_create(request):

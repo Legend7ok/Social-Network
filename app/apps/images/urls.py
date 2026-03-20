@@ -4,5 +4,6 @@ from . import views
 app_name = 'images'
 
 urlpatterns = [
-    path('create', views.image_create, name='create'),
+    path('create/', views.image_create, name='create'),
+    path('bookmarklet_launcher.js', views.bookmarklet_launcher, name='bookmarklet_launcher'),
 ]
