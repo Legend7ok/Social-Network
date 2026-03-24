@@ -201,6 +201,19 @@ wheels = [
 ]
 
 [[package]]
+name = "easy-thumbnails"
+version = "2.10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/2f/71f17c3ce65b25dd8fc8e513738c8496eadbd8bab94f39509a511ff99704/easy_thumbnails-2.10.1.tar.gz", hash = "sha256:a50aa5f99387546c35ab5ba1ea9b3cbbc5658e65601cd34949f62137c32c222e", size = 81446, upload-time = "2025-08-17T20:49:11.308Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/90/be137d0592501ec08d4a00c8430121e95dfe6c8114a1d4436b5cdd6b9803/easy_thumbnails-2.10.1-py3-none-any.whl", hash = "sha256:24462d63dd31543ef1585538b2bfefe0db96d3409bb431c70b81548fb2cfc5be", size = 79695, upload-time = "2025-08-17T20:49:09.119Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.11"
 source = { registry = "https://pypi.org/simple" }
@@ -559,6 +572,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-environ" },
+    { name = "easy-thumbnails" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
     { name = "pyopenssl" },
@@ -578,6 +592,7 @@ dev = [
 requires-dist = [
     { name = "django", specifier = ">=6.0.2" },
     { name = "django-environ", specifier = ">=0.13.0" },
+    { name = "easy-thumbnails", specifier = ">=2.10.1" },
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
     { name = "pyopenssl", specifier = ">=25.3.0" },
