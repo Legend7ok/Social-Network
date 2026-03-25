@@ -49,4 +49,20 @@
         e.preventDefault();
         var likeButton = this;
     });
+
+    // add request body
+    var formData = new FormData();
+    formData.append('id', likeButton.dataset.id);
+    formData.append('action', likeButton.dataset.action);
+    options['body'] = formData;
+
+    // отправить HTTP-запрос
+    fetch(url, options)
+    .then(response => response.json())
+    .then(data => {
+        if (data['status'] === 'ok')
+        {
+        }
+    })
+
 {% endblock %}
