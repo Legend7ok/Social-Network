@@ -40,18 +40,18 @@
 
 {% block domready %}
     const url = '{% url "images:like" %}';
-    var options = {
+    const options = {
         method: 'POST',
         headers: {'X-CSRFToken': csrftoken},
         mode: 'same-origin'
     }
 
-    document.querySelector('a.like').addEventListener('click', function(e){
+    document.querySelector('a.like').addEventListener('click', (e) => {
         e.preventDefault();
-        var likeButton = this;
+        const likeButton = e.currentTarget;
 
         // add request body
-        var formData = new FormData();
+        const formData = new FormData();
         formData.append('id', likeButton.dataset.id);
         formData.append('action', likeButton.dataset.action);
         options['body'] = formData;
@@ -60,18 +60,18 @@
         fetch(url, options)
         .then(response => response.json())
         .then(data => {
-            if (data['status'] === 'ok') {
-                var previousAction = likeButton.dataset.action;
+            if (data.status === 'ok') {
+                const previousAction = likeButton.dataset.action;
 
                 // toggle button text and data-action attribute
-                var action = previousAction === 'like' ? 'unlike' : 'like';
+                const action = previousAction === 'like' ? 'unlike' : 'like';
                 likeButton.dataset.action = action;
                 likeButton.innerHTML = action;
 
                 // update the number of likes
-                var likeCount = document.querySelector('span.count .total');
-                var totalLikes = parseInt(likeCount.innerHTML);
-                likeCount.innerHTML = previousAction === 'like' ? totalLikes + 1 : totalLikes - 1;
+                const likeCount = document.querySelector('span.count .total');
+                const totalLikes = parseInt(likeCount.textContent);
+                likeCount.textContent = previousAction === 'like' ? totalLikes + 1 : totalLikes - 1;
             }
         })
     });
