@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login
@@ -34,7 +35,7 @@ def user_login(request):
 def dashboard(request):
     return render(request,
                   'account/dashboard.html',
-                  {'section': 'dashboard'})
+                  {'section': 'dashboard', 'site_url': settings.SITE_URL})
 
 def register(request):
     if request.method == "POST":

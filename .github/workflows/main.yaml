@@ -55,5 +55,5 @@ jobs:
           ALLOWED_HOSTS: "localhost,127.0.0.1"
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/socialnetwork"
           PYTHONPATH: app
-          DJANGO_SETTINGS_MODULE: app.settings.settings
+          DJANGO_SETTINGS_MODULE: settings.settings
         run: uv run pytest
