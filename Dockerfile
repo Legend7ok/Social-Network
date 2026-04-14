@@ -24,5 +24,5 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 FROM base AS test
 
-RUN printf '#!/bin/sh\nset -e\npytest -q\n' > /usr/local/bin/run-tests \
+RUN printf '#!/bin/sh\nset -e\npytest -v\n' > /usr/local/bin/run-tests \
     && chmod +x /usr/local/bin/run-tests
