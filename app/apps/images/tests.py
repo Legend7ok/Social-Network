@@ -1,1 +1,367 @@
-# Create your tests here.
+import pytest
+from unittest.mock import patch, MagicMock
+from django import forms as dj_forms
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+
+from apps.account.models import Profile
+from apps.images.forms import ImageCreateForm
+from apps.images.models import Image
+
+# Minimal valid 1x1 PNG used as a lightweight test image file
+MINIMAL_PNG = (
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+    b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00'
+    b'\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18'
+    b'\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+)
+
+
+# ─── Fixtures ────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def make_user(db):
+    def _make(username, email, password):
+        User = get_user_model()
+        user_obj = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+        )
+        Profile.objects.create(user=user_obj)
+        return user_obj, password
+    return _make
+
+
+@pytest.fixture
+def user(make_user):
+    return make_user("alice", "alice@example.com", "testpass123")
+
+
+@pytest.fixture
+def second_user(make_user):
+    return make_user("bob", "bob@example.com", "testpass456")
+
+
+@pytest.fixture
+def image(db, user):
+    user_obj, _ = user
+    img_file = SimpleUploadedFile("test.png", MINIMAL_PNG, content_type="image/png")
+    return Image.objects.create(
+        user=user_obj,
+        title="Test Image",
+        url="https://example.com/test.png",
+        image=img_file,
+        description="A test image",
+    )
+
+
+# ─── Model Tests ─────────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_image_str(image):
+    assert str(image) == "Test Image"
+
+
+@pytest.mark.django_db
+def test_image_slug_auto_generated_from_title(image):
+    assert image.slug == "test-image"
+
+
+@pytest.mark.django_db
+def test_image_slug_not_overwritten_if_set(user):
+    user_obj, _ = user
+    img_file = SimpleUploadedFile("test.png", MINIMAL_PNG, content_type="image/png")
+    img = Image.objects.create(
+        user=user_obj,
+        title="Test Image",
+        slug="my-custom-slug",
+        url="https://example.com/test.png",
+        image=img_file,
+    )
+    assert img.slug == "my-custom-slug"
+
+
+@pytest.mark.django_db
+def test_image_get_absolute_url(image):
+    expected = reverse("images:detail", args=[image.id, image.slug])
+    assert image.get_absolute_url() == expected
+
+
+@pytest.mark.django_db
+def test_image_ordering_newest_first(user):
+    user_obj, _ = user
+    for i in range(3):
+        img_file = SimpleUploadedFile(f"img{i}.png", MINIMAL_PNG, content_type="image/png")
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {i}",
+            url=f"https://example.com/img{i}.png",
+            image=img_file,
+        )
+    images = list(Image.objects.all())
+    for a, b in zip(images, images[1:]):
+        assert a.created >= b.created
+
+
+@pytest.mark.django_db
+def test_image_users_like_add_and_remove(image, second_user):
+    liker, _ = second_user
+    image.users_like.add(liker)
+    assert image.users_like.filter(pk=liker.pk).exists()
+    image.users_like.remove(liker)
+    assert not image.users_like.filter(pk=liker.pk).exists()
+
+
+# ─── Form Tests ──────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("url", [
+    "https://example.com/photo.jpg",
+    "https://example.com/photo.jpeg",
+    "https://example.com/photo.png",
+    "https://example.com/photo.webp",
+])
+def test_clean_url_accepts_valid_extensions(url):
+    form = ImageCreateForm(data={"title": "Test", "url": url, "description": ""})
+    form.is_valid()
+    assert "url" not in form.errors
+
+
+def test_clean_url_rejects_invalid_extension():
+    form = ImageCreateForm(data={
+        "title": "Test",
+        "url": "https://example.com/photo.gif",
+        "description": "",
+    })
+    form.is_valid()
+    assert "url" in form.errors
+
+
+@pytest.mark.django_db
+def test_form_save_downloads_and_assigns_image(user):
+    user_obj, _ = user
+    mock_resp = MagicMock()
+    mock_resp.content = MINIMAL_PNG
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("apps.images.forms.requests.get", return_value=mock_resp):
+        form = ImageCreateForm(data={
+            "title": "Downloaded Image",
+            "url": "https://example.com/photo.jpg",
+            "description": "",
+        })
+        assert form.is_valid(), form.errors
+        img = form.save(commit=False)
+        img.user = user_obj
+
+    assert img.title == "Downloaded Image"
+    assert img.image.name.endswith(".jpg")
+
+
+@pytest.mark.django_db
+def test_form_save_raises_validation_error_on_request_exception():
+    import requests as req_lib
+    with patch("apps.images.forms.requests.get", side_effect=req_lib.exceptions.RequestException):
+        form = ImageCreateForm(data={
+            "title": "Bad URL",
+            "url": "https://example.com/photo.jpg",
+            "description": "",
+        })
+        assert form.is_valid()
+        with pytest.raises(dj_forms.ValidationError):
+            form.save(commit=False)
+
+
+# ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_bookmarklet_launcher_returns_javascript(client):
+    response = client.get(reverse("images:bookmarklet_launcher"))
+    assert response.status_code == 200
+    assert "application/javascript" in response["Content-Type"]
+
+
+# ─── View Tests: image_create ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_image_create_redirects_anonymous_user(client):
+    response = client.get(reverse("images:create"))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_create_get_shows_form(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:create"), {"url": "https://example.com/photo.jpg"})
+    assert response.status_code == 200
+    assert "form" in response.context
+
+
+@pytest.mark.django_db
+def test_image_create_post_valid_creates_image_and_redirects(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    mock_resp = MagicMock()
+    mock_resp.content = MINIMAL_PNG
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("apps.images.forms.requests.get", return_value=mock_resp):
+        response = client.post(reverse("images:create"), {
+            "title": "My Image",
+            "url": "https://example.com/photo.jpg",
+            "description": "Nice photo",
+        })
+
+    assert response.status_code == 302
+    assert Image.objects.filter(title="My Image", user=user_obj).exists()
+
+
+@pytest.mark.django_db
+def test_image_create_post_invalid_shows_form_errors(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:create"), {
+        "title": "Bad Image",
+        "url": "https://example.com/photo.gif",  # invalid extension
+        "description": "",
+    })
+
+    assert response.status_code == 200
+    assert response.context["form"].errors
+
+
+# ─── View Tests: image_detail ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_image_detail_returns_200_with_image_context(client, image):
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.status_code == 200
+    assert response.context["image"] == image
+
+
+@pytest.mark.django_db
+def test_image_detail_returns_404_for_unknown_id(client):
+    response = client.get(reverse("images:detail", args=[9999, "no-such-slug"]))
+    assert response.status_code == 404
+
+
+# ─── View Tests: image_like ──────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_image_like_redirects_anonymous_user(client, image):
+    response = client.post(reverse("images:like"), {"id": image.id, "action": "like"})
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_like_rejects_get_request(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:like"))
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_image_like_adds_user_to_likes(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:like"), {"id": image.id, "action": "like"})
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert image.users_like.filter(pk=user_obj.pk).exists()
+
+
+@pytest.mark.django_db
+def test_image_like_removes_user_from_likes(client, user, image):
+    user_obj, password = user
+    image.users_like.add(user_obj)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:like"), {"id": image.id, "action": "remove"})
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert not image.users_like.filter(pk=user_obj.pk).exists()
+
+
+@pytest.mark.django_db
+def test_image_like_nonexistent_image_returns_error(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:like"), {"id": 9999, "action": "like"})
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "error"}
+
+
+# ─── View Tests: image_list ──────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_image_list_redirects_anonymous_user(client):
+    response = client.get(reverse("images:list"))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_list_returns_200_with_section_context(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"))
+    assert response.status_code == 200
+    assert response.context["section"] == "images"
+
+
+@pytest.mark.django_db
+def test_image_list_uses_full_template(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"))
+    template_names = [t.name for t in response.templates]
+    assert "images/image/list.html" in template_names
+
+
+@pytest.mark.django_db
+def test_image_list_images_only_uses_partial_template(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"), {"images_only": "1"})
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert "images/image/list_images.html" in template_names
+    assert "images/image/list.html" not in template_names
+
+
+@pytest.mark.django_db
+def test_image_list_empty_page_with_images_only_returns_empty_body(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"), {"page": "999", "images_only": "1"})
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+@pytest.mark.django_db
+def test_image_list_second_page_contains_remaining_images(client, user):
+    user_obj, password = user
+    for i in range(10):
+        img_file = SimpleUploadedFile(f"img{i}.png", MINIMAL_PNG, content_type="image/png")
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {i}",
+            url=f"https://example.com/img{i}.png",
+            image=img_file,
+        )
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"), {"page": "2"})
+    assert response.status_code == 200
+    assert len(response.context["images"]) == 2  # 10 images, 8 per page → page 2 has 2

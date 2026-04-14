@@ -1,23 +1,28 @@
-FROM python:3.13-slim
+FROM python:3.13-slim AS base
 
 WORKDIR /app
 
 ENV PYTHONPATH=/app
 
-# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy dependency files first for layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv sync --no-dev --frozen
+RUN uv pip install --system --no-cache .
 
-# Copy source code
 COPY . .
+
+
+FROM base AS web
 
 RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 8000
 
 ENTRYPOINT ["./entrypoint.sh"]
+
+
+FROM base AS test
+
+RUN printf '#!/bin/sh\nset -e\npytest -v\n' > /usr/local/bin/run-tests \
+    && chmod +x /usr/local/bin/run-tests
