@@ -21,29 +21,27 @@ MINIMAL_PNG = (
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def user(db):
-    User = get_user_model()
-    password = "testpass123"
-    user_obj = User.objects.create_user(
-        username="alice",
-        email="alice@example.com",
-        password=password,
-    )
-    Profile.objects.create(user=user_obj)
-    return user_obj, password
+def make_user(db):
+    def _make(username, email, password):
+        User = get_user_model()
+        user_obj = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+        )
+        Profile.objects.create(user=user_obj)
+        return user_obj, password
+    return _make
 
 
 @pytest.fixture
-def second_user(db):
-    User = get_user_model()
-    password = "testpass456"
-    user_obj = User.objects.create_user(
-        username="bob",
-        email="bob@example.com",
-        password=password,
-    )
-    Profile.objects.create(user=user_obj)
-    return user_obj, password
+def user(make_user):
+    return make_user("alice", "alice@example.com", "testpass123")
+
+
+@pytest.fixture
+def second_user(make_user):
+    return make_user("bob", "bob@example.com", "testpass456")
 
 
 @pytest.fixture
