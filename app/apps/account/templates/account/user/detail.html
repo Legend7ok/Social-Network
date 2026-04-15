@@ -54,7 +54,9 @@
                         followButton.textContent = action;
                         const followerCount = document.querySelector('span.count .total');
                         const totalFollowers = parseInt(followerCount.textContent, 10);
-                        followerCount.textContent = previousAction === 'follow' ? totalFollowers + 1 : totalFollowers - 1;
+                        followerCount.textContent = previousAction === 'follow'
+                            ? totalFollowers + 1
+                            : totalFollowers - 1;
                     }
                 });
         });
