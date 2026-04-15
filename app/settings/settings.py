@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from django.urls import reverse_lazy
 
 import environ
 
@@ -163,3 +164,8 @@ SITE_URL = env('SITE_URL', default='http://localhost:8000')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
+
+
+ABSOLUTE_URL_OVERRIDES = {
+    'auth.user' : lambda u: reverse_lazy('user_detail', args=[u.username]),
+}
