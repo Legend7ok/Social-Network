@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 class Action(models.Model):
     user = models.ForeignKey('auth.User', related_name='actions', on_delete=models.CASCADE)
     verb = models.CharField(max_length=255)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True)
     target_ct = models.ForeignKey(
         ContentType,
         blank=True,
@@ -20,7 +20,7 @@ class Action(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['-created_at']),
-            models.Index(fields=['target_ct', 'created_at']),
+            models.Index(fields=['-created']),
+            models.Index(fields=['target_ct', 'created']),
         ]
-        ordering = ['-created_at']
+        ordering = ['-created']
