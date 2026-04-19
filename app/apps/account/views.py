@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import Contact
+from apps.actions.utils import create_action
 
 
 def user_login(request):
@@ -39,9 +40,11 @@ def user_login(request):
 
 @login_required
 def dashboard(request):
-    return render(request,
-                  'account/dashboard.html',
-                  {'section': 'dashboard', 'site_url': settings.SITE_URL})
+    return render(
+        request,
+        'account/dashboard.html',
+        {'section': 'dashboard', 'site_url': settings.SITE_URL}
+    )
 
 
 def register(request):
