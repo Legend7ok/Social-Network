@@ -7,6 +7,7 @@ from .forms import ImageCreateForm
 from .models import Image
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from apps.actions.utils import create_action
 
 
 def bookmarklet_launcher(request):
@@ -22,6 +23,7 @@ def image_create(request):
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
+            create_action(request.user, 'bookmarked image', new_image)
             messages.success(request, 'Image added successfully')
             return redirect(new_image.get_absolute_url())
     else:
