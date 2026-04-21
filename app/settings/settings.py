@@ -1,4 +1,5 @@
 import os
+import socket
 from pathlib import Path
 from django.urls import reverse_lazy
 
@@ -174,6 +175,6 @@ ABSOLUTE_URL_OVERRIDES = {
 }
 
 
-INTERNAL_IPS = [
- '127.0.0.1',
-]
+if DEBUG:
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind('.')] + '.1' for ip in ips]
