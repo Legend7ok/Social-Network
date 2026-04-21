@@ -1,4 +1,5 @@
 import os
+import socket
 from pathlib import Path
 from django.urls import reverse_lazy
 
@@ -40,10 +41,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'social_django',
     'apps.images',
+    'apps.actions',
     'easy_thumbnails',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -169,3 +173,8 @@ USE_X_FORWARDED_PORT = True
 ABSOLUTE_URL_OVERRIDES = {
     'auth.user' : lambda u: reverse_lazy('user_detail', args=[u.username]),
 }
+
+
+if DEBUG:
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind('.')] + '.1' for ip in ips]

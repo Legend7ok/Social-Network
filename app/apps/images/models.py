@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.urls import reverse
 
+
 class Image(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -20,10 +21,12 @@ class Image(models.Model):
         related_name='images_liked',
         blank=True
     )
+    total_likes = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes = [
             models.Index(fields=['-created']),
+            models.Index(fields=['-total_likes']),
         ]
         ordering = ['-created']
 
