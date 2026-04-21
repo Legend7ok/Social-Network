@@ -5,4 +5,4 @@ class ImagesConfig(AppConfig):
     name = 'apps.images'
 
     def ready(self):
-        import apps.images.signals
+        import apps.images.signals  # noqa: F401
