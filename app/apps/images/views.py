@@ -3,10 +3,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from .forms import ImageCreateForm
-from .models import Image
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+import redis
+
+from .forms import ImageCreateForm
+from .models import Image
 from apps.actions.utils import create_action
 
 
