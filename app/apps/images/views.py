@@ -55,7 +55,7 @@ def image_detail(request, id, slug):
     return render(
         request,
         'images/image/detail.html',
-        {'section': 'images', 'image': image, total_views: total_views},
+        {'section': 'images', 'image': image, 'total_views': total_views},
     )
 
 
