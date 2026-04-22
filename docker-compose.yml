@@ -26,6 +26,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
 
   test:
     build:
@@ -41,6 +43,12 @@ services:
     volumes:
       - .:/app
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
   ngrok:
     image: ngrok/ngrok:latest
     command: http web:8000
@@ -54,3 +62,4 @@ services:
 volumes:
   postgres_data:
   media:
+  redis_data:

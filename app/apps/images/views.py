@@ -3,12 +3,21 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from .forms import ImageCreateForm
-from .models import Image
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+import redis
+
+from .forms import ImageCreateForm
+from .models import Image
 from apps.actions.utils import create_action
 
+
+r = redis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB
+)
 
 def bookmarklet_launcher(request):
     js = render(request, 'bookmarklet_launcher.js', {'site_url': settings.SITE_URL})
@@ -41,10 +50,13 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(Image, id=id, slug=slug)
+    total_views = r.incr(f'image:{image.id}:views')
+    r.zincrby('image_ranking', 1, image.id)
+
     return render(
         request,
         'images/image/detail.html',
-        {'section': 'images', 'image': image}
+        {'section': 'images', 'image': image, 'total_views': total_views},
     )
 
 
@@ -99,4 +111,18 @@ def image_list(request):
         request,
         'images/image/list.html',
         {'section' : 'images', 'images': images}
+    )
+
+
+@login_required()
+def image_ranking(request):
+    image_ranking = r.zrange('image_ranking', 0, -1, desc=True)[:10]
+    image_ranking_ids = [int(id) for id in image_ranking]
+    most_viewed = list(Image.objects.filter(id__in=image_ranking_ids))
+    most_viewed.sort(key=lambda x: image_ranking_ids.index(x.id))
+
+    return render(
+        request,
+        'images/image/ranking.html',
+        {'section' : 'images', 'most_viewed': most_viewed}
     )
