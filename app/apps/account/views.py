@@ -1,6 +1,5 @@
 from django.conf import settings
-from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
 from django.contrib.auth.decorators import login_required
@@ -24,11 +23,12 @@ def user_login(request):
             if user is not None:
                 if user.is_active:
                     login(request, user)
-                    return HttpResponse("Authenticated successfully")
+                    messages.success(request, 'Authenticated successfully')
+                    return redirect('dashboard')
                 else:
-                    return HttpResponse("Disabled account")
+                    messages.error(request, 'Your account has been disabled')
             else:
-                return HttpResponse("Invalid login")
+                messages.error(request, 'Invalid username or password')
 
 
     else:
