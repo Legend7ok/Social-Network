@@ -7,11 +7,11 @@ from .models import Profile
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import Contact
 from apps.actions.utils import create_action
 from apps.actions.models import Action
+from core.utils import toggle_action
 
 
 def user_login(request):
@@ -123,26 +123,11 @@ def user_detail(request, username):
 @require_POST
 @login_required
 def user_follow(request):
-    user_id = request.POST.get('id')
-    action = request.POST.get('action')
-    if user_id and action:
-        try:
-            user = User.objects.get(id=user_id)
-            if action == 'follow':
-                Contact.objects.get_or_create(
-                    user_from=request.user,
-                    user_to=user,
-                )
-                create_action(request.user, 'is following', user)
-            else:
-                Contact.objects.filter(
-                    user_from=request.user,
-                    user_to=user,
-                ).delete()
+    def add(user):
+        Contact.objects.get_or_create(user_from=request.user, user_to=user)
+        create_action(request.user, 'is following', user)
 
-            return JsonResponse({'status': 'ok'})
+    def remove(user):
+        Contact.objects.filter(user_from=request.user, user_to=user).delete()
 
-        except User.DoesNotExist:
-            return JsonResponse({'status': 'error'})
-
-    return JsonResponse({'status': 'error'})
+    return toggle_action(request, User, 'follow', add, remove)
