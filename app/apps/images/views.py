@@ -79,7 +79,7 @@ def image_like(request):
         except Image.DoesNotExist:
             pass
 
-        return JsonResponse({'status': 'error'})
+    return JsonResponse({'status': 'error'})
 
 
 @login_required()
