@@ -68,5 +68,5 @@ jobs:
           REDIS_PORT: "6379"
           REDIS_DB: "0"
           PYTHONPATH: app
-          DJANGO_SETTINGS_MODULE: settings.dev
+          DJANGO_SETTINGS_MODULE: settings.test
         run: uv run pytest
