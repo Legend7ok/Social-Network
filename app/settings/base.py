@@ -120,3 +120,5 @@ ABSOLUTE_URL_OVERRIDES = {
 REDIS_HOST = env('REDIS_HOST', default='localhost')
 REDIS_PORT = env.int('REDIS_PORT', default=6379)
 REDIS_DB = env.int('REDIS_DB', default=0)
+
+from .storages import STORAGES
