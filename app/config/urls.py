@@ -8,8 +8,11 @@ urlpatterns = [
     path('account/', include('apps.account.urls')),
     path('social-auth/', include('social_django.urls', namespace='social')),
     path('images/', include('apps.images.urls', namespace='images')),
-    path('__debug__/', include('debug_toolbar.urls')),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
