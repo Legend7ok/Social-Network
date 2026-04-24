@@ -16,6 +16,8 @@ dependencies = [
     "easy-thumbnails>=2.10.1",
     "django-debug-toolbar>=6.3.0",
     "redis>=7.4.0",
+    "django-storages[s3]>=1.14.6",
+    "boto3>=1.42.95",
 ]
 
 [project.optional-dependencies]
