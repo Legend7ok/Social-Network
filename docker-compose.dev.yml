@@ -19,6 +19,8 @@ services:
       context: .
       target: web
     command: python app/manage.py runserver 0.0.0.0:8000
+    environment:
+      DJANGO_SETTINGS_MODULE: app.settings.dev
     volumes:
       - .:/app
       - media:/app/media
