@@ -23,3 +23,6 @@ errorlog = "-"
 loglevel = os.getenv("GUNICORN_LOG_LEVEL", "info")
 
 capture_output = True
+preload_app = True
+forwarded_allow_ips = "*"
+worker_tmp_dir = "/dev/shm"
