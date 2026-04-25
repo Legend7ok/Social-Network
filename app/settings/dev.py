@@ -10,6 +10,9 @@ MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 STORAGES = {
     **STORAGES,
     "staticfiles": {
