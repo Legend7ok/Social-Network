@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
+    container_name: social-network-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
