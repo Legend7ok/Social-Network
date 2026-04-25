@@ -42,6 +42,7 @@
 {% endblock %}
 
 {% block domready %}
+{{ block.super }}
     const url = '{% url "images:like" %}';
     const options = {
         method: 'POST',

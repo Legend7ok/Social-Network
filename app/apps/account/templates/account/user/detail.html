@@ -29,6 +29,7 @@
 
 
 {% block domready %}
+{{ block.super }}
     const url = '{% url "user_follow" %}';
     const options = {
         method: 'POST',

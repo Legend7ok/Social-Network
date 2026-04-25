@@ -4,6 +4,8 @@ from django.urls import reverse_lazy
 
 import environ
 
+from .storages import STORAGES
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
@@ -120,3 +122,5 @@ ABSOLUTE_URL_OVERRIDES = {
 REDIS_HOST = env('REDIS_HOST', default='localhost')
 REDIS_PORT = env.int('REDIS_PORT', default=6379)
 REDIS_DB = env.int('REDIS_DB', default=0)
+
+THUMBNAIL_CHECK_CACHE_MISS = False

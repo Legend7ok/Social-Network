@@ -56,6 +56,12 @@
         document.addEventListener('DOMContentLoaded', (event) => {
             // DOM loaded
             {% block domready %}
+            document.querySelectorAll('.messages .close').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    btn.closest('li').remove();
+                });
+            });
             {% endblock %}
         })
     </script>

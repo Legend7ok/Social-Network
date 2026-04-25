@@ -3,9 +3,16 @@
 {% block content %}
   <h1>Bookmark an image</h1>
   <img src="{{ request.GET.url }}" class="image-preview">
-  <form method="post">
+  <form method="post" id="bookmark-form">
     {{ form.as_p }}
     {% csrf_token %}
-    <input type="submit" value="Bookmark it!">
+    <button type="submit" id="submit-btn">Bookmark it!</button>
   </form>
+  <script>
+    document.getElementById('bookmark-form').addEventListener('submit', () => {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+    });
+  </script>
 {% endblock %}
