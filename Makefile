@@ -2,7 +2,7 @@ DEV := docker compose -f docker-compose.dev.yml
 PROD := docker compose -f docker-compose.prod.yml
 DEV_TEST := $(DEV) --profile test
 
-.PHONY: help up up-build build down restart logs ps shell migrate makemigrations test collectstatic superuser \
+.PHONY: help up up-build build down restart logs ps shell migrate makemigrations test superuser \
         prod-up prod-up-build prod-down prod-restart prod-logs prod-ps
 
 help:
@@ -27,7 +27,6 @@ help:
 	@echo "Django:"
 	@echo "  make migrate         Apply migrations"
 	@echo "  make makemigrations  Create migrations"
-	@echo "  make collectstatic   Collect static files to R2"
 	@echo "  make superuser       Create Django superuser"
 	@echo "  make test            Run tests"
 
@@ -59,9 +58,6 @@ migrate:
 
 makemigrations:
 	$(DEV) run --rm web python app/manage.py makemigrations
-
-collectstatic:
-	$(DEV) run --rm web python app/manage.py collectstatic --noinput
 
 superuser:
 	$(DEV) run --rm web python app/manage.py createsuperuser
