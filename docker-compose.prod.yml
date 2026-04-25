@@ -19,7 +19,7 @@ services:
     build:
       context: .
       target: web
-    command: sh -c "python app/manage.py collectstatic --noinput && gunicorn --chdir /app/app config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3}"
+    command: sh -c "python app/manage.py collectstatic --noinput && gunicorn --chdir /app/app -c /app/gunicorn.conf.py config.wsgi:application"
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.prod
     env_file: .env
