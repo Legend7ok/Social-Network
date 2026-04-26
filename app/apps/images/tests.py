@@ -11,14 +11,15 @@ from apps.images.models import Image
 
 # Minimal valid 1x1 PNG used as a lightweight test image file
 MINIMAL_PNG = (
-    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
-    b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00'
-    b'\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18'
-    b'\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+    b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
+    b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def make_user(db):
@@ -31,6 +32,7 @@ def make_user(db):
         )
         Profile.objects.create(user=user_obj)
         return user_obj, password
+
     return _make
 
 
@@ -58,6 +60,7 @@ def image(db, user):
 
 
 # ─── Model Tests ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 def test_image_str(image):
@@ -93,7 +96,9 @@ def test_image_get_absolute_url(image):
 def test_image_ordering_newest_first(user):
     user_obj, _ = user
     for i in range(3):
-        img_file = SimpleUploadedFile(f"img{i}.png", MINIMAL_PNG, content_type="image/png")
+        img_file = SimpleUploadedFile(
+            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
+        )
         Image.objects.create(
             user=user_obj,
             title=f"Image {i}",
@@ -116,12 +121,16 @@ def test_image_users_like_add_and_remove(image, second_user):
 
 # ─── Form Tests ──────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("url", [
-    "https://example.com/photo.jpg",
-    "https://example.com/photo.jpeg",
-    "https://example.com/photo.png",
-    "https://example.com/photo.webp",
-])
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/photo.jpg",
+        "https://example.com/photo.jpeg",
+        "https://example.com/photo.png",
+        "https://example.com/photo.webp",
+    ],
+)
 def test_clean_url_accepts_valid_extensions(url):
     form = ImageCreateForm(data={"title": "Test", "url": url, "description": ""})
     form.is_valid()
@@ -129,11 +138,13 @@ def test_clean_url_accepts_valid_extensions(url):
 
 
 def test_clean_url_rejects_invalid_extension():
-    form = ImageCreateForm(data={
-        "title": "Test",
-        "url": "https://example.com/photo.gif",
-        "description": "",
-    })
+    form = ImageCreateForm(
+        data={
+            "title": "Test",
+            "url": "https://example.com/photo.gif",
+            "description": "",
+        }
+    )
     form.is_valid()
     assert "url" in form.errors
 
@@ -146,11 +157,13 @@ def test_form_save_downloads_and_assigns_image(user):
     mock_resp.raise_for_status = MagicMock()
 
     with patch("apps.images.forms.requests.get", return_value=mock_resp):
-        form = ImageCreateForm(data={
-            "title": "Downloaded Image",
-            "url": "https://example.com/photo.jpg",
-            "description": "",
-        })
+        form = ImageCreateForm(
+            data={
+                "title": "Downloaded Image",
+                "url": "https://example.com/photo.jpg",
+                "description": "",
+            }
+        )
         assert form.is_valid(), form.errors
         img = form.save(commit=False)
         img.user = user_obj
@@ -162,18 +175,25 @@ def test_form_save_downloads_and_assigns_image(user):
 @pytest.mark.django_db
 def test_form_save_raises_validation_error_on_request_exception():
     import requests as req_lib
-    with patch("apps.images.forms.requests.get", side_effect=req_lib.exceptions.RequestException):
-        form = ImageCreateForm(data={
-            "title": "Bad URL",
-            "url": "https://example.com/photo.jpg",
-            "description": "",
-        })
+
+    with patch(
+        "apps.images.forms.requests.get",
+        side_effect=req_lib.exceptions.RequestException,
+    ):
+        form = ImageCreateForm(
+            data={
+                "title": "Bad URL",
+                "url": "https://example.com/photo.jpg",
+                "description": "",
+            }
+        )
         assert form.is_valid()
         with pytest.raises(dj_forms.ValidationError):
             form.save(commit=False)
 
 
 # ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
+
 
 @pytest.mark.django_db
 def test_bookmarklet_launcher_returns_javascript(client):
@@ -183,6 +203,7 @@ def test_bookmarklet_launcher_returns_javascript(client):
 
 
 # ─── View Tests: image_create ────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 def test_image_create_redirects_anonymous_user(client):
@@ -195,7 +216,9 @@ def test_image_create_redirects_anonymous_user(client):
 def test_image_create_get_shows_form(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:create"), {"url": "https://example.com/photo.jpg"})
+    response = client.get(
+        reverse("images:create"), {"url": "https://example.com/photo.jpg"}
+    )
     assert response.status_code == 200
     assert "form" in response.context
 
@@ -210,11 +233,14 @@ def test_image_create_post_valid_creates_image_and_redirects(client, user):
     mock_resp.raise_for_status = MagicMock()
 
     with patch("apps.images.forms.requests.get", return_value=mock_resp):
-        response = client.post(reverse("images:create"), {
-            "title": "My Image",
-            "url": "https://example.com/photo.jpg",
-            "description": "Nice photo",
-        })
+        response = client.post(
+            reverse("images:create"),
+            {
+                "title": "My Image",
+                "url": "https://example.com/photo.jpg",
+                "description": "Nice photo",
+            },
+        )
 
     assert response.status_code == 302
     assert Image.objects.filter(title="My Image", user=user_obj).exists()
@@ -225,17 +251,21 @@ def test_image_create_post_invalid_shows_form_errors(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
 
-    response = client.post(reverse("images:create"), {
-        "title": "Bad Image",
-        "url": "https://example.com/photo.gif",  # invalid extension
-        "description": "",
-    })
+    response = client.post(
+        reverse("images:create"),
+        {
+            "title": "Bad Image",
+            "url": "https://example.com/photo.gif",  # invalid extension
+            "description": "",
+        },
+    )
 
     assert response.status_code == 200
     assert response.context["form"].errors
 
 
 # ─── View Tests: image_detail ────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 def test_image_detail_returns_200_with_image_context(client, image):
@@ -251,6 +281,7 @@ def test_image_detail_returns_404_for_unknown_id(client):
 
 
 # ─── View Tests: image_like ──────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 def test_image_like_redirects_anonymous_user(client, image):
@@ -305,6 +336,7 @@ def test_image_like_nonexistent_image_returns_error(client, user):
 
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 def test_image_list_redirects_anonymous_user(client):
     response = client.get(reverse("images:list"))
@@ -354,7 +386,9 @@ def test_image_list_empty_page_with_images_only_returns_empty_body(client, user)
 def test_image_list_second_page_contains_remaining_images(client, user):
     user_obj, password = user
     for i in range(10):
-        img_file = SimpleUploadedFile(f"img{i}.png", MINIMAL_PNG, content_type="image/png")
+        img_file = SimpleUploadedFile(
+            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
+        )
         Image.objects.create(
             user=user_obj,
             title=f"Image {i}",

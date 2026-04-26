@@ -43,22 +43,18 @@ jobs:
       - name: 2. Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          # Включаем кеширование, чтобы повторные запуски были мгновенными
           enable-cache: true
 
       - name: 3. Set up Python
         run: uv python install 3.13
 
       - name: 4. Install dependencies
-        # uv sync установит всё строго по твоему uv.lock
         run: uv sync --extra dev
 
       - name: 5. Check code style (Ruff)
-        # Ruff — это современный линтер, он очень быстрый
-        run: uv run ruff check .
+        run: uv run ruff check . && uv run ruff format --check .
 
       - name: 6. Run Django tests
-        # Передаем переменные окружения, чтобы Django запустился без .env файла
         env:
           SECRET_KEY: "ci-test-key-only"
           DEBUG: "True"
@@ -69,4 +65,10 @@ jobs:
           REDIS_DB: "0"
           PYTHONPATH: app
           DJANGO_SETTINGS_MODULE: settings.test
-        run: uv run pytest
+        run: uv run pytest --cov --cov-report=xml
+
+      - name: 7. Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml

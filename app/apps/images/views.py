@@ -15,49 +15,43 @@ from core.utils import toggle_action
 
 
 r = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=settings.REDIS_DB
+    host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB
 )
 
+
 def bookmarklet_launcher(request):
-    js = render(request, 'bookmarklet_launcher.js', {'site_url': settings.SITE_URL})
-    return HttpResponse(js, content_type='application/javascript')
+    js = render(request, "bookmarklet_launcher.js", {"site_url": settings.SITE_URL})
+    return HttpResponse(js, content_type="application/javascript")
 
 
 @login_required
 def image_create(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ImageCreateForm(request.POST)
         if form.is_valid():
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
-            create_action(request.user, 'bookmarked image', new_image)
-            messages.success(request, 'Image added successfully')
+            create_action(request.user, "bookmarked image", new_image)
+            messages.success(request, "Image added successfully")
             return redirect(new_image.get_absolute_url())
     else:
         form = ImageCreateForm(data=request.GET)
 
     return render(
-        request,
-        'images/image/create.html',
-        {
-            'section': 'images',
-            'form': form
-        }
+        request, "images/image/create.html", {"section": "images", "form": form}
     )
 
 
 def image_detail(request, id, slug):
     image = get_object_or_404(Image, id=id, slug=slug)
-    total_views = r.incr(f'image:{image.id}:views')
-    r.zincrby('image_ranking', 1, image.id)
+    total_views = r.incr(f"image:{image.id}:views")
+    r.zincrby("image_ranking", 1, image.id)
 
     return render(
         request,
-        'images/image/detail.html',
-        {'section': 'images', 'image': image, 'total_views': total_views},
+        "images/image/detail.html",
+        {"section": "images", "image": image, "total_views": total_views},
     )
 
 
@@ -66,21 +60,20 @@ def image_detail(request, id, slug):
 def image_like(request):
     def add(image):
         image.users_like.add(request.user)
-        create_action(request.user, 'likes', image)
+        create_action(request.user, "likes", image)
 
     def remove(image):
         image.users_like.remove(request.user)
 
-    return toggle_action(request, Image, 'like', add, remove)
-
+    return toggle_action(request, Image, "like", add, remove)
 
 
 @login_required()
 def image_list(request):
     images = Image.objects.all()
     paginator = Paginator(images, 8)
-    page = request.GET.get('page')
-    images_only = request.GET.get('images_only')
+    page = request.GET.get("page")
+    images_only = request.GET.get("images_only")
     try:
         images = paginator.page(page)
 
@@ -89,33 +82,31 @@ def image_list(request):
 
     except EmptyPage:
         if images_only:
-            return HttpResponse('')
+            return HttpResponse("")
 
         images = paginator.page(paginator.num_pages)
 
     if images_only:
         return render(
             request,
-            'images/image/list_images.html',
-            {'section' : 'images', 'images': images}
+            "images/image/list_images.html",
+            {"section": "images", "images": images},
         )
 
     return render(
-        request,
-        'images/image/list.html',
-        {'section' : 'images', 'images': images}
+        request, "images/image/list.html", {"section": "images", "images": images}
     )
 
 
 @login_required()
 def image_ranking(request):
-    image_ranking = r.zrange('image_ranking', 0, -1, desc=True)[:10]
+    image_ranking = r.zrange("image_ranking", 0, -1, desc=True)[:10]
     image_ranking_ids = [int(id) for id in image_ranking]
     most_viewed = list(Image.objects.filter(id__in=image_ranking_ids))
     most_viewed.sort(key=lambda x: image_ranking_ids.index(x.id))
 
     return render(
         request,
-        'images/image/ranking.html',
-        {'section' : 'images', 'most_viewed': most_viewed}
+        "images/image/ranking.html",
+        {"section": "images", "most_viewed": most_viewed},
     )
