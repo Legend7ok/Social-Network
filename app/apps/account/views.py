@@ -41,7 +41,7 @@ def user_login(request):
 @login_required
 def dashboard(request):
     actions = Action.objects.exclude(user=request.user)
-    following_ids = request.user.following.values_list("id", flat=True)
+    following_ids = request.user.profile.following.values_list("user_id", flat=True)
 
     if following_ids:
         actions = actions.filter(user_id__in=following_ids)
@@ -120,10 +120,10 @@ def user_detail(request, username):
 @login_required
 def user_follow(request):
     def add(user):
-        Contact.objects.get_or_create(user_from=request.user, user_to=user)
+        Contact.objects.get_or_create(user_from=request.user.profile, user_to=user.profile)
         create_action(request.user, "is following", user)
 
     def remove(user):
-        Contact.objects.filter(user_from=request.user, user_to=user).delete()
+        Contact.objects.filter(user_from=request.user.profile, user_to=user.profile).delete()
 
     return toggle_action(request, User, "follow", add, remove)
