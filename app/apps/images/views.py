@@ -102,8 +102,8 @@ def image_list(request):
 def image_ranking(request):
     image_ranking = r.zrange("image_ranking", 0, -1, desc=True)[:10]
     image_ranking_ids = [int(id) for id in image_ranking]
-    most_viewed = list(Image.objects.filter(id__in=image_ranking_ids))
-    most_viewed.sort(key=lambda x: image_ranking_ids.index(x.id))
+    images_by_id = {image.id: image for image in Image.objects.filter(id__in=image_ranking_ids)}
+    most_viewed = [images_by_id[id] for id in image_ranking_ids if id in images_by_id]
 
     return render(
         request,
