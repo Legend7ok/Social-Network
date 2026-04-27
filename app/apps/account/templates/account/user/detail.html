@@ -9,13 +9,13 @@
     <div class="profile-info">
         <img src="{% thumbnail user.profile.photo 180x180 %}" class="user-detail">
     </div>
-    {% with total_followers=user.followers.count %}
+    {% with total_followers=user.profile.followers.count %}
         <span class="count">
             <span class="total">{{ total_followers }}</span>
             follower{{ total_followers|pluralize }}
         </span>
-        <a href="#" data-id="{{ user.id }}" data-action="{% if request.user in user.followers.all %}un{% endif %}follow" class="follow button">
-            {% if request.user not in user.followers.all %}
+        <a href="#" data-id="{{ user.id }}" data-action="{% if request.user.profile in user.profile.followers.all %}un{% endif %}follow" class="follow button">
+            {% if request.user.profile not in user.profile.followers.all %}
                 Follow
             {% else %}
                 Unfollow
