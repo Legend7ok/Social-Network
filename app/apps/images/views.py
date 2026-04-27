@@ -94,7 +94,9 @@ def image_list(request):
 @login_required()
 def image_ranking(request):
     image_ranking_ids = get_image_ranking()
-    images_by_id = {image.id: image for image in Image.objects.filter(id__in=image_ranking_ids)}
+    images_by_id = {
+        image.id: image for image in Image.objects.filter(id__in=image_ranking_ids)
+    }
     most_viewed = [images_by_id[id] for id in image_ranking_ids if id in images_by_id]
 
     return render(

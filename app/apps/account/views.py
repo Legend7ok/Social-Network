@@ -122,10 +122,14 @@ def user_detail(request, username):
 @login_required
 def user_follow(request):
     def add(user):
-        Contact.objects.get_or_create(user_from=request.user.profile, user_to=user.profile)
+        Contact.objects.get_or_create(
+            user_from=request.user.profile, user_to=user.profile
+        )
         create_action(request.user, "is following", user)
 
     def remove(user):
-        Contact.objects.filter(user_from=request.user.profile, user_to=user.profile).delete()
+        Contact.objects.filter(
+            user_from=request.user.profile, user_to=user.profile
+        ).delete()
 
     return toggle_action(request, User, "follow", add, remove)

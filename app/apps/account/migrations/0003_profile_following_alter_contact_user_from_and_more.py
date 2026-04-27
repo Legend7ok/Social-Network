@@ -5,25 +5,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('account', '0002_contact'),
+        ("account", "0002_contact"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='profile',
-            name='following',
-            field=models.ManyToManyField(related_name='followers', through='account.Contact', to='account.profile'),
+            model_name="profile",
+            name="following",
+            field=models.ManyToManyField(
+                related_name="followers",
+                through="account.Contact",
+                to="account.profile",
+            ),
         ),
         migrations.AlterField(
-            model_name='contact',
-            name='user_from',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_from_set', to='account.profile'),
+            model_name="contact",
+            name="user_from",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="rel_from_set",
+                to="account.profile",
+            ),
         ),
         migrations.AlterField(
-            model_name='contact',
-            name='user_to',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rel_to_set', to='account.profile'),
+            model_name="contact",
+            name="user_to",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="rel_to_set",
+                to="account.profile",
+            ),
         ),
     ]
