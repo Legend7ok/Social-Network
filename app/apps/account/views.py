@@ -1,17 +1,18 @@
 from django.conf import settings
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
-from django.contrib.auth.decorators import login_required
-from .models import Profile
 from django.contrib import messages
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
-from .models import Contact
+
+from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
+from .models import Profile, Contact
 from apps.actions.utils import create_action
 from apps.actions.models import Action
 from core.utils import toggle_action
+
+User = get_user_model()
 
 
 def user_login(request):
@@ -41,7 +42,7 @@ def user_login(request):
 @login_required
 def dashboard(request):
     actions = Action.objects.exclude(user=request.user)
-    following_ids = request.user.following.values_list("id", flat=True)
+    following_ids = request.user.profile.following.values_list("user_id", flat=True)
 
     if following_ids:
         actions = actions.filter(user_id__in=following_ids)
@@ -60,12 +61,13 @@ def register(request):
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
         if user_form.is_valid():
-            new_user = user_form.save(commit=False)
-            new_user.set_password(user_form.cleaned_data["password"])
-            new_user.save()
+            with transaction.atomic():
+                new_user = user_form.save(commit=False)
+                new_user.set_password(user_form.cleaned_data["password"])
+                new_user.save()
 
-            Profile.objects.create(user=new_user)
-            create_action(new_user, "has created an account")
+                Profile.objects.create(user=new_user)
+                create_action(new_user, "has created an account")
 
             return render(request, "account/register_done.html", {"new_user": new_user})
     else:
@@ -120,10 +122,14 @@ def user_detail(request, username):
 @login_required
 def user_follow(request):
     def add(user):
-        Contact.objects.get_or_create(user_from=request.user, user_to=user)
+        Contact.objects.get_or_create(
+            user_from=request.user.profile, user_to=user.profile
+        )
         create_action(request.user, "is following", user)
 
     def remove(user):
-        Contact.objects.filter(user_from=request.user, user_to=user).delete()
+        Contact.objects.filter(
+            user_from=request.user.profile, user_to=user.profile
+        ).delete()
 
     return toggle_action(request, User, "follow", add, remove)
