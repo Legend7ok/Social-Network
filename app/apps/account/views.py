@@ -1,12 +1,12 @@
 from django.conf import settings
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, get_user_model
+from django.db import transaction
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
 from django.contrib.auth.decorators import login_required
 from .models import Profile
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 from django.views.decorators.http import require_POST
@@ -62,12 +62,13 @@ def register(request):
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
         if user_form.is_valid():
-            new_user = user_form.save(commit=False)
-            new_user.set_password(user_form.cleaned_data["password"])
-            new_user.save()
+            with transaction.atomic():
+                new_user = user_form.save(commit=False)
+                new_user.set_password(user_form.cleaned_data["password"])
+                new_user.save()
 
-            Profile.objects.create(user=new_user)
-            create_action(new_user, "has created an account")
+                Profile.objects.create(user=new_user)
+                create_action(new_user, "has created an account")
 
             return render(request, "account/register_done.html", {"new_user": new_user})
     else:
