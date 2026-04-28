@@ -19,6 +19,7 @@ dependencies = [
     "boto3>=1.42.95",
     "gunicorn>=25.3.0",
     "sorl-thumbnail>=13.0.0",
+    "celery>=5.6.3",
 ]
 
 [project.optional-dependencies]
