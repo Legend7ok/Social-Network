@@ -98,7 +98,6 @@ def test_clean_url_rejects_invalid_extension():
     assert "url" in form.errors
 
 
-
 # ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
 
 

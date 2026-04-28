@@ -28,4 +28,3 @@ class ImageCreateForm(forms.ModelForm):
             )
 
         return url
-
