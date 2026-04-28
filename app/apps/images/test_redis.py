@@ -4,58 +4,10 @@ from django.urls import reverse
 
 from apps.images.models import Image
 from apps.images.services import get_image_ranking, record_image_view
-
-MINIMAL_PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
-    b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
-    b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-)
-
-
-# ─── Fixtures ────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def make_user(db):
-    def _make(username, email, password):
-        from django.contrib.auth import get_user_model
-
-        from apps.account.models import Profile
-
-        User = get_user_model()
-        user_obj = User.objects.create_user(
-            username=username, email=email, password=password
-        )
-        Profile.objects.create(user=user_obj)
-        return user_obj, password
-
-    return _make
-
-
-@pytest.fixture
-def user(make_user):
-    return make_user("alice", "alice@example.com", "testpass123")
-
-
-@pytest.fixture
-def image(db, user):
-    user_obj, _ = user
-    img_file = SimpleUploadedFile("test.png", MINIMAL_PNG, content_type="image/png")
-    return Image.objects.create(
-        user=user_obj,
-        title="Test Image",
-        url="https://example.com/test.png",
-        image=img_file,
-    )
+from conftest import MINIMAL_PNG
 
 
 # ─── record_image_view ───────────────────────────────────────────────────────
-
-
-def test_record_image_view_returns_int():
-    result = record_image_view(1)
-    assert isinstance(result, int)
 
 
 def test_record_image_view_starts_at_one():
