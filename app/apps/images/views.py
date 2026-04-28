@@ -9,6 +9,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .forms import ImageCreateForm
 from .models import Image
 from .services import record_image_view, get_image_ranking
+from .tasks import download_image
 from apps.actions.utils import create_action
 from core.utils import toggle_action
 
@@ -26,6 +27,7 @@ def image_create(request):
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
+            download_image.delay(new_image.id, new_image.url)
             create_action(request.user, "bookmarked image", new_image)
             messages.success(request, "Image added successfully")
             return redirect(new_image.get_absolute_url())
