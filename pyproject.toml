@@ -13,12 +13,12 @@ dependencies = [
     "social-auth-app-django>=5.7.0",
     "psycopg2-binary>=2.9",
     "requests>=2.32.5",
-    "easy-thumbnails>=2.10.1",
     "django-debug-toolbar>=6.3.0",
     "redis>=7.4.0",
     "django-storages[s3]>=1.14.6",
     "boto3>=1.42.95",
     "gunicorn>=25.3.0",
+    "sorl-thumbnail>=13.0.0",
 ]
 
 [project.optional-dependencies]

@@ -328,19 +328,6 @@ s3 = [
 ]
 
 [[package]]
-name = "easy-thumbnails"
-version = "2.10.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "pillow" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/04/2f/71f17c3ce65b25dd8fc8e513738c8496eadbd8bab94f39509a511ff99704/easy_thumbnails-2.10.1.tar.gz", hash = "sha256:a50aa5f99387546c35ab5ba1ea9b3cbbc5658e65601cd34949f62137c32c222e", size = 81446, upload-time = "2025-08-17T20:49:11.308Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/90/be137d0592501ec08d4a00c8430121e95dfe6c8114a1d4436b5cdd6b9803/easy_thumbnails-2.10.1-py3-none-any.whl", hash = "sha256:24462d63dd31543ef1585538b2bfefe0db96d3409bb431c70b81548fb2cfc5be", size = 79695, upload-time = "2025-08-17T20:49:09.119Z" },
-]
-
-[[package]]
 name = "fakeredis"
 version = "2.35.1"
 source = { registry = "https://pypi.org/simple" }
@@ -728,7 +715,6 @@ dependencies = [
     { name = "django-debug-toolbar" },
     { name = "django-environ" },
     { name = "django-storages", extra = ["s3"] },
-    { name = "easy-thumbnails" },
     { name = "gunicorn" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
@@ -737,17 +723,14 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "social-auth-app-django" },
+    { name = "sorl-thumbnail" },
 ]
 
 [package.optional-dependencies]
 dev = [
+    { name = "fakeredis" },
     { name = "pytest-cov" },
     { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "fakeredis" },
 ]
 
 [package.metadata]
@@ -757,7 +740,7 @@ requires-dist = [
     { name = "django-debug-toolbar", specifier = ">=6.3.0" },
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
-    { name = "easy-thumbnails", specifier = ">=2.10.1" },
+    { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "gunicorn", specifier = ">=25.3.0" },
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
@@ -768,11 +751,18 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
     { name = "social-auth-app-django", specifier = ">=5.7.0" },
+    { name = "sorl-thumbnail", specifier = ">=13.0.0" },
 ]
 provides-extras = ["dev"]
 
-[package.metadata.requires-dev]
-dev = [{ name = "fakeredis", specifier = ">=2.35.1" }]
+[[package]]
+name = "sorl-thumbnail"
+version = "13.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/d8/038201e8fc4bda7f7905c41155af70fc0d15f94f90baac52f04ea66ad3af/sorl_thumbnail-13.0.0.tar.gz", hash = "sha256:75f1f22fa742846917ca4774cd4c578cd802ff5e4f6f53328735c3a38264ee49", size = 668977, upload-time = "2026-01-22T15:20:51.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/8b/04d8eaaffbdfc17792b008d7bdf0b379e6bb2648ce262e96c95f76f4ba7c/sorl_thumbnail-13.0.0-py3-none-any.whl", hash = "sha256:8035d218b2b90511326c9a73dbf6e8a829f9ea808e448e98332190a0e2c0ee18", size = 43136, upload-time = "2026-01-22T15:20:37.103Z" },
+]
 
 [[package]]
 name = "sortedcontainers"
