@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
+from .tasks import send_welcome_email
 from .models import Profile, Contact
 from apps.actions.utils import create_action
 from apps.actions.models import Action
@@ -69,6 +70,7 @@ def register(request):
                 Profile.objects.create(user=new_user)
                 create_action(new_user, "has created an account")
 
+            send_welcome_email.delay(new_user.id)
             return render(request, "account/register_done.html", {"new_user": new_user})
     else:
         user_form = UserRegistrationForm()
