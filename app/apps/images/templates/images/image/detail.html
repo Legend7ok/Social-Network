@@ -3,11 +3,15 @@
 {% block content %}
     <h1>{{ image.title }}</h1>
     {% load thumbnail %}
+    {% if image.image %}
     <a href="{{ image.image.url }}">
         {% thumbnail image.image "300" as im %}
         <img src="{{ im.url }}" class="image-detail">
         {% endthumbnail %}
     </a>
+    {% else %}
+    <p>Image is being processed...</p>
+    {% endif %}
     {% with total_likes=image.users_like.count users_like=image.users_like.all %}
         <div class="image-info">
             <div>
