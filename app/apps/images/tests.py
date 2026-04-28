@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -138,15 +139,16 @@ def test_image_create_post_valid_creates_image_and_redirects(client, user):
     mock_resp.content = MINIMAL_PNG
     mock_resp.raise_for_status = MagicMock()
 
-    with patch("apps.images.forms.requests.get", return_value=mock_resp):
-        response = client.post(
-            reverse("images:create"),
-            {
-                "title": "My Image",
-                "url": "https://example.com/photo.jpg",
-                "description": "Nice photo",
-            },
-        )
+    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
+        with patch("apps.images.tasks.get_thumbnail"):
+            response = client.post(
+                reverse("images:create"),
+                {
+                    "title": "My Image",
+                    "url": "https://example.com/photo.jpg",
+                    "description": "Nice photo",
+                },
+            )
 
     assert response.status_code == 302
     assert Image.objects.filter(title="My Image", user=user_obj).exists()
