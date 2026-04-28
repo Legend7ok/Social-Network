@@ -5,6 +5,7 @@ import requests
 from celery import shared_task
 from django.core.files.base import ContentFile
 from django.utils.text import slugify
+from sorl.thumbnail import get_thumbnail
 
 from .models import Image
 
@@ -18,5 +19,7 @@ def download_image(image_id, url):
         extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
         name = f"{slugify(image.title)}.{extension}"
         image.image.save(name, ContentFile(response.content), save=True)
+        get_thumbnail(image.image, "300x300", crop="center")
+        get_thumbnail(image.image, "300")
     except Exception:
         pass
