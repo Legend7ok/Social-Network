@@ -47,6 +47,20 @@ services:
     volumes:
       - .:/app
 
+  worker:
+    build:
+      context: .
+      target: web
+    command: celery -A config worker -l info
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped

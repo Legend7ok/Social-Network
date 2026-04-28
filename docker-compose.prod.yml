@@ -47,6 +47,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  worker:
+    build:
+      context: .
+      target: web
+    command: celery -A config worker -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: app.settings.prod
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped

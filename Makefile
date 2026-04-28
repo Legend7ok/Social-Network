@@ -3,7 +3,7 @@ PROD := docker compose -f docker-compose.prod.yml
 DEV_TEST := $(DEV) --profile test
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
-        prod-up prod-up-build prod-down prod-restart prod-logs prod-ps
+        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps
 
 help:
 	@echo "Dev:"
@@ -29,6 +29,7 @@ help:
 	@echo "  make makemigrations  Create migrations"
 	@echo "  make superuser       Create Django superuser"
 	@echo "  make test            Run tests"
+	@echo "  make worker-logs     Show Celery worker logs"
 	@echo "  make build-test      Rebuild test image"
 
 up:
@@ -62,6 +63,9 @@ makemigrations:
 
 superuser:
 	$(DEV) run --rm web python app/manage.py createsuperuser
+
+worker-logs:
+	$(DEV) logs -f worker
 
 test:
 	$(DEV_TEST) run --rm test
