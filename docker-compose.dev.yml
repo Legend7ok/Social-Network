@@ -57,6 +57,7 @@ services:
     env_file: .env
     volumes:
       - .:/app
+      - media:/app/media
     depends_on:
       db:
         condition: service_healthy
