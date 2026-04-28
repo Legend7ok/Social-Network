@@ -24,5 +24,7 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 FROM base AS test
 
+RUN uv pip install --system --no-cache .[dev]
+
 RUN printf '#!/bin/sh\nset -e\npytest -v\n' > /usr/local/bin/run-tests \
     && chmod +x /usr/local/bin/run-tests
