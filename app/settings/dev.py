@@ -10,6 +10,8 @@ MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware"] + MIDDLEWARE
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+THUMBNAIL_STORAGE = "django.core.files.storage.FileSystemStorage"
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
