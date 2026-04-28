@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     "social_django",
     "apps.images",
     "apps.actions",
-    "easy_thumbnails",
+    "sorl.thumbnail",
 ]
 
 MIDDLEWARE = [
@@ -129,4 +129,7 @@ REDIS_HOST = env("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
 REDIS_DB = env.int("REDIS_DB", default=0)
 
-THUMBNAIL_CHECK_CACHE_MISS = False
+THUMBNAIL_KVSTORE = "sorl.thumbnail.kvstores.redis_kvstore.KVStore"
+THUMBNAIL_REDIS_HOST = REDIS_HOST
+THUMBNAIL_REDIS_PORT = REDIS_PORT
+THUMBNAIL_REDIS_DB = REDIS_DB

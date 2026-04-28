@@ -4,7 +4,9 @@
     <h1>{{ image.title }}</h1>
     {% load thumbnail %}
     <a href="{{ image.image.url }}">
-        <img src="{% thumbnail image.image 300x0 %}" class="image-detail">
+        {% thumbnail image.image "300" as im %}
+        <img src="{{ im.url }}" class="image-detail">
+        {% endthumbnail %}
     </a>
     {% with total_likes=image.users_like.count users_like=image.users_like.all %}
         <div class="image-info">
