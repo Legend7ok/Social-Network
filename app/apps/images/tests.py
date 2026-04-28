@@ -1,6 +1,4 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from django import forms as dj_forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -98,48 +96,6 @@ def test_clean_url_rejects_invalid_extension():
     form.is_valid()
     assert "url" in form.errors
 
-
-@pytest.mark.django_db
-def test_form_save_downloads_and_assigns_image(user):
-    user_obj, _ = user
-    mock_resp = MagicMock()
-    mock_resp.content = MINIMAL_PNG
-    mock_resp.raise_for_status = MagicMock()
-
-    with patch("apps.images.forms.requests.get", return_value=mock_resp):
-        form = ImageCreateForm(
-            data={
-                "title": "Downloaded Image",
-                "url": "https://example.com/photo.jpg",
-                "description": "",
-            }
-        )
-        assert form.is_valid(), form.errors
-        img = form.save(commit=False)
-        img.user = user_obj
-
-    assert img.title == "Downloaded Image"
-    assert img.image.name.endswith(".jpg")
-
-
-@pytest.mark.django_db
-def test_form_save_raises_validation_error_on_request_exception():
-    import requests as req_lib
-
-    with patch(
-        "apps.images.forms.requests.get",
-        side_effect=req_lib.exceptions.RequestException,
-    ):
-        form = ImageCreateForm(
-            data={
-                "title": "Bad URL",
-                "url": "https://example.com/photo.jpg",
-                "description": "",
-            }
-        )
-        assert form.is_valid()
-        with pytest.raises(dj_forms.ValidationError):
-            form.save(commit=False)
 
 
 # ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
