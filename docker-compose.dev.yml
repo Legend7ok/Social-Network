@@ -52,6 +52,8 @@ services:
       context: .
       target: web
     command: celery -A config worker -l info
+    environment:
+      PYTHONPATH: /app/app
     env_file: .env
     volumes:
       - .:/app
