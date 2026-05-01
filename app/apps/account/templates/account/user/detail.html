@@ -35,7 +35,7 @@
     const url = '{% url "user_follow" %}';
     const options = {
         method: 'POST',
-        headers: {'X-CSRFToken': csrftoken},
+        headers: {'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest'},
         mode: 'same-origin'
     };
 
