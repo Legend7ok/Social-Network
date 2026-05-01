@@ -66,7 +66,7 @@ def image_like(request):
     return toggle_action(request, Image, "like", add, remove)
 
 
-@login_required()
+@login_required
 def image_list(request):
     images = Image.objects.all()
     paginator = Paginator(images, 8)
