@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
@@ -58,6 +59,7 @@ def dashboard(request):
     )
 
 
+@ratelimit(key="ip", rate="10/h", method="POST", block=True)
 def register(request):
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
@@ -122,6 +124,7 @@ def user_detail(request, username):
 
 @require_POST
 @login_required
+@ratelimit(key="user", rate="20/m", block=True)
 def user_follow(request):
     def add(user):
         Contact.objects.get_or_create(
