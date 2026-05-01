@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageCreateForm
 from .models import Image
@@ -20,6 +21,7 @@ def bookmarklet_launcher(request):
 
 
 @login_required
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
 def image_create(request):
     if request.method == "POST":
         form = ImageCreateForm(request.POST)
@@ -52,6 +54,7 @@ def image_detail(request, id, slug):
 
 @login_required
 @require_POST
+@ratelimit(key="user", rate="20/m", block=True)
 def image_like(request):
     def add(image):
         image.users_like.add(request.user)
