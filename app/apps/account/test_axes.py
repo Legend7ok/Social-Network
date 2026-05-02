@@ -24,7 +24,9 @@ def user(db):
 def test_failed_logins_below_limit(client, user):
     url = reverse("login")
     for _ in range(2):
-        response = client.post(url, {"username": user.username, "password": "wrongpass"})
+        response = client.post(
+            url, {"username": user.username, "password": "wrongpass"}
+        )
     assert response.status_code == 200
 
 
@@ -49,5 +51,7 @@ def test_successful_login_resets_counter(client, user):
     client.logout()
 
     for _ in range(2):
-        response = client.post(url, {"username": user.username, "password": "wrongpass"})
+        response = client.post(
+            url, {"username": user.username, "password": "wrongpass"}
+        )
     assert response.status_code == 200
