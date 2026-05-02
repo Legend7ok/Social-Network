@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 from django.urls import reverse_lazy
 
@@ -25,11 +26,13 @@ INSTALLED_APPS = [
     "apps.images",
     "apps.actions",
     "sorl.thumbnail",
+    "axes",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "axes.middleware.AxesMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -91,6 +94,7 @@ LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
 
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
     "apps.account.authentication.EmailAuthBackend",
     "social_core.backends.google.GoogleOAuth2",
@@ -145,3 +149,10 @@ THUMBNAIL_KVSTORE = "sorl.thumbnail.kvstores.cached_db_kvstore.KVStore"
 THUMBNAIL_CACHE = "default"
 
 RATELIMIT_IP_META_KEY = "HTTP_X_FORWARDED_FOR"
+
+AXES_DISABLE_ACCESS_LOG = True
+AXES_FAILURE_LIMIT = 3
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
+AXES_LOCKOUT_TEMPLATE = "account/lockout.html"

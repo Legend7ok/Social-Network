@@ -21,6 +21,7 @@ dependencies = [
     "sorl-thumbnail>=13.0.0",
     "celery>=5.6.3",
     "django-ratelimit>=4.1.0",
+    "django-axes>=8.3.1",
 ]
 
 [project.optional-dependencies]

@@ -6,6 +6,8 @@ from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
+from axes.handlers.proxy import AxesProxyHandler
+from axes.helpers import get_lockout_response, get_credentials as axes_get_credentials
 
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
@@ -22,6 +24,9 @@ def user_login(request):
         form = LoginForm(request.POST)
         if form.is_valid():
             cd = form.cleaned_data
+            credentials = axes_get_credentials(username=cd["username"])
+            if not AxesProxyHandler.is_allowed(request, credentials):
+                return get_lockout_response(request, credentials=credentials)
             user = authenticate(
                 request, username=cd["username"], password=cd["password"]
             )
