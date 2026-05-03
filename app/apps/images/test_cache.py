@@ -20,7 +20,9 @@ def test_image_ranking_cache_miss_populates_cache(client, user, image, settings)
 @pytest.mark.django_db
 def test_image_ranking_served_from_cache(client, user, image, settings):
     user_obj, password = user
-    cache.set(settings.IMAGE_RANKING_CACHE_KEY, [image], settings.IMAGE_RANKING_CACHE_TTL)
+    cache.set(
+        settings.IMAGE_RANKING_CACHE_KEY, [image], settings.IMAGE_RANKING_CACHE_TTL
+    )
 
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:ranking"))

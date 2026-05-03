@@ -57,7 +57,9 @@ def dashboard(request):
         if following_ids:
             actions_qs = actions_qs.filter(user_id__in=following_ids)
         actions = list(
-            actions_qs.select_related("user", "user__profile").prefetch_related("target")[:10]
+            actions_qs.select_related("user", "user__profile").prefetch_related(
+                "target"
+            )[:10]
         )
         cache.set(cache_key, actions, settings.DASHBOARD_CACHE_TTL)
 
