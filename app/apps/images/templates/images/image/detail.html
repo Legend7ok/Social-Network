@@ -49,41 +49,30 @@
 
 {% block domready %}
 {{ block.super }}
-    const url = '{% url "images:like" %}';
     const options = {
         method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest'},
+        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
         mode: 'same-origin'
-    }
+    };
 
     document.querySelector('a.like').addEventListener('click', (e) => {
         e.preventDefault();
         const likeButton = e.currentTarget;
+        options['body'] = JSON.stringify({action: likeButton.dataset.action});
 
-        // add request body
-        const formData = new FormData();
-        formData.append('id', likeButton.dataset.id);
-        formData.append('action', likeButton.dataset.action);
-        options['body'] = formData;
-
-        // отправить HTTP-запрос
-        fetch(url, options)
+        fetch(`/api/images/${likeButton.dataset.id}/like/`, options)
         .then(response => response.json())
         .then(data => {
             if (data.status === 'ok') {
                 const previousAction = likeButton.dataset.action;
-
-                // toggle button text and data-action attribute
                 const action = previousAction === 'like' ? 'unlike' : 'like';
                 likeButton.dataset.action = action;
                 likeButton.innerHTML = action;
-
-                // update the number of likes
                 const likeCount = document.querySelector('span.count .total');
                 const totalLikes = parseInt(likeCount.textContent);
                 likeCount.textContent = previousAction === 'like' ? totalLikes + 1 : totalLikes - 1;
             }
-        })
+        });
     });
 
 {% endblock %}

@@ -32,10 +32,9 @@
 
 {% block domready %}
 {{ block.super }}
-    const url = '{% url "user_follow" %}';
     const options = {
         method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest'},
+        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
         mode: 'same-origin'
     };
 
@@ -43,11 +42,8 @@
         .addEventListener('click', (e) => {
             e.preventDefault();
             const followButton = e.currentTarget;
-            const formData = new FormData();
-            formData.append('id', followButton.dataset.id);
-            formData.append('action', followButton.dataset.action);
-            options.body = formData;
-            fetch(url, options)
+            options.body = JSON.stringify({action: followButton.dataset.action});
+            fetch(`/api/users/${followButton.dataset.id}/follow/`, options)
                 .then(response => response.json())
                 .then(data => {
                     if (data['status'] === 'ok') {
