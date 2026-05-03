@@ -64,6 +64,22 @@ services:
       redis:
         condition: service_started
 
+  beat:
+    build:
+      context: .
+      target: web
+    command: celery -A config beat -l info
+    environment:
+      PYTHONPATH: /app/app
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
