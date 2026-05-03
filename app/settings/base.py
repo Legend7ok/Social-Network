@@ -145,6 +145,16 @@ CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
+IMAGE_RANKING_CACHE_KEY = "image_ranking_list"
+IMAGE_RANKING_CACHE_TTL = 60 * 5
+
+CELERY_BEAT_SCHEDULE = {
+    "refresh-image-ranking-cache": {
+        "task": "apps.images.tasks.refresh_image_ranking_cache",
+        "schedule": timedelta(minutes=4),
+    },
+}
+
 THUMBNAIL_KVSTORE = "sorl.thumbnail.kvstores.cached_db_kvstore.KVStore"
 THUMBNAIL_CACHE = "default"
 

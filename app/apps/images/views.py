@@ -97,20 +97,16 @@ def image_list(request):
     )
 
 
-IMAGE_RANKING_CACHE_KEY = "image_ranking_list"
-IMAGE_RANKING_CACHE_TTL = 60 * 5
-
-
 @login_required()
 def image_ranking(request):
-    most_viewed = cache.get(IMAGE_RANKING_CACHE_KEY)
+    most_viewed = cache.get(settings.IMAGE_RANKING_CACHE_KEY)
     if most_viewed is None:
         image_ranking_ids = get_image_ranking()
         images_by_id = {
             image.id: image for image in Image.objects.filter(id__in=image_ranking_ids)
         }
         most_viewed = [images_by_id[id] for id in image_ranking_ids if id in images_by_id]
-        cache.set(IMAGE_RANKING_CACHE_KEY, most_viewed, IMAGE_RANKING_CACHE_TTL)
+        cache.set(settings.IMAGE_RANKING_CACHE_KEY, most_viewed, settings.IMAGE_RANKING_CACHE_TTL)
 
     return render(
         request,
