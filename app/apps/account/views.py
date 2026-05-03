@@ -5,17 +5,15 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from axes.handlers.proxy import AxesProxyHandler
 from axes.helpers import get_lockout_response, get_credentials as axes_get_credentials
 
 from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
-from .models import Profile, Contact
+from .models import Profile
 from apps.actions.utils import create_action
 from apps.actions.models import Action
-from core.utils import toggle_action
 
 User = get_user_model()
 
@@ -133,19 +131,3 @@ def user_detail(request, username):
     )
 
 
-@require_POST
-@login_required
-@ratelimit(key="user", rate="20/m", block=True)
-def user_follow(request):
-    def add(user):
-        Contact.objects.get_or_create(
-            user_from=request.user.profile, user_to=user.profile
-        )
-        create_action(request.user, "is following", user)
-
-    def remove(user):
-        Contact.objects.filter(
-            user_from=request.user.profile, user_to=user.profile
-        ).delete()
-
-    return toggle_action(request, User, "follow", add, remove)
