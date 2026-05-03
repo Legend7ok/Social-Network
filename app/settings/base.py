@@ -148,6 +148,8 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 IMAGE_RANKING_CACHE_KEY = "image_ranking_list"
 IMAGE_RANKING_CACHE_TTL = 60 * 5
 
+DASHBOARD_CACHE_TTL = 60 * 3
+
 CELERY_BEAT_SCHEDULE = {
     "refresh-image-ranking-cache": {
         "task": "apps.images.tasks.refresh_image_ranking_cache",
