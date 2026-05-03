@@ -26,5 +26,5 @@ FROM base AS test
 
 RUN uv pip install --system --no-cache .[dev]
 
-RUN printf '#!/bin/sh\nset -e\npytest -v\n' > /usr/local/bin/run-tests \
+RUN printf '#!/bin/sh\nset -e\npytest -v --cov --cov-report=term-missing\n' > /usr/local/bin/run-tests \
     && chmod +x /usr/local/bin/run-tests

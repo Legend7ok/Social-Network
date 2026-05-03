@@ -1,6 +1,7 @@
 import fakeredis
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.account.models import Profile
@@ -12,6 +13,13 @@ MINIMAL_PNG = (
     b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
     b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture(autouse=True)

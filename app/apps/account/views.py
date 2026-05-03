@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
@@ -48,14 +49,19 @@ def user_login(request):
 
 @login_required
 def dashboard(request):
-    actions = Action.objects.exclude(user=request.user)
-    following_ids = request.user.profile.following.values_list("user_id", flat=True)
-
-    if following_ids:
-        actions = actions.filter(user_id__in=following_ids)
-    actions = actions.select_related("user", "user__profile").prefetch_related(
-        "target"
-    )[:10]
+    cache_key = f"dashboard_{request.user.id}"
+    actions = cache.get(cache_key)
+    if actions is None:
+        actions_qs = Action.objects.exclude(user=request.user)
+        following_ids = request.user.profile.following.values_list("user_id", flat=True)
+        if following_ids:
+            actions_qs = actions_qs.filter(user_id__in=following_ids)
+        actions = list(
+            actions_qs.select_related("user", "user__profile").prefetch_related(
+                "target"
+            )[:10]
+        )
+        cache.set(cache_key, actions, settings.DASHBOARD_CACHE_TTL)
 
     return render(
         request,
