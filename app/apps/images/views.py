@@ -51,7 +51,6 @@ def image_detail(request, id, slug):
     )
 
 
-
 @login_required
 def image_list(request):
     images = Image.objects.all()
