@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -11,6 +12,7 @@ User = get_user_model()
 
 
 class UserFollowView(APIView):
+    @extend_schema(request=FollowSerializer, responses={200: None})
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, is_active=True)
         serializer = FollowSerializer(data=request.data)

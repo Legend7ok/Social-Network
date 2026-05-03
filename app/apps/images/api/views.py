@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -8,6 +9,7 @@ from .serializers import LikeSerializer
 
 
 class ImageLikeView(APIView):
+    @extend_schema(request=LikeSerializer, responses={200: None})
     def post(self, request, pk):
         image = get_object_or_404(Image, pk=pk)
         serializer = LikeSerializer(data=request.data)
