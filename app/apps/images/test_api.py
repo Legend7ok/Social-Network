@@ -2,8 +2,6 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.images.models import Image
-
 
 @pytest.fixture
 def api_client():
