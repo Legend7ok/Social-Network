@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
-from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.cache import cache
 from django_ratelimit.decorators import ratelimit
@@ -13,7 +12,6 @@ from .models import Image
 from .services import record_image_view, get_image_ranking
 from .tasks import download_image
 from apps.actions.utils import create_action
-from core.utils import toggle_action
 
 
 def bookmarklet_launcher(request):
@@ -51,20 +49,6 @@ def image_detail(request, id, slug):
         "images/image/detail.html",
         {"section": "images", "image": image, "total_views": total_views},
     )
-
-
-@login_required
-@require_POST
-@ratelimit(key="user", rate="20/m", block=True)
-def image_like(request):
-    def add(image):
-        image.users_like.add(request.user)
-        create_action(request.user, "likes", image)
-
-    def remove(image):
-        image.users_like.remove(request.user)
-
-    return toggle_action(request, Image, "like", add, remove)
 
 
 @login_required

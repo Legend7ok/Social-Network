@@ -187,60 +187,6 @@ def test_image_detail_returns_404_for_unknown_id(client):
     assert response.status_code == 404
 
 
-# ─── View Tests: image_like ──────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_image_like_redirects_anonymous_user(client, image):
-    response = client.post(reverse("images:like"), {"id": image.id, "action": "like"})
-    assert response.status_code == 302
-    assert "login" in response["Location"]
-
-
-@pytest.mark.django_db
-def test_image_like_rejects_get_request(client, user):
-    user_obj, password = user
-    client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:like"))
-    assert response.status_code == 405
-
-
-@pytest.mark.django_db
-def test_image_like_adds_user_to_likes(client, user, image):
-    user_obj, password = user
-    client.login(username=user_obj.username, password=password)
-
-    response = client.post(reverse("images:like"), {"id": image.id, "action": "like"})
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-    assert image.users_like.filter(pk=user_obj.pk).exists()
-
-
-@pytest.mark.django_db
-def test_image_like_removes_user_from_likes(client, user, image):
-    user_obj, password = user
-    image.users_like.add(user_obj)
-    client.login(username=user_obj.username, password=password)
-
-    response = client.post(reverse("images:like"), {"id": image.id, "action": "remove"})
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-    assert not image.users_like.filter(pk=user_obj.pk).exists()
-
-
-@pytest.mark.django_db
-def test_image_like_nonexistent_image_returns_error(client, user):
-    user_obj, password = user
-    client.login(username=user_obj.username, password=password)
-
-    response = client.post(reverse("images:like"), {"id": 9999, "action": "like"})
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "error"}
-
-
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
 
