@@ -25,7 +25,9 @@ def test_lockout_after_three_failures(client, user):
     for _ in range(3):
         client.post(url, {"username": user_obj.username, "password": "wrongpass"})
 
-    response = client.post(url, {"username": user_obj.username, "password": "wrongpass"})
+    response = client.post(
+        url, {"username": user_obj.username, "password": "wrongpass"}
+    )
     assert response.status_code == 429
     assert b"Account Locked" in response.content
 

@@ -15,29 +15,41 @@ def backend():
 @pytest.mark.django_db
 def test_authenticate_valid_email_returns_user(backend, user):
     user_obj, password = user
-    result = backend.authenticate(request=None, username=user_obj.email, password=password)
+    result = backend.authenticate(
+        request=None, username=user_obj.email, password=password
+    )
     assert result == user_obj
 
 
 @pytest.mark.django_db
 def test_authenticate_wrong_password_returns_none(backend, user):
     user_obj, _ = user
-    result = backend.authenticate(request=None, username=user_obj.email, password="wrongpass")
+    result = backend.authenticate(
+        request=None, username=user_obj.email, password="wrongpass"
+    )
     assert result is None
 
 
 @pytest.mark.django_db
 def test_authenticate_nonexistent_email_returns_none(backend):
-    result = backend.authenticate(request=None, username="nobody@example.com", password="pass")
+    result = backend.authenticate(
+        request=None, username="nobody@example.com", password="pass"
+    )
     assert result is None
 
 
 @pytest.mark.django_db
 def test_authenticate_duplicate_email_returns_none(backend):
     User = get_user_model()
-    User.objects.create_user(username="user1", email="same@example.com", password="pass1")
-    User.objects.create_user(username="user2", email="same@example.com", password="pass2")
-    result = backend.authenticate(request=None, username="same@example.com", password="pass1")
+    User.objects.create_user(
+        username="user1", email="same@example.com", password="pass1"
+    )
+    User.objects.create_user(
+        username="user2", email="same@example.com", password="pass2"
+    )
+    result = backend.authenticate(
+        request=None, username="same@example.com", password="pass1"
+    )
     assert result is None
 
 
