@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from .models import Profile
+from apps.account.models import Profile
 
 
 @pytest.fixture(autouse=True)
