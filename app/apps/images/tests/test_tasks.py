@@ -67,7 +67,7 @@ def test_download_image_pregenerates_thumbnails(user):
 
 
 @pytest.mark.django_db
-def test_download_image_silently_ignores_missing_image(db):
+def test_download_image_silently_ignores_missing_image():
     download_image(9999, "https://example.com/test.jpg")
 
 
