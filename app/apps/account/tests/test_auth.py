@@ -33,7 +33,7 @@ def test_authenticate_nonexistent_email_returns_none(backend):
 
 
 @pytest.mark.django_db
-def test_authenticate_duplicate_email_returns_none(backend, db):
+def test_authenticate_duplicate_email_returns_none(backend):
     User = get_user_model()
     User.objects.create_user(username="user1", email="same@example.com", password="pass1")
     User.objects.create_user(username="user2", email="same@example.com", password="pass2")

@@ -88,7 +88,7 @@ def test_edit_updates_profile(client, user):
     assert user_obj.profile.date_of_birth == date(1990, 1, 1)
 
 
-# ─── user_login POST ──────────────────────────────────────────────────────────
+# ─── login ───────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
