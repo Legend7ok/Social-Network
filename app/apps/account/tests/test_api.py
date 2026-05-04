@@ -1,21 +1,7 @@
 import pytest
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from apps.account.models import Contact
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
-@pytest.fixture
-def auth_client(user):
-    user_obj, _ = user
-    client = APIClient()
-    client.force_authenticate(user=user_obj)
-    return client
 
 
 # ─── UserFollowView ───────────────────────────────────────────────────────────

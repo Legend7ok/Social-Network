@@ -1,13 +1,5 @@
 import pytest
-from django.core.cache import cache
 from django.urls import reverse
-
-
-@pytest.fixture(autouse=True)
-def clear_cache():
-    cache.clear()
-    yield
-    cache.clear()
 
 
 @pytest.mark.django_db

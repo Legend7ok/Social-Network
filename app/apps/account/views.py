@@ -1,48 +1,19 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django_ratelimit.decorators import ratelimit
-from axes.handlers.proxy import AxesProxyHandler
-from axes.helpers import get_lockout_response, get_credentials as axes_get_credentials
 
-from .forms import LoginForm, UserRegistrationForm, UserEditForm, ProfileEditForm
+from .forms import UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
 from .models import Profile
 from apps.actions.utils import create_action
 from apps.actions.models import Action
 
 User = get_user_model()
-
-
-def user_login(request):
-    if request.method == "POST":
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-            credentials = axes_get_credentials(username=cd["username"])
-            if not AxesProxyHandler.is_allowed(request, credentials):
-                return get_lockout_response(request, credentials=credentials)
-            user = authenticate(
-                request, username=cd["username"], password=cd["password"]
-            )
-            if user is not None:
-                if user.is_active:
-                    login(request, user)
-                    messages.success(request, "Authenticated successfully")
-                    return redirect("dashboard")
-                else:
-                    messages.error(request, "Your account has been disabled")
-            else:
-                messages.error(request, "Invalid username or password")
-
-    else:
-        form = LoginForm()
-
-    return render(request, "account/login.html", {"form": form})
 
 
 @login_required
