@@ -3,6 +3,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APIClient
 
 from apps.account.models import Profile
 from apps.images.models import Image
@@ -63,3 +64,16 @@ def image(db, user):
         image=img_file,
         description="A test image",
     )
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def auth_client(user):
+    user_obj, _ = user
+    client = APIClient()
+    client.force_authenticate(user=user_obj)
+    return client
