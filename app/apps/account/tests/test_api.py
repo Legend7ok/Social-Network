@@ -57,11 +57,9 @@ def test_user_follow_invalid_action_returns_400(auth_client, second_user):
 
 
 @pytest.mark.django_db
-def test_user_follow_throttled_after_limit(auth_client, second_user, settings):
-    settings.REST_FRAMEWORK = {
-        **settings.REST_FRAMEWORK,
-        "DEFAULT_THROTTLE_RATES": {"like": "30/min", "follow": "1/min"},
-    }
+def test_user_follow_throttled_after_limit(auth_client, second_user, monkeypatch):
+    from core.throttles import FollowRateThrottle
+    monkeypatch.setattr(FollowRateThrottle, "rate", "1/min", raising=False)
     target, _ = second_user
     url = reverse("user-follow", args=[target.pk])
     auth_client.post(url, {"action": "follow"}, format="json")
