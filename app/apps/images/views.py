@@ -42,7 +42,7 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(Image, id=id, slug=slug)
-    total_views = record_image_view(image.id)
+    total_views = record_image_view(image.id) if image.image else 0
 
     return render(
         request,
