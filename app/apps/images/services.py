@@ -26,4 +26,4 @@ def get_image_views(image_id):
 
 def is_first_view(image_id, viewer_key, ttl=3600):
     key = f"image:{image_id}:view:{viewer_key}"
-    return r.set(key, 1, ex=ttl, nx=True)
+    return bool(r.set(key, 1, ex=ttl, nx=True))
