@@ -55,14 +55,42 @@
         mode: 'same-origin'
     };
 
+    function showMessage(text, id) {
+        if (id && document.getElementById(id)) return;
+        let list = document.querySelector('ul.messages');
+        if (!list) {
+            list = document.createElement('ul');
+            list.className = 'messages';
+            document.getElementById('content').before(list);
+        }
+        const li = document.createElement('li');
+        li.className = 'error';
+        if (id) li.id = id;
+        li.textContent = text;
+        const close = document.createElement('a');
+        close.href = '#';
+        close.className = 'close';
+        close.textContent = 'x';
+        close.addEventListener('click', (e) => { e.preventDefault(); li.remove(); });
+        li.appendChild(close);
+        list.appendChild(li);
+    }
+
     document.querySelector('a.like').addEventListener('click', (e) => {
         e.preventDefault();
         const likeButton = e.currentTarget;
         options['body'] = JSON.stringify({action: likeButton.dataset.action});
 
         fetch(`/api/images/${likeButton.dataset.id}/like/`, options)
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 429) {
+                showMessage('Too many requests. Please slow down.', 'msg-throttle-like');
+                return null;
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
             if (data.status === 'ok') {
                 const previousAction = likeButton.dataset.action;
                 const action = previousAction === 'like' ? 'unlike' : 'like';

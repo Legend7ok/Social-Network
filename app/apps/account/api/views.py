@@ -6,12 +6,15 @@ from rest_framework.response import Response
 
 from apps.account.models import Contact
 from apps.actions.utils import create_action
+from core.throttles import FollowRateThrottle
 from .serializers import FollowSerializer
 
 User = get_user_model()
 
 
 class UserFollowView(APIView):
+    throttle_classes = [FollowRateThrottle]
+
     @extend_schema(request=FollowSerializer, responses={200: None})
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, is_active=True)
