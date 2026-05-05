@@ -9,7 +9,7 @@ from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageCreateForm
 from .models import Image
-from .services import record_image_view, get_image_ranking
+from .services import record_image_view, get_image_ranking, get_image_views, is_first_view
 from .tasks import download_image
 from apps.actions.utils import create_action
 
@@ -42,7 +42,19 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(Image, id=id, slug=slug)
-    total_views = record_image_view(image.id) if image.image else 0
+    if image.image:
+        if request.user.is_authenticated:
+            viewer_key = f"user:{request.user.id}"
+        else:
+            if not request.session.session_key:
+                request.session.create()
+            viewer_key = f"session:{request.session.session_key}"
+        if is_first_view(image.id, viewer_key):
+            total_views = record_image_view(image.id)
+        else:
+            total_views = get_image_views(image.id)
+    else:
+        total_views = 0
 
     return render(
         request,
