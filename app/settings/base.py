@@ -169,7 +169,7 @@ AXES_FAILURE_LIMIT = 3
 AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
-AXES_LOCKOUT_TEMPLATE = "account/lockout.html"
+AXES_LOCKOUT_CALLABLE = "apps.account.views.lockout_view"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
