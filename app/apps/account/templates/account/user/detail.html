@@ -38,14 +38,42 @@
         mode: 'same-origin'
     };
 
+    function showMessage(text, id) {
+        if (id && document.getElementById(id)) return;
+        let list = document.querySelector('ul.messages');
+        if (!list) {
+            list = document.createElement('ul');
+            list.className = 'messages';
+            document.getElementById('content').before(list);
+        }
+        const li = document.createElement('li');
+        li.className = 'error';
+        if (id) li.id = id;
+        li.textContent = text;
+        const close = document.createElement('a');
+        close.href = '#';
+        close.className = 'close';
+        close.textContent = 'x';
+        close.addEventListener('click', (e) => { e.preventDefault(); li.remove(); });
+        li.appendChild(close);
+        list.appendChild(li);
+    }
+
     document.querySelector('a.follow')
         .addEventListener('click', (e) => {
             e.preventDefault();
             const followButton = e.currentTarget;
             options.body = JSON.stringify({action: followButton.dataset.action});
             fetch(`/api/users/${followButton.dataset.id}/follow/`, options)
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 429) {
+                        showMessage('Too many requests. Please slow down.', 'msg-throttle-follow');
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     if (data['status'] === 'ok') {
                         const previousAction = followButton.dataset.action;
                         const action = previousAction === 'follow' ? 'unfollow' : 'follow';
