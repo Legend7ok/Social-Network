@@ -4,6 +4,22 @@
 
 {% block content %}
     <h1>Account Locked</h1>
-    <p>Too many failed login attempts. Your account has been locked for 15 minutes.</p>
+    <p>Too many failed login attempts. Try again in <span id="countdown"></span>.</p>
     <p><a href="{% url 'login' %}">Back to login</a></p>
+{% endblock %}
+
+{% block domready %}
+{{ block.super }}
+    const until = new Date("{{ lockout_until }}");
+    const el = document.getElementById('countdown');
+
+    function update() {
+        const diff = Math.max(0, Math.floor((until - Date.now()) / 1000));
+        const m = Math.floor(diff / 60);
+        const s = diff % 60;
+        el.textContent = m + ':' + String(s).padStart(2, '0');
+        if (diff > 0) setTimeout(update, 1000);
+        else el.textContent = '0:00';
+    }
+    update();
 {% endblock %}

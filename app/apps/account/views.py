@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
 from .forms import UserRegistrationForm, UserEditForm, ProfileEditForm
@@ -14,6 +15,23 @@ from apps.actions.utils import create_action
 from apps.actions.models import Action
 
 User = get_user_model()
+
+
+def lockout_view(request, credentials, *args, **kwargs):
+    stored = request.session.get("lockout_until")
+    if stored:
+        lockout_until = timezone.datetime.fromisoformat(stored)
+        if lockout_until <= timezone.now():
+            stored = None
+    if not stored:
+        lockout_until = timezone.now() + settings.AXES_COOLOFF_TIME
+        request.session["lockout_until"] = lockout_until.isoformat()
+    return render(
+        request,
+        "account/lockout.html",
+        {"lockout_until": lockout_until.isoformat()},
+        status=429,
+    )
 
 
 @login_required
