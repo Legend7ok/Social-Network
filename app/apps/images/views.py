@@ -9,7 +9,12 @@ from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageCreateForm
 from .models import Image
-from .services import record_image_view, get_image_ranking, get_image_views, is_first_view
+from .services import (
+    record_image_view,
+    get_image_ranking,
+    get_image_views,
+    is_first_view,
+)
 from .tasks import download_image
 from apps.actions.utils import create_action
 

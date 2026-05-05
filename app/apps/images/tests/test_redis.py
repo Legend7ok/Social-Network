@@ -3,7 +3,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.images.models import Image
-from apps.images.services import get_image_ranking, get_image_views, is_first_view, record_image_view
+from apps.images.services import (
+    get_image_ranking,
+    get_image_views,
+    is_first_view,
+    record_image_view,
+)
 from conftest import MINIMAL_PNG
 
 

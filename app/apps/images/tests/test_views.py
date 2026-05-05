@@ -221,7 +221,9 @@ def test_image_detail_second_view_does_not_increment(client, user, image):
 
 
 @pytest.mark.django_db
-def test_image_detail_different_users_count_separately(client, user, second_user, image):
+def test_image_detail_different_users_count_separately(
+    client, user, second_user, image
+):
     user1, password1 = user
     user2, password2 = second_user
     url = reverse("images:detail", args=[image.id, image.slug])
