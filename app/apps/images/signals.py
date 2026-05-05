@@ -9,4 +9,4 @@ def users_like_changed(sender, instance, action, **kwargs):
     if action == "post_add":
         Image.objects.filter(pk=instance.pk).update(total_likes=F("total_likes") + 1)
     elif action == "post_remove":
-        Image.objects.filter(pk=instance.pk).update(total_likes=F("total_likes") - 1)
+        Image.objects.filter(pk=instance.pk, total_likes__gt=0).update(total_likes=F("total_likes") - 1)
