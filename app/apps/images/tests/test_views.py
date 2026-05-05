@@ -187,6 +187,29 @@ def test_image_detail_returns_404_for_unknown_id(client):
     assert response.status_code == 404
 
 
+@pytest.mark.django_db
+def test_image_detail_does_not_count_view_when_image_empty(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj,
+        title="Pending Image",
+        url="https://example.com/pending.jpg",
+    )
+    with patch("apps.images.views.record_image_view") as mock_record:
+        response = client.get(reverse("images:detail", args=[pending.id, pending.slug]))
+    assert response.status_code == 200
+    mock_record.assert_not_called()
+    assert response.context["total_views"] == 0
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_view_when_image_present(client, image):
+    with patch("apps.images.views.record_image_view", return_value=1) as mock_record:
+        response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.status_code == 200
+    mock_record.assert_called_once_with(image.id)
+
+
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
 
