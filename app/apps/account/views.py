@@ -18,7 +18,14 @@ User = get_user_model()
 
 
 def lockout_view(request, credentials, *args, **kwargs):
-    lockout_until = timezone.now() + settings.AXES_COOLOFF_TIME
+    stored = request.session.get("lockout_until")
+    if stored:
+        lockout_until = timezone.datetime.fromisoformat(stored)
+        if lockout_until <= timezone.now():
+            stored = None
+    if not stored:
+        lockout_until = timezone.now() + settings.AXES_COOLOFF_TIME
+        request.session["lockout_until"] = lockout_until.isoformat()
     return render(
         request,
         "account/lockout.html",
