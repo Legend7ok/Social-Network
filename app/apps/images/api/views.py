@@ -5,10 +5,13 @@ from rest_framework.response import Response
 
 from apps.images.models import Image
 from apps.actions.utils import create_action
+from core.throttles import LikeRateThrottle
 from .serializers import LikeSerializer
 
 
 class ImageLikeView(APIView):
+    throttle_classes = [LikeRateThrottle]
+
     @extend_schema(request=LikeSerializer, responses={200: None})
     def post(self, request, pk):
         image = get_object_or_404(Image, pk=pk)
