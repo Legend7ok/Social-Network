@@ -54,3 +54,16 @@ def test_user_follow_invalid_action_returns_400(auth_client, second_user):
     url = reverse("user-follow", args=[target.pk])
     response = auth_client.post(url, {"action": "invalid"}, format="json")
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_user_follow_throttled_after_limit(auth_client, second_user, settings):
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_RATES": {"like": "30/min", "follow": "1/min"},
+    }
+    target, _ = second_user
+    url = reverse("user-follow", args=[target.pk])
+    auth_client.post(url, {"action": "follow"}, format="json")
+    response = auth_client.post(url, {"action": "follow"}, format="json")
+    assert response.status_code == 429

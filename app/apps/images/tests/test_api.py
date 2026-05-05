@@ -44,3 +44,15 @@ def test_image_like_invalid_action_returns_400(auth_client, image):
     url = reverse("image-like", args=[image.pk])
     response = auth_client.post(url, {"action": "invalid"}, format="json")
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_image_like_throttled_after_limit(auth_client, image, settings):
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_RATES": {"like": "1/min", "follow": "20/min"},
+    }
+    url = reverse("image-like", args=[image.pk])
+    auth_client.post(url, {"action": "like"}, format="json")
+    response = auth_client.post(url, {"action": "like"}, format="json")
+    assert response.status_code == 429
