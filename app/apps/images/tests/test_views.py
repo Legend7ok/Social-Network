@@ -210,6 +210,31 @@ def test_image_detail_counts_view_when_image_present(client, image):
     mock_record.assert_called_once_with(image.id)
 
 
+@pytest.mark.django_db
+def test_image_detail_second_view_does_not_increment(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    url = reverse("images:detail", args=[image.id, image.slug])
+    client.get(url)
+    response = client.get(url)
+    assert response.context["total_views"] == 1
+
+
+@pytest.mark.django_db
+def test_image_detail_different_users_count_separately(
+    client, user, second_user, image
+):
+    user1, password1 = user
+    user2, password2 = second_user
+    url = reverse("images:detail", args=[image.id, image.slug])
+    client.login(username=user1.username, password=password1)
+    client.get(url)
+    client.logout()
+    client.login(username=user2.username, password=password2)
+    response = client.get(url)
+    assert response.context["total_views"] == 2
+
+
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
 

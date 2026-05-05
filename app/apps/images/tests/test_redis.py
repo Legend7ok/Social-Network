@@ -3,7 +3,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.images.models import Image
-from apps.images.services import get_image_ranking, record_image_view
+from apps.images.services import (
+    get_image_ranking,
+    get_image_views,
+    is_first_view,
+    record_image_view,
+)
 from conftest import MINIMAL_PNG
 
 
@@ -35,6 +40,41 @@ def test_record_image_view_increments_ranking_score(fake_redis):
     record_image_view(10)
     record_image_view(10)
     assert fake_redis.zscore("image_ranking", 10) == 3.0
+
+
+# ─── get_image_views ─────────────────────────────────────────────────────────
+
+
+def test_get_image_views_returns_zero_for_new_image():
+    assert get_image_views(99) == 0
+
+
+def test_get_image_views_returns_current_count():
+    record_image_view(5)
+    record_image_view(5)
+    assert get_image_views(5) == 2
+
+
+# ─── is_first_view ────────────────────────────────────────────────────────────
+
+
+def test_is_first_view_returns_true_on_first_call():
+    assert is_first_view(1, "user:42") is True
+
+
+def test_is_first_view_returns_false_on_repeat():
+    is_first_view(1, "user:42")
+    assert is_first_view(1, "user:42") is False
+
+
+def test_is_first_view_different_viewers_are_independent():
+    assert is_first_view(1, "user:1") is True
+    assert is_first_view(1, "user:2") is True
+
+
+def test_is_first_view_different_images_are_independent():
+    assert is_first_view(1, "user:1") is True
+    assert is_first_view(2, "user:1") is True
 
 
 # ─── get_image_ranking ───────────────────────────────────────────────────────
