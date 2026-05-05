@@ -30,7 +30,7 @@ def lockout_view(request, credentials, *args, **kwargs):
         request,
         "account/lockout.html",
         {"lockout_until": lockout_until.isoformat()},
-        status=403,
+        status=429,
     )
 
 
