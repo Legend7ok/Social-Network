@@ -49,6 +49,7 @@ def test_image_like_invalid_action_returns_400(auth_client, image):
 @pytest.mark.django_db
 def test_image_like_throttled_after_limit(auth_client, image, monkeypatch):
     from core.throttles import LikeRateThrottle
+
     monkeypatch.setattr(LikeRateThrottle, "rate", "1/min", raising=False)
     url = reverse("image-like", args=[image.pk])
     auth_client.post(url, {"action": "like"}, format="json")
