@@ -3,9 +3,11 @@
 <html>
 <head>
     <title>{% block title %}{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link href="{% static "css/base.css" %}" rel="stylesheet">
+    <link href="{% static "css/dist/styles.css" %}" rel="stylesheet">
 </head>
-<body>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div id="header">
         <span class="logo">Social-Network</span>
         {% if request.user.is_authenticated %}
@@ -50,11 +52,14 @@
         {% endblock %}
     </div>
 
-    <script src="//cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+    <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
     <script>
-        const csrftoken = Cookies.get('csrftoken');
-        document.addEventListener('DOMContentLoaded', (event) => {
-            // DOM loaded
+        const csrftoken = document.querySelector('meta[name="csrf-token"]').content;
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('csrf', csrftoken);
+        });
+        document.addEventListener('DOMContentLoaded', () => {
             {% block domready %}
             document.querySelectorAll('.messages .close').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -63,7 +68,7 @@
                 });
             });
             {% endblock %}
-        })
+        });
     </script>
 
 </body>
