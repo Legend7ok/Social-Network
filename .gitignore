@@ -27,3 +27,7 @@ celerybeat-schedule-wal
 # IDE
 .idea/
 .vscode/
+
+# Node
+node_modules/
+app/static/css/dist/
