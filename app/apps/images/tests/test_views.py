@@ -182,6 +182,23 @@ def test_image_detail_returns_200_with_image_context(client, image):
 
 
 @pytest.mark.django_db
+def test_image_detail_renders_liked_false_when_not_liked(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert b"liked: false" in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_renders_liked_true_when_liked(client, user, image):
+    user_obj, password = user
+    image.users_like.add(user_obj)
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert b"liked: true" in response.content
+
+
+@pytest.mark.django_db
 def test_image_detail_returns_404_for_unknown_id(client):
     response = client.get(reverse("images:detail", args=[9999, "no-such-slug"]))
     assert response.status_code == 404
@@ -300,3 +317,44 @@ def test_image_list_second_page_contains_remaining_images(client, user):
     response = client.get(reverse("images:list"), {"page": "2"})
     assert response.status_code == 200
     assert len(response.context["images"]) == 2  # 10 images, 8 per page → page 2 has 2
+
+
+# ─── View Tests: HTMX infinite scroll sentinel ───────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_list_partial_has_sentinel_when_has_next(client, user):
+    user_obj, password = user
+    for i in range(9):
+        img_file = SimpleUploadedFile(
+            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
+        )
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {i}",
+            url=f"https://example.com/img{i}.png",
+            image=img_file,
+        )
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"), {"images_only": "1", "page": "1"})
+    assert response.status_code == 200
+    assert b'hx-get="?images_only=1&amp;page=2"' in response.content
+
+
+@pytest.mark.django_db
+def test_image_list_partial_no_sentinel_on_last_page(client, user):
+    user_obj, password = user
+    for i in range(9):
+        img_file = SimpleUploadedFile(
+            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
+        )
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {i}",
+            url=f"https://example.com/img{i}.png",
+            image=img_file,
+        )
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:list"), {"images_only": "1", "page": "2"})
+    assert response.status_code == 200
+    assert b"hx-get" not in response.content
