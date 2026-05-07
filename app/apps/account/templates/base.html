@@ -7,7 +7,7 @@
     <link href="{% static "css/base.css" %}" rel="stylesheet">
     <link href="{% static "css/dist/styles.css" %}" rel="stylesheet">
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body x-data hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' @show-message.window="$store.messages.push(event.detail.value)">
     <div id="header">
         <span class="logo">Social-Network</span>
         {% if request.user.is_authenticated %}
@@ -39,13 +39,30 @@
     {% if messages %}
         <ul class="messages">
             {% for message in messages %}
-                <li class="{{ message.tags }}">
+                <li x-data="{ show: true }"
+                    x-show="show"
+                    x-transition
+                    x-init="setTimeout(() => show = false, 4000)"
+                    class="{{ message.tags }}">
                     {{ message|safe }}
-                    <a href="#" class="close">x</a>
+                    <a href="#" class="close" @click.prevent="show = false">x</a>
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
+
+    <ul class="messages">
+        <template x-for="(msg, i) in $store.messages" :key="i">
+            <li x-data="{ show: true }"
+                x-show="show"
+                x-transition
+                x-init="setTimeout(() => show = false, 4000)"
+                class="error">
+                <span x-text="msg"></span>
+                <a href="#" class="close" @click.prevent="show = false">x</a>
+            </li>
+        </template>
+    </ul>
 
     <div id="content">
         {% block content %}
@@ -58,18 +75,10 @@
         const csrftoken = document.querySelector('meta[name="csrf-token"]').content;
         document.addEventListener('alpine:init', () => {
             Alpine.store('csrf', csrftoken);
-        });
-        document.addEventListener('DOMContentLoaded', () => {
-            {% block domready %}
-            document.querySelectorAll('.messages .close').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    btn.closest('li').remove();
-                });
-            });
-            {% endblock %}
+            Alpine.store('messages', []);
         });
     </script>
+    {% block scripts %}{% endblock %}
 
 </body>
 </html>
