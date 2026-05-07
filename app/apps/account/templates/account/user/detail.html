@@ -12,79 +12,36 @@
         {% endthumbnail %}
     </div>
     {% with total_followers=user.profile.followers.count %}
-        <span class="count">
-            <span class="total">{{ total_followers }}</span>
-            follower{{ total_followers|pluralize }}
-        </span>
-        <a href="#" data-id="{{ user.id }}" data-action="{% if request.user.profile in user.profile.followers.all %}un{% endif %}follow" class="follow button">
-            {% if request.user.profile not in user.profile.followers.all %}
-                Follow
-            {% else %}
-                Unfollow
-            {% endif %}
-        </a>
+        <div x-data="{
+            following: {% if request.user.profile in user.profile.followers.all %}true{% else %}false{% endif %},
+            count: {{ total_followers }},
+            async toggle() {
+                const res = await fetch('{% url 'user-follow' user.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': Alpine.store('csrf'),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
+                });
+                if (res.status === 429) {
+                    Alpine.store('messages').push('Too many requests. Please slow down.');
+                    return;
+                }
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    this.following = !this.following;
+                    this.count += this.following ? 1 : -1;
+                }
+            },
+        }">
+            <span class="count">
+                <span x-text="count + (count === 1 ? ' follower' : ' followers')"></span>
+            </span>
+            <a href="#" class="follow button" @click.prevent="toggle()" x-text="following ? 'Unfollow' : 'Follow'"></a>
+        </div>
         <div id="image-list" class="image-container">
             {% include "images/image/list_images.html" with images=user.images_created.all %}
         </div>
     {% endwith %}
-{% endblock %}
-
-
-{% block domready %}
-{{ block.super }}
-    const options = {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
-        mode: 'same-origin'
-    };
-
-    function showMessage(text, id) {
-        if (id && document.getElementById(id)) return;
-        let list = document.querySelector('ul.messages');
-        if (!list) {
-            list = document.createElement('ul');
-            list.className = 'messages';
-            document.getElementById('content').before(list);
-        }
-        const li = document.createElement('li');
-        li.className = 'error';
-        if (id) li.id = id;
-        li.textContent = text;
-        const close = document.createElement('a');
-        close.href = '#';
-        close.className = 'close';
-        close.textContent = 'x';
-        close.addEventListener('click', (e) => { e.preventDefault(); li.remove(); });
-        li.appendChild(close);
-        list.appendChild(li);
-    }
-
-    document.querySelector('a.follow')
-        .addEventListener('click', (e) => {
-            e.preventDefault();
-            const followButton = e.currentTarget;
-            options.body = JSON.stringify({action: followButton.dataset.action});
-            fetch(`/api/users/${followButton.dataset.id}/follow/`, options)
-                .then(response => {
-                    if (response.status === 429) {
-                        showMessage('Too many requests. Please slow down.', 'msg-throttle-follow');
-                        return null;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!data) return;
-                    if (data['status'] === 'ok') {
-                        const previousAction = followButton.dataset.action;
-                        const action = previousAction === 'follow' ? 'unfollow' : 'follow';
-                        followButton.dataset.action = action;
-                        followButton.textContent = action;
-                        const followerCount = document.querySelector('span.count .total');
-                        const totalFollowers = parseInt(followerCount.textContent, 10);
-                        followerCount.textContent = previousAction === 'follow'
-                            ? totalFollowers + 1
-                            : totalFollowers - 1;
-                    }
-                });
-        });
 {% endblock %}
