@@ -72,9 +72,8 @@
     <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
     <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
     <script>
-        const csrftoken = document.querySelector('meta[name="csrf-token"]').content;
         document.addEventListener('alpine:init', () => {
-            Alpine.store('csrf', csrftoken);
+            Alpine.store('csrf', document.querySelector('meta[name="csrf-token"]').content);
             Alpine.store('messages', []);
         });
     </script>
