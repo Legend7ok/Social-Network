@@ -14,21 +14,34 @@
     {% endif %}
     {% with total_likes=image.users_like.count users_like=image.users_like.all %}
         <div class="image-info">
-            <div>
-                <span class="count">
-                    <span class="total">{{ total_likes }}</span>
-                    like{{ total_likes|pluralize }}
-                </span>
+            <div x-data="{
+                liked: {% if request.user in users_like %}true{% else %}false{% endif %},
+                count: {{ total_likes }},
+                async toggle() {
+                    const res = await fetch('{% url 'image-like' image.id %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': Alpine.store('csrf'),
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
+                    });
+                    if (res.status === 429) {
+                        Alpine.store('messages').push('Too many requests. Please slow down.');
+                        return;
+                    }
+                    const data = await res.json();
+                    if (data.status === 'ok') {
+                        this.liked = !this.liked;
+                        this.count += this.liked ? 1 : -1;
+                    }
+                },
+            }">
+                <span class="count" x-text="count + (count === 1 ? ' like' : ' likes')"></span>
                 <span class="count">
                     {{ total_views }} view{{ total_views|pluralize }}
                 </span>
-                <a href="#" data-id="{{ image.id }}" data-action="{% if request.user in users_like %}un{% endif %}like" class="like button">
-                    {% if request.user not in users_like %}
-                        Like
-                    {% else %}
-                        Unlike
-                    {% endif %}
-                </a>
+                <a href="#" class="like button" @click.prevent="toggle()" x-text="liked ? 'Unlike' : 'Like'"></a>
             </div>
             {{ image.description|linebreaks }}
         </div>
@@ -45,62 +58,4 @@
             {% endfor %}
         </div>
     {% endwith %}
-{% endblock %}
-
-{% block domready %}
-{{ block.super }}
-    const options = {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
-        mode: 'same-origin'
-    };
-
-    function showMessage(text, id) {
-        if (id && document.getElementById(id)) return;
-        let list = document.querySelector('ul.messages');
-        if (!list) {
-            list = document.createElement('ul');
-            list.className = 'messages';
-            document.getElementById('content').before(list);
-        }
-        const li = document.createElement('li');
-        li.className = 'error';
-        if (id) li.id = id;
-        li.textContent = text;
-        const close = document.createElement('a');
-        close.href = '#';
-        close.className = 'close';
-        close.textContent = 'x';
-        close.addEventListener('click', (e) => { e.preventDefault(); li.remove(); });
-        li.appendChild(close);
-        list.appendChild(li);
-    }
-
-    document.querySelector('a.like').addEventListener('click', (e) => {
-        e.preventDefault();
-        const likeButton = e.currentTarget;
-        options['body'] = JSON.stringify({action: likeButton.dataset.action});
-
-        fetch(`/api/images/${likeButton.dataset.id}/like/`, options)
-        .then(response => {
-            if (response.status === 429) {
-                showMessage('Too many requests. Please slow down.', 'msg-throttle-like');
-                return null;
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (!data) return;
-            if (data.status === 'ok') {
-                const previousAction = likeButton.dataset.action;
-                const action = previousAction === 'like' ? 'unlike' : 'like';
-                likeButton.dataset.action = action;
-                likeButton.innerHTML = action;
-                const likeCount = document.querySelector('span.count .total');
-                const totalLikes = parseInt(likeCount.textContent);
-                likeCount.textContent = previousAction === 'like' ? totalLikes + 1 : totalLikes - 1;
-            }
-        });
-    });
-
 {% endblock %}
