@@ -18,3 +18,9 @@
         </div>
     </div>
 {% endfor %}
+{% if images.has_next %}
+<div hx-get="?images_only=1&page={{ images.next_page_number }}"
+     hx-trigger="revealed"
+     hx-target="#image-list"
+     hx-swap="beforeend"></div>
+{% endif %}
