@@ -203,7 +203,9 @@ def test_user_detail_returns_404_for_unknown_user(client, user):
 
 
 @pytest.mark.django_db
-def test_user_detail_renders_following_false_when_not_following(client, user, second_user):
+def test_user_detail_renders_following_false_when_not_following(
+    client, user, second_user
+):
     user_obj, password = user
     target, _ = second_user
     client.login(username=user_obj.username, password=password)
@@ -214,6 +216,7 @@ def test_user_detail_renders_following_false_when_not_following(client, user, se
 @pytest.mark.django_db
 def test_user_detail_renders_following_true_when_following(client, user, second_user):
     from apps.account.models import Contact
+
     user_obj, password = user
     target, _ = second_user
     Contact.objects.create(user_from=user_obj.profile, user_to=target.profile)
