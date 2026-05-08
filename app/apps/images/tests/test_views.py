@@ -252,6 +252,35 @@ def test_image_detail_different_users_count_separately(
     assert response.context["total_views"] == 2
 
 
+# ─── View Tests: image_status ────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_status_returns_200(client, image):
+    response = client.get(reverse("images:status", args=[image.id]))
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_image_status_ready_renders_img_without_polling(client, image):
+    response = client.get(reverse("images:status", args=[image.id]))
+    assert b"<img" in response.content
+    assert b"hx-trigger" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_status_pending_renders_skeleton_with_polling(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj,
+        title="Pending Image",
+        url="https://example.com/pending.jpg",
+    )
+    response = client.get(reverse("images:status", args=[pending.id]))
+    assert b"hx-trigger" in response.content
+    assert b"<img" not in response.content
+
+
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
 

@@ -13,4 +13,5 @@ urlpatterns = [
     path("detail/<int:id>/<slug:slug>/", views.image_detail, name="detail"),
     path("", views.image_list, name="list"),
     path("ranking/", views.image_ranking, name="ranking"),
+    path("status/<int:id>/", views.image_status, name="status"),
 ]
