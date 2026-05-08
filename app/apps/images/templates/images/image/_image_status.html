@@ -1,0 +1,14 @@
+{% load thumbnail %}
+{% if image.image %}
+<a href="{{ image.image.url }}">
+    {% thumbnail image.image "300" as im %}
+    <img src="{{ im.url }}" class="image-detail">
+    {% endthumbnail %}
+</a>
+{% else %}
+<div hx-get="{% url 'images:status' image.id %}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+    <div class="image-detail animate-pulse bg-gray-200 rounded"></div>
+</div>
+{% endif %}
