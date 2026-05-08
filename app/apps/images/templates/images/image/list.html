@@ -4,6 +4,7 @@
 
 {% block content %}
   <h1>Images bookmarked</h1>
+  <a href="{% url 'images:upload' %}" class="button">Upload image</a>
   <div id="image-list">
     {% include "images/image/list_images.html" %}
   </div>

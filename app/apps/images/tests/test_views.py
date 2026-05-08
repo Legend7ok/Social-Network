@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.images.forms import ImageCreateForm
+from apps.images.forms import ImageBookmarkForm, ImageUploadForm
 from apps.images.models import Image
 from conftest import MINIMAL_PNG
 
@@ -81,13 +81,13 @@ def test_image_users_like_add_and_remove(image, second_user):
     ],
 )
 def test_clean_url_accepts_valid_extensions(url):
-    form = ImageCreateForm(data={"title": "Test", "url": url, "description": ""})
+    form = ImageBookmarkForm(data={"title": "Test", "url": url, "description": ""})
     form.is_valid()
     assert "url" not in form.errors
 
 
 def test_clean_url_rejects_invalid_extension():
-    form = ImageCreateForm(
+    form = ImageBookmarkForm(
         data={
             "title": "Test",
             "url": "https://example.com/photo.gif",
@@ -250,6 +250,52 @@ def test_image_detail_different_users_count_separately(
     client.login(username=user2.username, password=password2)
     response = client.get(url)
     assert response.context["total_views"] == 2
+
+
+# ─── View Tests: image_upload ────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_upload_redirects_anonymous_user(client):
+    response = client.get(reverse("images:upload"))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_upload_get_shows_form(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:upload"))
+    assert response.status_code == 200
+    assert isinstance(response.context["form"], ImageUploadForm)
+
+
+@pytest.mark.django_db
+def test_image_upload_post_valid_creates_image_and_redirects(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
+    with patch("PIL.Image.open"):
+        response = client.post(
+            reverse("images:upload"),
+            {"title": "Uploaded Image", "description": "test", "image": img_file},
+        )
+    assert response.status_code == 302
+    assert Image.objects.filter(title="Uploaded Image", user=user_obj).exists()
+
+
+@pytest.mark.django_db
+def test_image_upload_post_invalid_extension_shows_errors(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    gif_file = SimpleUploadedFile("anim.gif", b"GIF89a", content_type="image/gif")
+    response = client.post(
+        reverse("images:upload"),
+        {"title": "Bad Upload", "description": "", "image": gif_file},
+    )
+    assert response.status_code == 200
+    assert response.context["form"].errors
 
 
 # ─── View Tests: image_status ────────────────────────────────────────────────
