@@ -98,6 +98,11 @@ def image_list(request):
     )
 
 
+def image_status(request, id):
+    image = get_object_or_404(Image, id=id)
+    return render(request, "images/image/_image_status.html", {"image": image})
+
+
 @login_required()
 def image_ranking(request):
     most_viewed = cache.get(settings.IMAGE_RANKING_CACHE_KEY)
