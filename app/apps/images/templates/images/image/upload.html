@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Upload an image</h1>
 
-<form method="post" enctype="multipart/form-data"
+<form method="post" enctype="multipart/form-data" @submit="submitting = true"
       x-data="{
           preview: null,
           dragging: false,
@@ -58,7 +58,7 @@
         {{ form.description.errors }}
     </p>
 
-    <button type="submit" class="button" @click="submitting = true" :disabled="submitting"
+    <button type="submit" class="button" :disabled="submitting"
             x-text="submitting ? 'Uploading...' : 'Upload image'"></button>
 </form>
 {% endblock %}
