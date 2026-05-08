@@ -9,6 +9,8 @@
 <div hx-get="{% url 'images:status' image.id %}"
      hx-trigger="every 2s"
      hx-swap="outerHTML">
-    <div class="image-detail animate-pulse bg-gray-200 rounded"></div>
+    <div class="flex items-center justify-center bg-gray-100 rounded border border-gray-200" style="width:300px;height:300px;margin:20px 20px 20px 0;">
+        <div role="status" class="w-10 h-10 rounded-full border-4 border-gray-200 border-t-gray-500 animate-spin"></div>
+    </div>
 </div>
 {% endif %}
