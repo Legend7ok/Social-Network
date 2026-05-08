@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.images.forms import ImageCreateForm, ImageUploadForm
+from apps.images.forms import ImageBookmarkForm, ImageUploadForm
 from apps.images.models import Image
 from conftest import MINIMAL_PNG
 
@@ -81,13 +81,13 @@ def test_image_users_like_add_and_remove(image, second_user):
     ],
 )
 def test_clean_url_accepts_valid_extensions(url):
-    form = ImageCreateForm(data={"title": "Test", "url": url, "description": ""})
+    form = ImageBookmarkForm(data={"title": "Test", "url": url, "description": ""})
     form.is_valid()
     assert "url" not in form.errors
 
 
 def test_clean_url_rejects_invalid_extension():
-    form = ImageCreateForm(
+    form = ImageBookmarkForm(
         data={
             "title": "Test",
             "url": "https://example.com/photo.gif",
@@ -275,11 +275,12 @@ def test_image_upload_get_shows_form(client, user):
 def test_image_upload_post_valid_creates_image_and_redirects(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    img_file = SimpleUploadedFile("photo.jpg", MINIMAL_PNG, content_type="image/jpeg")
-    response = client.post(
-        reverse("images:upload"),
-        {"title": "Uploaded Image", "description": "test", "image": img_file},
-    )
+    img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
+    with patch("PIL.Image.open"):
+        response = client.post(
+            reverse("images:upload"),
+            {"title": "Uploaded Image", "description": "test", "image": img_file},
+        )
     assert response.status_code == 302
     assert Image.objects.filter(title="Uploaded Image", user=user_obj).exists()
 
