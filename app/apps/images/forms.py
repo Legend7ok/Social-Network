@@ -4,6 +4,8 @@ import os
 
 from .models import Image
 
+VALID_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
+
 
 class ImageCreateForm(forms.ModelForm):
     class Meta:
@@ -15,16 +17,30 @@ class ImageCreateForm(forms.ModelForm):
 
     def clean_url(self):
         url = self.cleaned_data["url"]
-        valid_extensions = ["jpg", "jpeg", "png", "webp"]
         path = urlparse(url).path
         extension = os.path.splitext(path)[1].lstrip(".").lower()
 
         if not extension:
             raise forms.ValidationError("URL must have a file extension")
 
-        if extension not in valid_extensions:
+        if extension not in VALID_EXTENSIONS:
             raise forms.ValidationError(
-                "URL must end with one of {}".format(valid_extensions)
+                "URL must end with one of {}".format(VALID_EXTENSIONS)
             )
 
         return url
+
+
+class ImageUploadForm(forms.ModelForm):
+    class Meta:
+        model = Image
+        fields = ["title", "description", "image"]
+
+    def clean_image(self):
+        image = self.cleaned_data["image"]
+        ext = os.path.splitext(image.name)[1].lstrip(".").lower()
+        if ext not in VALID_EXTENSIONS:
+            raise forms.ValidationError(
+                "File must be one of {}".format(VALID_EXTENSIONS)
+            )
+        return image
