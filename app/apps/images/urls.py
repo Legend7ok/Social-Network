@@ -10,7 +10,7 @@ urlpatterns = [
         views.bookmarklet_launcher,
         name="bookmarklet_launcher",
     ),
-    path("detail/<int:id>/<slug:slug>/", views.image_detail, name="detail"),
+    path("detail/<int:id>/<str:slug>/", views.image_detail, name="detail"),
     path("", views.image_list, name="list"),
     path("ranking/", views.image_ranking, name="ranking"),
     path("status/<int:id>/", views.image_status, name="status"),
