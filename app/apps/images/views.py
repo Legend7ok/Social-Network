@@ -7,7 +7,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.cache import cache
 from django_ratelimit.decorators import ratelimit
 
-from .forms import ImageCreateForm, ImageUploadForm
+from .forms import ImageBookmarkForm, ImageUploadForm
 from .models import Image
 from .services import (
     record_image_view,
@@ -28,7 +28,7 @@ def bookmarklet_launcher(request):
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 def image_create(request):
     if request.method == "POST":
-        form = ImageCreateForm(request.POST)
+        form = ImageBookmarkForm(request.POST)
         if form.is_valid():
             new_image = form.save(commit=False)
             new_image.user = request.user
@@ -38,7 +38,7 @@ def image_create(request):
             messages.success(request, "Image added successfully")
             return redirect(new_image.get_absolute_url())
     else:
-        form = ImageCreateForm(data=request.GET)
+        form = ImageBookmarkForm(data=request.GET)
 
     return render(
         request, "images/image/create.html", {"section": "images", "form": form}

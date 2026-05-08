@@ -7,7 +7,7 @@ from .models import Image
 VALID_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 
 
-class ImageCreateForm(forms.ModelForm):
+class ImageBookmarkForm(forms.ModelForm):
     class Meta:
         model = Image
         fields = ["title", "url", "description"]
