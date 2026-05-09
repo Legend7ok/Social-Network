@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+@theme {
+  --color-brand: #7C3AED;
+  --color-brand-light: #A78BFA;
+  --color-surface-page: #0F0E13;
+  --color-surface-card: #1C1B20;
+  --color-surface-input: #26242D;
+}
