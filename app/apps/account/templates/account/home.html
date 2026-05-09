@@ -170,15 +170,15 @@
 
 
 {% block sidebar_right %}
-<aside class="w-[210px] shrink-0 border-l border-white/[0.08] px-3.5 py-4 overflow-y-auto">
+<aside class="w-[280px] shrink-0 border-l border-white/[0.08] px-3.5 py-4 overflow-y-auto">
 
   <!-- Following -->
-  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2.5">Following</p>
+  <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-2.5">Following</p>
   <div class="flex flex-col gap-2.5">
     {% for u in following_users %}
     <a href="{% url 'user_detail' u.username %}"
        class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-      <div class="w-[30px] h-[30px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
+      <div class="w-[36px] h-[36px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
         {% if u.profile.photo %}
           {% thumbnail u.profile.photo "60x60" crop="center" as im %}
           <img src="{{ im.url }}" class="w-full h-full object-cover">
