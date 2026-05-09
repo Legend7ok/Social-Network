@@ -115,7 +115,7 @@
             <div class="bg-surface-input rounded-xl px-3.5 py-2.5 flex-1">
               <p class="text-[13px] font-medium text-white">{{ target.get_full_name }}</p>
               <p class="text-[12px] text-[#9896A4] mt-0.5">
-                {{ target.images_created.count }} images · {{ target.profile.followers.count }} followers
+                {{ target.images.count }} images · {{ target.profile.followers.count }} followers
               </p>
               <button @click.prevent="toggle()"
                       :class="following ? 'bg-brand/15 text-brand-light border border-brand/30' : 'bg-brand text-white'"
@@ -189,7 +189,7 @@
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-[13px] text-white truncate">{{ u.get_full_name }}</p>
-        <p class="text-[11px] text-[#5E5C6A]">{{ u.images_created.count }} images</p>
+        <p class="text-[11px] text-[#5E5C6A]">{{ u.images.count }} images</p>
       </div>
     </a>
     {% empty %}
