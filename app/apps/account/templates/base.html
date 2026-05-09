@@ -1,83 +1,244 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{% block title %}{% endblock %}</title>
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <link href="{% static "css/base.css" %}" rel="stylesheet">
-    <link href="{% static "css/dist/styles.css" %}" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}socnet{% endblock %}</title>
+  <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    [x-cloak] { display: none; }
+    html, body { height: 100%; overflow: hidden; }
+  </style>
+  {% block extra_head %}{% endblock %}
 </head>
-<body x-data hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' @show-message.window="$store.messages.push(event.detail.value)">
-    <div id="header">
-        <span class="logo">Social-Network</span>
-        {% if request.user.is_authenticated %}
-            <ul class="menu">
-                <li {% if section == "dashboard" %}class="selected"{% endif %}>
-                    <a href="{% url 'dashboard' %}">My dashboard</a>
-                </li>
-                <li {% if section == "images" %}class="selected"{% endif %}>
-                    <a href="{% url 'images:list' %}">Images</a>
-                </li>
-                <li {% if section == "people" %}class="selected"{% endif %}>
-                    <a href="{% url 'user_list' %}">People</a>
-                </li>
-            </ul>
-        {% endif %}
-        <span class="user">
-            {% if request.user.is_authenticated %}
-                Hello {{ request.user.first_name|default:request.user.username }},
-                <form method="post" action="{% url 'logout' %}" class="logout-form">
-                    {% csrf_token %}
-                    <button type="submit" class="link-button">Logout</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}">Log-in</a>
-            {% endif %}
-        </span>
+
+<body
+  class="bg-surface-page text-white h-screen flex flex-col overflow-hidden"
+  x-data
+  hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+  @show-message.window="$store.messages.push(event.detail.value)"
+>
+
+  <!-- Flash messages (Django) -->
+  {% if messages %}
+    <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4">
+      {% for message in messages %}
+        <div
+          x-data="{ show: true }"
+          x-init="setTimeout(() => show = false, 4000)"
+          x-show="show"
+          x-transition
+          class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm border
+            {% if message.tags == 'success' %}bg-green-900/60 border-green-700/40 text-green-300
+            {% elif message.tags == 'error' %}bg-red-900/60 border-red-700/40 text-red-300
+            {% elif message.tags == 'warning' %}bg-orange-900/60 border-orange-700/40 text-orange-300
+            {% else %}bg-yellow-900/60 border-yellow-700/40 text-yellow-300{% endif %}"
+        >
+          <span>{{ message }}</span>
+          <button @click="show = false" class="shrink-0 opacity-60 hover:opacity-100">
+            <i class="ti ti-x text-base"></i>
+          </button>
+        </div>
+      {% endfor %}
     </div>
+  {% endif %}
 
-    {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-                <li x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 4000)"
-                    class="{{ message.tags }}">
-                    {{ message|safe }}
-                    <a href="#" class="close" @click.prevent="show = false">x</a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+  <!-- Flash messages (Alpine $store) -->
+  <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
+    <template x-for="(msg, i) in $store.messages" :key="i">
+      <div
+        x-data="{ show: true }"
+        x-init="setTimeout(() => show = false, 4000)"
+        x-show="show"
+        x-transition
+        class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm border bg-red-900/60 border-red-700/40 text-red-300 pointer-events-auto"
+      >
+        <span x-text="msg"></span>
+        <button @click="show = false" class="shrink-0 opacity-60 hover:opacity-100">
+          <i class="ti ti-x text-base"></i>
+        </button>
+      </div>
+    </template>
+  </div>
 
-    <ul class="messages">
-        <template x-for="(msg, i) in $store.messages" :key="i">
-            <li x-data="{ show: true }"
-                x-show="show"
-                x-transition
-                x-init="setTimeout(() => show = false, 4000)"
-                class="error">
-                <span x-text="msg"></span>
-                <a href="#" class="close" @click.prevent="show = false">x</a>
-            </li>
-        </template>
-    </ul>
+  {% if request.user.is_authenticated %}
 
-    <div id="content">
-        {% block content %}
-        {% endblock %}
+    <!-- Navbar -->
+    <header class="h-[52px] shrink-0 bg-surface-card border-b border-white/[0.08] flex items-center px-5 gap-0 z-20">
+
+      <a href="{% url 'dashboard' %}" class="text-[15px] font-medium text-white tracking-tight mr-7">
+        <span class="text-brand-light">●</span> socnet
+      </a>
+
+      <nav class="flex gap-0.5 flex-1">
+        <a href="{% url 'dashboard' %}"
+           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+                  {% if request.resolver_match.url_name == 'dashboard' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-home text-[15px] {% if request.resolver_match.url_name == 'dashboard' %}text-brand-light{% endif %}"></i> Home
+        </a>
+        <a href="{% url 'images:list' %}"
+           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+                  {% if request.resolver_match.namespace == 'images' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' %}text-brand-light{% endif %}"></i> Images
+        </a>
+        <a href="{% url 'user_list' %}"
+           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+                  {% if request.resolver_match.url_name == 'user_list' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-users text-[15px] {% if request.resolver_match.url_name == 'user_list' %}text-brand-light{% endif %}"></i> People
+        </a>
+      </nav>
+
+      <div class="flex items-center gap-2.5">
+
+        <!-- Search icon -->
+        <button class="w-8 h-8 flex items-center justify-center text-[#9896A4] hover:text-white transition-colors">
+          <i class="ti ti-search text-lg"></i>
+        </button>
+
+        <!-- Notifications icon -->
+        <a href="#" class="relative w-8 h-8 flex items-center justify-center text-[#9896A4] hover:text-white transition-colors">
+          <i class="ti ti-bell text-lg"></i>
+          <span class="absolute top-1 right-1 w-[7px] h-[7px] bg-brand rounded-full border-[1.5px] border-surface-card"></span>
+        </a>
+
+        <!-- Avatar dropdown -->
+        <div class="relative" x-data="{ open: false }">
+          <button @click="open = !open" @keydown.escape="open = false"
+            class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-[12px] font-medium text-white select-none">
+            {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+          </button>
+
+          <div
+            x-show="open"
+            @click.outside="open = false"
+            x-transition:enter="transition ease-out duration-100"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-75"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            x-cloak
+            class="absolute right-0 top-11 w-48 bg-surface-card border border-white/[0.15] rounded-xl p-1.5 z-50"
+          >
+            <a href="{% url 'user_detail' request.user.username %}"
+               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-user text-[15px]"></i> My Profile
+            </a>
+            <a href="{% url 'edit' %}"
+               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-edit text-[15px]"></i> Edit Profile
+            </a>
+            <a href="{% url 'password_change' %}"
+               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-lock text-[15px]"></i> Change Password
+            </a>
+            <div class="h-px bg-white/[0.08] my-1"></div>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit"
+                class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#F09595] hover:bg-red-900/20 transition-colors">
+                <i class="ti ti-logout text-[15px]"></i> Logout
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Layout -->
+    <div class="flex flex-1 overflow-hidden">
+
+      <!-- Sidebar -->
+      <aside class="w-[196px] shrink-0 border-r border-white/[0.08] flex flex-col px-2.5 py-2 overflow-y-auto">
+
+        <p class="text-[11px] text-[#5E5C6A] px-2 mt-1 mb-1 tracking-widest uppercase">Navigation</p>
+        <a href="{% url 'dashboard' %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+                  {% if request.resolver_match.url_name == 'dashboard' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-layout-dashboard text-base {% if request.resolver_match.url_name == 'dashboard' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[13px]">Home</span>
+        </a>
+        <a href="{% url 'images:ranking' %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+                  {% if request.resolver_match.url_name == 'ranking' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-trophy text-base {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[13px]">Top Ranking</span>
+        </a>
+        <a href="{% url 'images:create' %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+                  {% if request.resolver_match.url_name == 'create' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-cloud-upload text-base {% if request.resolver_match.url_name == 'create' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[13px]">Add image</span>
+        </a>
+
+        <p class="text-[11px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
+        <a href="{% url 'user_detail' request.user.username %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[#9896A4] hover:text-white transition-colors">
+          <i class="ti ti-user-circle text-base text-[#9896A4]"></i>
+          <span class="text-[13px]">My Profile</span>
+        </a>
+
+        <p class="text-[11px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Bookmarks</p>
+        <div class="bg-brand/10 border border-brand/30 rounded-xl p-3 mx-0">
+          <div class="flex items-center gap-2 mb-1.5">
+            <i class="ti ti-bookmark-plus text-[15px] text-brand-light"></i>
+            <span class="text-[13px] font-medium text-white">Bookmark it</span>
+            <span class="ml-auto text-[11px] bg-brand text-white px-2 py-0.5 rounded-full font-medium">
+              {{ request.user.images_created.count }}
+            </span>
+          </div>
+          <p class="text-[10px] text-[#5E5C6A] leading-snug mb-2">Drag the button to your bookmarks toolbar</p>
+          <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
+             class="block bg-brand rounded-md py-1.5 text-[11px] font-medium text-white text-center cursor-grab select-none">
+            ⊕ Bookmark it
+          </a>
+        </div>
+
+        <div class="mt-auto pt-3 border-t border-white/[0.08]">
+          <a href="{% url 'user_detail' request.user.username %}"
+             class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-input transition-colors">
+            <div class="w-[34px] h-[34px] rounded-full bg-brand flex items-center justify-center text-[12px] font-medium text-white shrink-0">
+              {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+            </div>
+            <div class="min-w-0">
+              <p class="text-[13px] font-medium text-white truncate">{{ request.user.get_full_name }}</p>
+              <p class="text-[11px] text-[#5E5C6A]">@{{ request.user.username }}</p>
+            </div>
+          </a>
+        </div>
+
+      </aside>
+
+      <!-- Main content -->
+      <main class="flex-1 overflow-y-auto">
+  {% else %}
+      <main class="flex-1 overflow-y-auto flex items-center justify-center">
+  {% endif %}
+
+        {% block content %}{% endblock %}
+
+  {% if request.user.is_authenticated %}
+      </main>
+      <!-- Right sidebar -->
+      {% block sidebar_right %}{% endblock %}
     </div>
+  {% else %}
+      </main>
+  {% endif %}
 
-    <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
-    <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('csrf', document.querySelector('meta[name="csrf-token"]').content);
-            Alpine.store('messages', []);
-        });
-    </script>
-    {% block scripts %}{% endblock %}
+  <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+  <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('csrf', document.querySelector('meta[name="csrf-token"]').content);
+      Alpine.store('messages', []);
+    });
+  </script>
+  {% block scripts %}{% endblock %}
 
 </body>
 </html>
