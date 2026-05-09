@@ -50,10 +50,20 @@ def home(request):
         )
         cache.set(cache_key, actions, settings.DASHBOARD_CACHE_TTL)
 
+    following_users = (
+        User.objects.filter(profile__in=request.user.profile.following.all())
+        .select_related("profile")[:8]
+    )
+
     return render(
         request,
         "account/home.html",
-        {"section": "home", "actions": actions, "site_url": settings.SITE_URL},
+        {
+            "section": "home",
+            "actions": actions,
+            "site_url": settings.SITE_URL,
+            "following_users": following_users,
+        },
     )
 
 
