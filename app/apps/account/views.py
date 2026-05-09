@@ -35,8 +35,8 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 
 @login_required
-def dashboard(request):
-    cache_key = f"dashboard_{request.user.id}"
+def home(request):
+    cache_key = f"home_{request.user.id}"
     actions = cache.get(cache_key)
     if actions is None:
         actions_qs = Action.objects.exclude(user=request.user)
@@ -52,8 +52,8 @@ def dashboard(request):
 
     return render(
         request,
-        "account/dashboard.html",
-        {"section": "dashboard", "actions": actions, "site_url": settings.SITE_URL},
+        "account/home.html",
+        {"section": "home", "actions": actions, "site_url": settings.SITE_URL},
     )
 
 

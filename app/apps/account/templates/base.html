@@ -69,15 +69,15 @@
     <!-- Navbar -->
     <header class="h-[52px] shrink-0 bg-surface-card border-b border-white/[0.08] flex items-center px-5 gap-0 z-20">
 
-      <a href="{% url 'dashboard' %}" class="text-[15px] font-medium text-white tracking-tight mr-7">
+      <a href="{% url 'home' %}" class="text-[15px] font-medium text-white tracking-tight mr-7">
         <span class="text-brand-light">●</span> socnet
       </a>
 
       <nav class="flex gap-0.5 flex-1">
-        <a href="{% url 'dashboard' %}"
+        <a href="{% url 'home' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
-                  {% if request.resolver_match.url_name == 'dashboard' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-home text-[15px] {% if request.resolver_match.url_name == 'dashboard' %}text-brand-light{% endif %}"></i> Home
+                  {% if request.resolver_match.url_name == 'home' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-home text-[15px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% endif %}"></i> Home
         </a>
         <a href="{% url 'images:list' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
@@ -156,10 +156,10 @@
       <aside class="w-[196px] shrink-0 border-r border-white/[0.08] flex flex-col px-2.5 py-2 overflow-y-auto">
 
         <p class="text-[11px] text-[#5E5C6A] px-2 mt-1 mb-1 tracking-widest uppercase">Navigation</p>
-        <a href="{% url 'dashboard' %}"
+        <a href="{% url 'home' %}"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
-                  {% if request.resolver_match.url_name == 'dashboard' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-layout-dashboard text-base {% if request.resolver_match.url_name == 'dashboard' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+                  {% if request.resolver_match.url_name == 'home' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-layout-home text-base {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[13px]">Home</span>
         </a>
         <a href="{% url 'images:ranking' %}"

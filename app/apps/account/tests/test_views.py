@@ -34,8 +34,8 @@ def test_logout_post_logs_out(client, user):
 
     assert response.status_code == 302
 
-    dashboard_response = client.get(reverse("dashboard"))
-    assert dashboard_response.status_code == 302
+    home_response = client.get(reverse("home"))
+    assert home_response.status_code == 302
 
 
 @pytest.mark.django_db
@@ -92,32 +92,32 @@ def test_edit_updates_profile(client, user):
 
 
 @pytest.mark.django_db
-def test_login_post_valid_credentials_redirects_to_dashboard(client, user):
+def test_login_post_valid_credentials_redirects_to_home(client, user):
     user_obj, password = user
     response = client.post(
         reverse("login"), {"username": user_obj.username, "password": password}
     )
     assert response.status_code == 302
-    assert response["Location"] == reverse("dashboard")
+    assert response["Location"] == reverse("home")
 
 
-# ─── dashboard ────────────────────────────────────────────────────────────────
+# ─── home ────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
-def test_dashboard_requires_login(client):
-    response = client.get(reverse("dashboard"))
+def test_home_requires_login(client):
+    response = client.get(reverse("home"))
     assert response.status_code == 302
     assert "login" in response["Location"]
 
 
 @pytest.mark.django_db
-def test_dashboard_returns_200(client, user):
+def test_home_returns_200(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("dashboard"))
+    response = client.get(reverse("home"))
     assert response.status_code == 200
-    assert response.context["section"] == "dashboard"
+    assert response.context["section"] == "home"
 
 
 # ─── register ─────────────────────────────────────────────────────────────────
