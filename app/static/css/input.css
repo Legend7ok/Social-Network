@@ -7,3 +7,7 @@
   --color-surface-card: #1C1B20;
   --color-surface-input: #26242D;
 }
+
+.overlay-panel {
+  transition: left 450ms cubic-bezier(.77, 0, .18, 1);
+}
