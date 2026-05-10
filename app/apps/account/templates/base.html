@@ -175,6 +175,13 @@
           <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'create' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Add image</span>
         </a>
+        <a href="{% url 'images:list' %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+                  {% if request.resolver_match.url_name == 'list' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-bookmark text-[17px] {% if request.resolver_match.url_name == 'list' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[14px]">My Bookmarks</span>
+          <span class="ml-auto text-[11px] bg-surface-input text-[#9896A4] px-1.5 py-0.5 rounded-full">{{ request.user.images.count }}</span>
+        </a>
 
         <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
         <a href="{% url 'user_detail' request.user.username %}"
@@ -188,9 +195,6 @@
           <div class="flex items-center gap-2 mb-1.5">
             <i class="ti ti-bookmark-plus text-[15px] text-brand-light"></i>
             <span class="text-[13px] font-medium text-white">Bookmark it</span>
-            <span class="ml-auto text-[11px] bg-brand text-white px-2 py-0.5 rounded-full font-medium">
-              {{ request.user.images.count }}
-            </span>
           </div>
           <p class="text-[10px] text-[#5E5C6A] leading-snug mb-2">Drag the button to your bookmarks toolbar</p>
           <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
