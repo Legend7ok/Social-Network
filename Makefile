@@ -3,7 +3,7 @@ PROD := docker compose -f docker-compose.prod.yml
 DEV_TEST := $(DEV) --profile test
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
-        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps
+        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps vendor
 
 help:
 	@echo "Dev:"
@@ -23,6 +23,9 @@ help:
 	@echo "  make prod-restart    Restart prod containers"
 	@echo "  make prod-logs       Show prod logs (follow)"
 	@echo "  make prod-ps         Show running prod services"
+	@echo ""
+	@echo "Frontend:"
+	@echo "  make vendor          Install npm deps and copy vendor assets"
 	@echo ""
 	@echo "Django:"
 	@echo "  make migrate         Apply migrations"
@@ -72,6 +75,10 @@ test:
 
 build-test:
 	$(DEV_TEST) build test
+
+vendor:
+	npm install
+	npm run copy:vendor
 
 prod-up:
 	$(PROD) up
