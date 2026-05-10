@@ -1,0 +1,49 @@
+{% load thumbnail %}
+
+{% for image in images %}
+<a href="{{ image.get_absolute_url }}"
+   class="img-card bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden block">
+
+  <div class="aspect-[4/3] bg-surface-input relative overflow-hidden">
+    {% if image.image %}
+      {% thumbnail image.image "640x480" crop="center" as im %}
+      <img src="{{ im.url }}"
+           class="w-full h-full object-cover"
+           alt="{{ image.title }}"
+           loading="lazy" />
+      {% endthumbnail %}
+    {% else %}
+      <div class="w-full h-full flex items-center justify-center">
+        <i class="ti ti-photo text-4xl text-[#5E5C6A]"></i>
+      </div>
+    {% endif %}
+    <div class="thumb-overlay">
+      <span class="flex items-center gap-1.5 text-white text-[13px]">
+        <i class="ti ti-heart"></i> {{ image.total_likes }}
+      </span>
+      <!-- total_views: not a model field yet, stored in Redis; view needs to annotate queryset -->
+      <span class="flex items-center gap-1.5 text-white text-[13px]">
+        <i class="ti ti-eye"></i> {{ image.total_views|default:0 }}
+      </span>
+    </div>
+  </div>
+
+  <div class="p-3">
+    <div class="text-[13px] font-medium text-white mb-1.5 truncate">{{ image.title }}</div>
+    <div class="flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light shrink-0 overflow-hidden">
+        {% if image.user.profile.photo %}
+          {% thumbnail image.user.profile.photo "40x40" crop="center" as avatar %}
+          <img src="{{ avatar.url }}" class="w-full h-full object-cover" alt="{{ image.user.username }}" />
+          {% endthumbnail %}
+        {% else %}
+          {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
+        {% endif %}
+      </div>
+      <span class="text-[12px] text-[#9896A4] truncate">{{ image.user.get_full_name }}</span>
+      <span class="ml-auto text-[11px] text-[#5E5C6A] shrink-0">{{ image.created|timesince }}</span>
+    </div>
+  </div>
+
+</a>
+{% endfor %}

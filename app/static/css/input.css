@@ -11,3 +11,34 @@
 .overlay-panel {
   transition: left 450ms cubic-bezier(.77, 0, .18, 1);
 }
+
+.img-card {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.15s;
+}
+.img-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.img-card:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  transform: translateY(-3px);
+}
+.img-card.visible:hover {
+  transform: translateY(-3px);
+}
+.thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 14, 19, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.img-card:hover .thumb-overlay {
+  opacity: 1;
+}

@@ -1,11 +1,130 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Images bookmarked{% endblock %}
+{% block title %}Images · socnet{% endblock %}
 
 {% block content %}
-  <h1>Images bookmarked</h1>
-  <a href="{% url 'images:upload' %}" class="button">Upload image</a>
-  <div id="image-list">
-    {% include "images/image/list_images.html" %}
+<div class="px-6 py-5">
+
+  <!-- Toolbar -->
+  <div class="flex items-center gap-3 mb-6">
+
+    <!-- Search (view needs: q= param support + HX-Request partial rendering) -->
+    <div class="flex items-center gap-2 bg-surface-card border border-white/[0.15] rounded-lg px-3 py-2 flex-1 max-w-xs">
+      <i class="ti ti-search text-[15px] text-[#5E5C6A]"></i>
+      <input
+        type="text"
+        placeholder="Search..."
+        value="{{ request.GET.q }}"
+        class="bg-transparent text-[13px] text-white placeholder-[#5E5C6A] outline-none w-full"
+        hx-get="{% url 'images:list' %}"
+        hx-trigger="keyup changed delay:400ms"
+        hx-target="#images-grid"
+        hx-swap="innerHTML"
+        name="q"
+      />
+    </div>
+
+    <!-- Sort (view needs: sort= param support) -->
+    <div class="flex gap-1.5 ml-auto">
+      <a href="?sort=new{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="px-3.5 py-1.5 rounded-lg text-[13px] border transition-colors
+                {% if sort == 'new' or not sort %}bg-brand/15 border-brand/40 text-brand-light{% else %}bg-surface-card border-white/[0.15] text-[#9896A4] hover:text-white{% endif %}">
+        New
+      </a>
+      <a href="?sort=popular{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="px-3.5 py-1.5 rounded-lg text-[13px] border transition-colors
+                {% if sort == 'popular' %}bg-brand/15 border-brand/40 text-brand-light{% else %}bg-surface-card border-white/[0.15] text-[#9896A4] hover:text-white{% endif %}">
+        Popular
+      </a>
+      <a href="?sort=views{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="px-3.5 py-1.5 rounded-lg text-[13px] border transition-colors
+                {% if sort == 'views' %}bg-brand/15 border-brand/40 text-brand-light{% else %}bg-surface-card border-white/[0.15] text-[#9896A4] hover:text-white{% endif %}">
+        Views
+      </a>
+    </div>
+
   </div>
+
+  <!-- Grid -->
+  <div id="images-grid" class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+    {% include 'images/partials/image_cards.html' %}
+  </div>
+
+  <!-- Infinite scroll (view needs: HX-Request header check to return only the partial) -->
+  {% if images.has_next %}
+  <div hx-get="{% url 'images:list' %}?images_only=1&page={{ images.next_page_number }}&sort={{ sort }}&q={{ request.GET.q }}"
+       hx-trigger="intersect once"
+       hx-target="#images-grid"
+       hx-swap="beforeend"
+       hx-indicator="#loading"
+       class="h-4">
+  </div>
+  <div id="loading" class="htmx-indicator flex justify-center py-6">
+    <div class="flex items-center gap-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></div>
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block sidebar_right %}
+<aside class="w-[210px] shrink-0 border-l border-white/[0.08] px-3.5 py-4 overflow-y-auto flex flex-col">
+
+  <!-- Following (view needs: following_users in context) -->
+  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2.5">Following</p>
+  <div class="flex flex-col gap-2.5 mb-5">
+    {% for u in following_users %}
+    <a href="{% url 'user_detail' u.username %}"
+       class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      <div class="w-[30px] h-[30px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
+        {% if u.profile.photo %}
+          <img src="{{ u.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
+        {% else %}
+          {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] text-white truncate">{{ u.get_full_name }}</p>
+        <p class="text-[11px] text-[#5E5C6A]">{{ u.images.count }} images</p>
+      </div>
+    </a>
+    {% empty %}
+      <p class="text-[12px] text-[#5E5C6A]">You are not following anyone yet</p>
+    {% endfor %}
+  </div>
+
+  <!-- Suggestions: not implemented (needs recommendation algorithm + common_friends annotation) -->
+
+</aside>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  const _cardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        _cardObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  function _observeCards() {
+    document.querySelectorAll('.img-card:not(.visible)').forEach((card, i) => {
+      card.style.transitionDelay = `${i * 60}ms`;
+      _cardObserver.observe(card);
+    });
+  }
+
+  _observeCards();
+  document.addEventListener('htmx:afterSwap', e => {
+    if (e.detail.target.id === 'images-grid') _observeCards();
+  });
+</script>
 {% endblock %}
