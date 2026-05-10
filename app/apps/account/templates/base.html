@@ -7,7 +7,7 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}socnet{% endblock %}</title>
   <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link href="{% static 'css/vendor/tabler-icons.min.css' %}" rel="stylesheet">
   <style>
     body { zoom: 1.1; }
     [x-cloak] { display: none; }
@@ -160,7 +160,7 @@
         <a href="{% url 'home' %}"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'home' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-layout-home text-[17px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <i class="ti ti-home text-[17px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Home</span>
         </a>
         <a href="{% url 'images:ranking' %}"
