@@ -10,14 +10,6 @@
     {% include 'images/partials/image_cards.html' %}
   </div>
 
-  {% if images.has_next %}
-  <div hx-get="{% url 'images:list' %}?images_only=1&page={{ images.next_page_number }}"
-       hx-trigger="intersect once"
-       hx-target="#images-grid"
-       hx-swap="beforeend"
-       hx-indicator="#loading"
-       class="h-4">
-  </div>
   <div id="loading" class="htmx-indicator flex justify-center py-6">
     <div class="flex items-center gap-2">
       <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></div>
@@ -25,7 +17,6 @@
       <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
     </div>
   </div>
-  {% endif %}
 
 </div>
 {% endblock %}
@@ -82,8 +73,6 @@
   }
 
   _observeCards();
-  document.addEventListener('htmx:afterSwap', e => {
-    if (e.detail.target.id === 'images-grid') _observeCards();
-  });
+  document.addEventListener('htmx:afterSwap', _observeCards);
 </script>
 {% endblock %}
