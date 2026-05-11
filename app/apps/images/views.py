@@ -51,7 +51,9 @@ def image_create(request):
 
 
 def image_detail(request, id, slug):
-    image = get_object_or_404(Image, id=id, slug=slug)
+    image = get_object_or_404(
+        Image.objects.select_related("user", "user__profile"), id=id, slug=slug
+    )
     if image.image:
         if request.user.is_authenticated:
             viewer_key = f"user:{request.user.id}"
@@ -66,10 +68,12 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
+    users_like = image.users_like.select_related("profile").all()
+
     return render(
         request,
         "images/image/detail.html",
-        {"section": "images", "image": image, "total_views": total_views},
+        {"section": "images", "image": image, "total_views": total_views, "users_like": users_like},
     )
 
 
