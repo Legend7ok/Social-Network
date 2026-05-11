@@ -1,0 +1,18 @@
+{% if users_like %}
+<div class="mb-4">
+  <p class="text-[12px] text-[#5E5C6A] mb-2.5 uppercase tracking-widest">Liked by</p>
+  <div class="flex flex-wrap gap-2">
+    {% for user in users_like %}
+    <a href="{% url 'user_detail' user.username %}"
+       title="{{ user.get_full_name }}"
+       class="w-8 h-8 rounded-full bg-brand/30 flex items-center justify-center text-[11px] font-medium text-brand-light overflow-hidden border border-white/[0.08] hover:border-brand/40 transition-colors shrink-0">
+      {% if user.profile.photo %}
+        <img src="{{ user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ user.get_full_name }}" />
+      {% else %}
+        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
