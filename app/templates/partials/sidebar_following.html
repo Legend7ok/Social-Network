@@ -1,0 +1,25 @@
+<aside class="w-[210px] shrink-0 border-l border-white/[0.08] px-3.5 py-4 overflow-y-auto flex flex-col">
+
+  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2.5">Following</p>
+  <div class="flex flex-col gap-2.5 mb-5">
+    {% for u in following_users %}
+    <a href="{% url 'user_detail' u.username %}"
+       class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      <div class="w-[30px] h-[30px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
+        {% if u.profile.photo %}
+          <img src="{{ u.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
+        {% else %}
+          {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] text-white truncate">{{ u.get_full_name }}</p>
+        <p class="text-[11px] text-[#5E5C6A]">{{ u.images.count }} images</p>
+      </div>
+    </a>
+    {% empty %}
+      <p class="text-[12px] text-[#5E5C6A]">You are not following anyone yet</p>
+    {% endfor %}
+  </div>
+
+</aside>
