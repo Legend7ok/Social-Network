@@ -70,10 +70,22 @@ def image_detail(request, id, slug):
 
     users_like = image.users_like.select_related("profile").all()
 
+    following_users = (
+        User.objects.filter(profile__in=request.user.profile.following.all())
+        .select_related("profile")[:8]
+        if request.user.is_authenticated else []
+    )
+
     return render(
         request,
         "images/image/detail.html",
-        {"section": "images", "image": image, "total_views": total_views, "users_like": users_like},
+        {
+            "section": "images",
+            "image": image,
+            "total_views": total_views,
+            "users_like": users_like,
+            "following_users": following_users,
+        },
     )
 
 
