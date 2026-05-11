@@ -75,7 +75,7 @@ def image_detail(request, id, slug):
 @login_required
 def image_list(request):
     images = Image.objects.all().select_related("user", "user__profile")
-    paginator = Paginator(images, 8)
+    paginator = Paginator(images, 6)
     page = request.GET.get("page")
     images_only = request.GET.get("images_only")
     try:
