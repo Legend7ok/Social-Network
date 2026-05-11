@@ -35,6 +35,50 @@
           </div>
         {% endif %}
       </div>
+
+      <!-- Actions row -->
+      <div class="flex items-center gap-2 mt-3"
+           x-data="{
+             liked: {% if request.user in users_like %}true{% else %}false{% endif %},
+             count: {{ image.total_likes }},
+             async toggle() {
+               const res = await fetch('{% url 'image-like' image.id %}', {
+                 method: 'POST',
+                 headers: {
+                   'X-CSRFToken': Alpine.store('csrf'),
+                   'Content-Type': 'application/json',
+                 },
+                 body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
+               });
+               if (res.status === 429) {
+                 Alpine.store('messages').push('Too many requests. Please slow down.');
+                 return;
+               }
+               const data = await res.json();
+               if (data.status === 'ok') {
+                 this.liked = !this.liked;
+                 this.count += this.liked ? 1 : -1;
+               }
+             },
+           }">
+        <button @click="toggle()"
+                :class="liked
+                  ? 'bg-brand border-brand text-white'
+                  : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-medium transition-all">
+          <i class="ti ti-heart text-[15px]"></i>
+          <span x-text="liked ? 'Unlike' : 'Like'"></span>
+          <span class="text-[12px] opacity-60" x-text="count"></span>
+        </button>
+        <div class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4]">
+          <i class="ti ti-eye text-[15px]"></i>
+          <span>{{ total_views|floatformat:"-1" }}</span>
+        </div>
+        <button @click="navigator.clipboard.writeText(window.location.href); Alpine.store('messages').push('Link copied!')"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+          <i class="ti ti-share text-[15px]"></i> Share
+        </button>
+      </div>
     </div>
 
     <!-- Right: description + author (one card) -->
@@ -124,55 +168,6 @@
       {% endwith %}
 
     </div>
-  </div>
-
-  <!-- Actions row -->
-  <div class="flex items-center gap-2.5 mb-5"
-       x-data="{
-         liked: {% if request.user in users_like %}true{% else %}false{% endif %},
-         count: {{ image.total_likes }},
-         async toggle() {
-           const res = await fetch('{% url 'image-like' image.id %}', {
-             method: 'POST',
-             headers: {
-               'X-CSRFToken': Alpine.store('csrf'),
-               'Content-Type': 'application/json',
-             },
-             body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
-           });
-           if (res.status === 429) {
-             Alpine.store('messages').push('Too many requests. Please slow down.');
-             return;
-           }
-           const data = await res.json();
-           if (data.status === 'ok') {
-             this.liked = !this.liked;
-             this.count += this.liked ? 1 : -1;
-           }
-         },
-       }">
-    <!-- Like -->
-    <button @click="toggle()"
-            :class="liked
-              ? 'bg-brand border-brand text-white'
-              : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-medium transition-all">
-      <i class="ti ti-heart text-[15px]"></i>
-      <span x-text="liked ? 'Unlike' : 'Like'"></span>
-      <span class="text-[12px] opacity-60" x-text="count"></span>
-    </button>
-
-    <!-- Views -->
-    <div class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4]">
-      <i class="ti ti-eye text-[15px]"></i>
-      <span>{{ total_views|floatformat:"-1" }}</span>
-    </div>
-
-    <!-- Share -->
-    <button @click="navigator.clipboard.writeText(window.location.href); Alpine.store('messages').push('Link copied!')"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
-      <i class="ti ti-share text-[15px]"></i> Share
-    </button>
   </div>
 
   <!-- Divider -->
