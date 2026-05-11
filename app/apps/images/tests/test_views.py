@@ -362,7 +362,7 @@ def test_image_list_images_only_uses_partial_template(client, user):
     response = client.get(reverse("images:list"), {"images_only": "1"})
     assert response.status_code == 200
     template_names = [t.name for t in response.templates]
-    assert "images/image/list_images.html" in template_names
+    assert "images/partials/image_cards.html" in template_names
     assert "images/image/list.html" not in template_names
 
 
