@@ -150,8 +150,13 @@ def image_ranking(request):
     for img in ranking:
         img.total_views = views_map.get(img.id, 0)
 
+    following_users = (
+        User.objects.filter(profile__in=request.user.profile.following.all())
+        .select_related("profile")[:8]
+    )
+
     return render(
         request,
         "images/image/ranking.html",
-        {"section": "images", "ranking": ranking},
+        {"section": "images", "ranking": ranking, "following_users": following_users},
     )
