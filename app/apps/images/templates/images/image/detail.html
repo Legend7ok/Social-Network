@@ -12,26 +12,93 @@
   </a>
   <h1 class="text-[22px] font-semibold text-white mb-4">{{ image.title }}</h1>
 
-  <!-- Image -->
-  <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card mb-4 inline-block">
-    {% if image.image %}
-      <a href="{{ image.image.url }}" target="_blank" rel="noopener noreferrer">
-        {% thumbnail image.image "300" as im %}
-        <img src="{{ im.url }}" class="block" alt="{{ image.title }}" />
-        {% endthumbnail %}
-      </a>
-    {% else %}
-      <div hx-get="{% url 'images:status' image.id %}"
-           hx-trigger="every 2s"
-           hx-swap="outerHTML">
-        <div class="flex items-center justify-center h-64 w-64">
-          <div class="flex flex-col items-center gap-3">
-            <div class="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
-            <span class="text-[13px] text-[#5E5C6A]">Processing...</span>
+  <!-- Image + meta row -->
+  <div class="flex gap-5 items-start mb-5">
+
+    <!-- Image -->
+    <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card shrink-0">
+      {% if image.image %}
+        <a href="{{ image.image.url }}" target="_blank" rel="noopener noreferrer">
+          {% thumbnail image.image "300" as im %}
+          <img src="{{ im.url }}" class="block" alt="{{ image.title }}" />
+          {% endthumbnail %}
+        </a>
+      {% else %}
+        <div hx-get="{% url 'images:status' image.id %}"
+             hx-trigger="every 2s"
+             hx-swap="outerHTML">
+          <div class="flex items-center justify-center h-64 w-64">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+              <span class="text-[13px] text-[#5E5C6A]">Processing...</span>
+            </div>
           </div>
         </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: description + author (one card) -->
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card min-w-0 flex-1 self-start"
+         x-data="{
+           following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
+           async toggle() {
+             const res = await fetch('{% url 'user-follow' image.user.id %}', {
+               method: 'POST',
+               headers: {
+                 'X-CSRFToken': Alpine.store('csrf'),
+                 'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
+             });
+             if (res.status === 429) {
+               Alpine.store('messages').push('Too many requests. Please slow down.');
+               return;
+             }
+             const data = await res.json();
+             if (data.status === 'ok') {
+               this.following = !this.following;
+             }
+           },
+         }">
+
+      {% if image.description %}
+      <div class="px-4 pt-4 pb-3">
+        <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2">Description</p>
+        <p class="text-[14px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
       </div>
-    {% endif %}
+      <div class="h-px bg-white/[0.08] mx-4"></div>
+      {% endif %}
+
+      <div class="px-4 pt-3 pb-4">
+        <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-3">Author</p>
+        <a href="{% url 'user_detail' image.user.username %}"
+           class="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
+          <div class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
+            {% if image.user.profile.photo %}
+              <img src="{{ image.user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
+            {% else %}
+              {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
+            {% endif %}
+          </div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
+            <p class="text-[11px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
+          </div>
+        </a>
+        {% if request.user != image.user %}
+        <button @click="toggle()"
+                :class="following
+                  ? 'bg-surface-input border-white/[0.15] text-white'
+                  : 'bg-brand border-brand text-white'"
+                class="w-full flex items-center justify-center gap-2 py-2 rounded-xl border text-[13px] font-medium transition-all">
+          <i class="ti ti-user-plus text-[14px]" x-show="!following"></i>
+          <i class="ti ti-user-check text-[14px]" x-show="following"></i>
+          <span x-text="following ? 'Following' : 'Follow'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+    </div>
   </div>
 
   <!-- Actions row -->
@@ -83,10 +150,6 @@
     </button>
   </div>
 
-  {% if image.description %}
-  <p class="text-[14px] text-[#9896A4] leading-relaxed mb-5 max-w-lg">{{ image.description }}</p>
-  {% endif %}
-
   <!-- Divider -->
   <div class="h-px bg-white/[0.08] mb-5"></div>
 
@@ -98,60 +161,5 @@
 
 
 {% block sidebar_right %}
-<aside class="w-[240px] shrink-0 border-l border-white/[0.08] px-4 py-5 overflow-y-auto">
-
-  <!-- Author -->
-  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-3">Author</p>
-
-  <div x-data="{
-    following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
-    async toggle() {
-      const res = await fetch('{% url 'user-follow' image.user.id %}', {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': Alpine.store('csrf'),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-      });
-      if (res.status === 429) {
-        Alpine.store('messages').push('Too many requests. Please slow down.');
-        return;
-      }
-      const data = await res.json();
-      if (data.status === 'ok') {
-        this.following = !this.following;
-      }
-    },
-  }">
-    <a href="{% url 'user_detail' image.user.username %}"
-       class="flex items-center gap-3 p-3 rounded-xl border border-white/[0.08] hover:border-white/[0.15] hover:bg-surface-input transition-all mb-3">
-      <div class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
-        {% if image.user.profile.photo %}
-          <img src="{{ image.user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
-        {% else %}
-          {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
-        {% endif %}
-      </div>
-      <div class="min-w-0">
-        <p class="text-[13px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
-        <p class="text-[11px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
-      </div>
-    </a>
-
-    {% if request.user != image.user %}
-    <button @click="toggle()"
-            :class="following
-              ? 'bg-surface-input border-white/[0.15] text-white'
-              : 'bg-brand border-brand text-white'"
-            class="w-full flex items-center justify-center gap-2 py-2 rounded-xl border text-[13px] font-medium transition-all">
-      <i class="ti ti-user-plus text-[14px]" x-show="!following"></i>
-      <i class="ti ti-user-check text-[14px]" x-show="following"></i>
-      <span x-text="following ? 'Following' : 'Follow'"></span>
-    </button>
-    {% endif %}
-  </div>
-
-
-</aside>
+  {% include 'partials/sidebar_following.html' %}
 {% endblock %}
