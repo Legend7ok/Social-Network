@@ -15,6 +15,7 @@ from .models import Image
 from .services import (
     record_image_view,
     get_image_ranking,
+    get_image_ranking_count,
     get_image_views,
     get_images_views,
     is_first_view,
@@ -136,27 +137,69 @@ def image_status(request, id):
 
 @login_required()
 def image_ranking(request):
-    ranking = cache.get(settings.IMAGE_RANKING_CACHE_KEY)
-    if ranking is None:
-        image_ranking_ids = get_image_ranking()
-        images_by_id = {
-            image.id: image
-            for image in Image.objects.filter(id__in=image_ranking_ids).select_related("user", "user__profile")
-        }
-        ranking = [images_by_id[id] for id in image_ranking_ids if id in images_by_id]
-        cache.set(settings.IMAGE_RANKING_CACHE_KEY, ranking, settings.IMAGE_RANKING_CACHE_TTL)
+    per_page = 10
+    ranking_only = request.GET.get("ranking_only")
 
-    views_map = get_images_views([img.id for img in ranking])
-    for img in ranking:
+    try:
+        page = int(request.GET.get("page", 1))
+    except ValueError:
+        page = 1
+
+    list_start = 3 + (page - 1) * per_page
+
+    # Fetch current list page from Redis + DB
+    list_ids = get_image_ranking(start=list_start, count=per_page)
+    list_images_by_id = {
+        img.id: img
+        for img in Image.objects.filter(id__in=list_ids).select_related("user", "user__profile")
+    }
+    ranking_list = []
+    for i, img_id in enumerate(list_ids, start=list_start + 1):
+        if img_id in list_images_by_id:
+            img = list_images_by_id[img_id]
+            img.rank = i
+            ranking_list.append(img)
+
+    views_map = get_images_views([img.id for img in ranking_list])
+    for img in ranking_list:
         img.total_views = views_map.get(img.id, 0)
+
+    total = get_image_ranking_count()
+    has_next = (list_start + per_page) < total
+    next_page = page + 1
+
+    if ranking_only:
+        return render(request, "images/partials/ranking_rows.html", {
+            "ranking_list": ranking_list,
+            "has_next": has_next,
+            "next_page": next_page,
+        })
+
+    # Top 3 only needed for full page load
+    top3_ids = get_image_ranking(start=0, count=3)
+    top3_by_id = {
+        img.id: img
+        for img in Image.objects.filter(id__in=top3_ids).select_related("user", "user__profile")
+    }
+    top3_views = get_images_views(top3_ids)
+    top3 = []
+    for i, img_id in enumerate(top3_ids, start=1):
+        if img_id in top3_by_id:
+            img = top3_by_id[img_id]
+            img.rank = i
+            img.total_views = top3_views.get(img_id, 0)
+            top3.append(img)
 
     following_users = (
         User.objects.filter(profile__in=request.user.profile.following.all())
         .select_related("profile")[:8]
     )
 
-    return render(
-        request,
-        "images/image/ranking.html",
-        {"section": "images", "ranking": ranking, "following_users": following_users},
-    )
+    return render(request, "images/image/ranking.html", {
+        "section": "images",
+        "top3": top3,
+        "ranking_list": ranking_list,
+        "has_next": has_next,
+        "next_page": next_page,
+        "following_users": following_users,
+    })
