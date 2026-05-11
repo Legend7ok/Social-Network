@@ -1,52 +1,178 @@
 {% extends "base.html" %}
-{% block title %}{{ image.title }}{% endblock %}
+{% block title %}{{ image.title }} · socnet{% endblock %}
+
 {% block content %}
-    <h1>{{ image.title }}</h1>
-    {% include "images/image/_image_status.html" %}
-    {% with total_likes=image.users_like.count users_like=image.users_like.all %}
-        <div class="image-info">
-            <div x-data="{
-                liked: {% if request.user in users_like %}true{% else %}false{% endif %},
-                count: {{ total_likes }},
-                async toggle() {
-                    const res = await fetch('{% url 'image-like' image.id %}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': Alpine.store('csrf'),
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
-                    });
-                    if (res.status === 429) {
-                        Alpine.store('messages').push('Too many requests. Please slow down.');
-                        return;
-                    }
-                    const data = await res.json();
-                    if (data.status === 'ok') {
-                        this.liked = !this.liked;
-                        this.count += this.liked ? 1 : -1;
-                    }
-                },
-            }">
-                <span class="count" x-text="count + (count === 1 ? ' like' : ' likes')"></span>
-                <span class="count">
-                    {{ total_views }} view{{ total_views|pluralize }}
-                </span>
-                <a href="#" class="like button" @click.prevent="toggle()" x-text="liked ? 'Unlike' : 'Like'"></a>
-            </div>
-            {{ image.description|linebreaks }}
+<div class="px-6 py-5">
+
+  <!-- Image -->
+  <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card mb-5">
+    {% if image.image %}
+      <img src="{{ image.image.url }}" class="w-full object-contain max-h-[520px]" alt="{{ image.title }}" />
+    {% else %}
+      <div hx-get="{% url 'images:status' image.id %}"
+           hx-trigger="every 2s"
+           hx-swap="outerHTML">
+        <div class="flex items-center justify-center h-64">
+          <div class="flex flex-col items-center gap-3">
+            <div class="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+            <span class="text-[13px] text-[#5E5C6A]">Processing image...</span>
+          </div>
         </div>
-        <div class="image-likes">
-            {% for user in image.users_like.all %}
-                <div>
-                    {% if user.profile.photo %}
-                        <img src="{{ user.profile.photo.url }}">
-                    {% endif %}
-                    <p>{{ user.first_name }}</p>
-                </div>
-            {% empty %}
-                Nobody likes this image yet.
-            {% endfor %}
-        </div>
-    {% endwith %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Title -->
+  <h1 class="text-[22px] font-semibold text-white mb-3">{{ image.title }}</h1>
+
+  {% if image.description %}
+  <p class="text-[14px] text-[#9896A4] leading-relaxed mb-4 max-w-2xl">{{ image.description }}</p>
+  {% endif %}
+
+  <!-- Stats row -->
+  <div class="flex items-center gap-4 mb-5">
+    <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1.5">
+      <i class="ti ti-eye text-[14px]"></i> {{ total_views|floatformat:"-1" }} views
+    </span>
+    <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1.5">
+      <i class="ti ti-heart text-[14px]"></i> {{ image.total_likes }} likes
+    </span>
+    <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1.5">
+      <i class="ti ti-calendar text-[14px]"></i> {{ image.created|date:"d M Y" }}
+    </span>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex items-center gap-2.5 mb-6"
+       x-data="{
+         liked: {% if request.user in users_like %}true{% else %}false{% endif %},
+         count: {{ image.total_likes }},
+         async toggle() {
+           const res = await fetch('{% url 'image-like' image.id %}', {
+             method: 'POST',
+             headers: {
+               'X-CSRFToken': Alpine.store('csrf'),
+               'Content-Type': 'application/json',
+             },
+             body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
+           });
+           if (res.status === 429) {
+             Alpine.store('messages').push('Too many requests. Please slow down.');
+             return;
+           }
+           const data = await res.json();
+           if (data.status === 'ok') {
+             this.liked = !this.liked;
+             this.count += this.liked ? 1 : -1;
+           }
+         },
+       }">
+    <button @click="toggle()"
+            :class="liked
+              ? 'bg-brand border-brand text-white'
+              : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
+            class="flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-medium transition-all">
+      <i class="ti ti-heart text-[15px]"></i>
+      <span x-text="liked ? 'Unlike' : 'Like'"></span>
+      <span class="text-[12px] opacity-70" x-text="'(' + count + ')'"></span>
+    </button>
+
+    <a href="{{ image.url }}" target="_blank" rel="noopener noreferrer"
+       class="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+      <i class="ti ti-external-link text-[15px]"></i> Source
+    </a>
+  </div>
+
+  <!-- Divider -->
+  <div class="h-px bg-white/[0.08] mb-5"></div>
+
+  <!-- Liked by -->
+  {% include 'images/partials/liked_by.html' %}
+
+</div>
+{% endblock %}
+
+
+{% block sidebar_right %}
+<aside class="w-[240px] shrink-0 border-l border-white/[0.08] px-4 py-5 overflow-y-auto">
+
+  <!-- Author -->
+  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-3">Author</p>
+
+  <div x-data="{
+    following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
+    async toggle() {
+      const res = await fetch('{% url 'user-follow' image.user.id %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': Alpine.store('csrf'),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
+      });
+      if (res.status === 429) {
+        Alpine.store('messages').push('Too many requests. Please slow down.');
+        return;
+      }
+      const data = await res.json();
+      if (data.status === 'ok') {
+        this.following = !this.following;
+      }
+    },
+  }">
+    <a href="{% url 'user_detail' image.user.username %}"
+       class="flex items-center gap-3 p-3 rounded-xl border border-white/[0.08] hover:border-white/[0.15] hover:bg-surface-input transition-all mb-3">
+      <div class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
+        {% if image.user.profile.photo %}
+          <img src="{{ image.user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
+        {% else %}
+          {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
+        {% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-[13px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
+        <p class="text-[11px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
+      </div>
+    </a>
+
+    {% if request.user != image.user %}
+    <button @click="toggle()"
+            :class="following
+              ? 'bg-surface-input border-white/[0.15] text-white'
+              : 'bg-brand border-brand text-white'"
+            class="w-full flex items-center justify-center gap-2 py-2 rounded-xl border text-[13px] font-medium transition-all">
+      <i class="ti ti-user-plus text-[14px]" x-show="!following"></i>
+      <i class="ti ti-user-check text-[14px]" x-show="following"></i>
+      <span x-text="following ? 'Following' : 'Follow'"></span>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Divider -->
+  <div class="h-px bg-white/[0.08] my-4"></div>
+
+  <!-- Stats -->
+  <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-3">Stats</p>
+  <div class="flex flex-col gap-2.5">
+    <div class="flex items-center justify-between">
+      <span class="text-[13px] text-[#9896A4] flex items-center gap-1.5">
+        <i class="ti ti-eye text-[14px]"></i> Views
+      </span>
+      <span class="text-[13px] text-white font-medium">{{ total_views|floatformat:"-1" }}</span>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="text-[13px] text-[#9896A4] flex items-center gap-1.5">
+        <i class="ti ti-heart text-[14px]"></i> Likes
+      </span>
+      <span class="text-[13px] text-white font-medium">{{ image.total_likes }}</span>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="text-[13px] text-[#9896A4] flex items-center gap-1.5">
+        <i class="ti ti-calendar text-[14px]"></i> Added
+      </span>
+      <span class="text-[13px] text-white font-medium">{{ image.created|date:"d M Y" }}</span>
+    </div>
+  </div>
+
+</aside>
 {% endblock %}
