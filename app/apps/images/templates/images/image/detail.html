@@ -1,13 +1,18 @@
 {% extends "base.html" %}
+{% load thumbnail %}
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
 {% block content %}
 <div class="px-6 py-5">
 
   <!-- Image -->
-  <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card mb-5">
+  <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card mb-5 inline-block">
     {% if image.image %}
-      <img src="{{ image.image.url }}" class="w-full object-contain max-h-[520px]" alt="{{ image.title }}" />
+      <a href="{{ image.image.url }}" target="_blank" rel="noopener noreferrer">
+        {% thumbnail image.image "300" as im %}
+        <img src="{{ im.url }}" class="block" alt="{{ image.title }}" />
+        {% endthumbnail %}
+      </a>
     {% else %}
       <div hx-get="{% url 'images:status' image.id %}"
            hx-trigger="every 2s"
