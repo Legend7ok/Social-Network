@@ -136,23 +136,22 @@ def image_status(request, id):
 
 @login_required()
 def image_ranking(request):
-    most_viewed = cache.get(settings.IMAGE_RANKING_CACHE_KEY)
-    if most_viewed is None:
+    ranking = cache.get(settings.IMAGE_RANKING_CACHE_KEY)
+    if ranking is None:
         image_ranking_ids = get_image_ranking()
         images_by_id = {
-            image.id: image for image in Image.objects.filter(id__in=image_ranking_ids)
+            image.id: image
+            for image in Image.objects.filter(id__in=image_ranking_ids).select_related("user", "user__profile")
         }
-        most_viewed = [
-            images_by_id[id] for id in image_ranking_ids if id in images_by_id
-        ]
-        cache.set(
-            settings.IMAGE_RANKING_CACHE_KEY,
-            most_viewed,
-            settings.IMAGE_RANKING_CACHE_TTL,
-        )
+        ranking = [images_by_id[id] for id in image_ranking_ids if id in images_by_id]
+        cache.set(settings.IMAGE_RANKING_CACHE_KEY, ranking, settings.IMAGE_RANKING_CACHE_TTL)
+
+    views_map = get_images_views([img.id for img in ranking])
+    for img in ranking:
+        img.total_views = views_map.get(img.id, 0)
 
     return render(
         request,
         "images/image/ranking.html",
-        {"section": "images", "most_viewed": most_viewed},
+        {"section": "images", "ranking": ranking},
     )
