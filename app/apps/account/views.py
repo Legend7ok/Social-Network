@@ -13,6 +13,7 @@ from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
 from apps.images.models import Image
+from apps.images.services import get_images_views
 
 from .forms import UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
@@ -180,7 +181,45 @@ def user_list(request):
 
 @login_required
 def user_detail(request, username):
-    user = get_object_or_404(User, username=username, is_active=True)
+    profile_user = get_object_or_404(
+        User.objects.select_related("profile"),
+        username=username,
+        is_active=True,
+    )
+
+    images = list(profile_user.images.order_by("-created"))
+    views_map = get_images_views([img.id for img in images])
+    for img in images:
+        img.total_views = views_map.get(img.id, 0)
+
+    total_likes = sum(img.total_likes for img in images)
+
+    follower_profiles = profile_user.profile.followers.all()
+    following_profiles = profile_user.profile.following.all()
+
+    is_following = follower_profiles.filter(user=request.user).exists()
+
+    followers = (
+        User.objects.filter(profile__in=follower_profiles)
+        .select_related("profile")[:4]
+    )
+    following = (
+        User.objects.filter(profile__in=following_profiles)
+        .select_related("profile")[:4]
+    )
+
     return render(
-        request, "account/user/detail.html", {"section": "people", "user": user}
+        request,
+        "account/user/detail.html",
+        {
+            "section": "people",
+            "user": profile_user,
+            "images": images,
+            "total_likes": total_likes,
+            "is_following": is_following,
+            "followers": followers,
+            "following": following,
+            "follower_count": follower_profiles.count(),
+            "following_count": following_profiles.count(),
+        },
     )

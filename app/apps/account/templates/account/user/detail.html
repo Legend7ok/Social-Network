@@ -1,47 +1,182 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% load thumbnail %}
 
-{% block title %}{{ user.get_full_name }}{% endblock %}
+{% block title %}{{ user.get_full_name }} · socnet{% endblock %}
 
 {% block content %}
-    <h1>{{ user.get_full_name }}</h1>
-    <div class="profile-info">
-        {% thumbnail user.profile.photo "180x180" as im %}
-        <img src="{{ im.url }}" class="user-detail">
-        {% endthumbnail %}
+<div class="px-7 py-6">
+
+  <!-- Profile header -->
+  <div class="flex items-start gap-5 pb-6 border-b border-white/[0.08] mb-6">
+
+    <!-- Avatar -->
+    <div class="w-[84px] h-[84px] rounded-full bg-brand/30 flex items-center justify-center text-[26px] font-medium text-brand-light overflow-hidden shrink-0"
+         style="border: 2px solid rgba(124,58,237,0.4);">
+      {% if user.profile.photo %}
+        <img src="{{ user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ user.username }}" />
+      {% else %}
+        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+      {% endif %}
     </div>
-    {% with total_followers=user.profile.followers.count %}
-        <div x-data="{
-            following: {% if request.user.profile in user.profile.followers.all %}true{% else %}false{% endif %},
-            count: {{ total_followers }},
-            async toggle() {
-                const res = await fetch('{% url 'user-follow' user.id %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': Alpine.store('csrf'),
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-                });
-                if (res.status === 429) {
-                    Alpine.store('messages').push('Too many requests. Please slow down.');
-                    return;
-                }
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    this.following = !this.following;
-                    this.count += this.following ? 1 : -1;
-                }
+
+    <div class="flex-1 min-w-0">
+
+      <!-- Name + username + joined -->
+      <div class="flex items-center gap-2.5 flex-wrap mb-3">
+        <span class="text-[20px] font-medium text-white">{{ user.get_full_name }}</span>
+        <span class="text-[12px] text-[#5E5C6A]">@{{ user.username }}</span>
+        <span class="text-[11px] text-[#5E5C6A] flex items-center gap-1 ml-1">
+          <i class="ti ti-calendar text-[12px]"></i> joined {{ user.date_joined|date:"F Y" }}
+        </span>
+      </div>
+
+      <!-- Stats row -->
+      <div class="flex items-center gap-5 mb-4"
+           x-data="{ followersOpen: false, followingOpen: false }"
+           @click.outside="followersOpen = false; followingOpen = false">
+
+        <div class="text-center">
+          <div class="text-[17px] font-medium text-white">{{ images|length }}</div>
+          <div class="text-[11px] text-[#5E5C6A]">images</div>
+        </div>
+        <div class="w-px h-7 bg-white/[0.15]"></div>
+
+        <div class="text-center">
+          <div class="text-[17px] font-medium text-white">{{ total_likes }}</div>
+          <div class="text-[11px] text-[#5E5C6A]">likes</div>
+        </div>
+        <div class="w-px h-7 bg-white/[0.15]"></div>
+
+        <!-- Followers dropdown -->
+        <div class="relative text-center cursor-pointer"
+             @click.stop="followersOpen = !followersOpen; followingOpen = false">
+          <div class="text-[17px] font-medium text-white">{{ follower_count }}</div>
+          <div class="text-[11px] text-[#5E5C6A] flex items-center gap-1 justify-center">
+            followers <i class="ti ti-chevron-down text-[10px]"></i>
+          </div>
+          <div x-show="followersOpen" x-cloak x-transition
+               class="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-52 bg-surface-card border border-white/[0.15] rounded-xl p-2 z-50 shadow-xl text-left">
+            <p class="text-[11px] text-[#5E5C6A] px-2.5 pb-2 pt-1 tracking-widest uppercase">Followers</p>
+            {% for follower in followers %}
+            <a href="{% url 'user_detail' follower.username %}"
+               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-input transition-colors">
+              <div class="w-7 h-7 rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
+                {% if follower.profile.photo %}
+                  <img src="{{ follower.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ follower.username }}" />
+                {% else %}
+                  {{ follower.first_name|first|upper }}{{ follower.last_name|first|upper }}
+                {% endif %}
+              </div>
+              <div class="min-w-0">
+                <div class="text-[13px] text-white truncate">{{ follower.get_full_name }}</div>
+                <div class="text-[11px] text-[#5E5C6A]">@{{ follower.username }}</div>
+              </div>
+            </a>
+            {% empty %}
+              <p class="text-[13px] text-[#5E5C6A] px-2.5 py-2">No followers yet</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="w-px h-7 bg-white/[0.15]"></div>
+
+        <!-- Following dropdown -->
+        <div class="relative text-center cursor-pointer"
+             @click.stop="followingOpen = !followingOpen; followersOpen = false">
+          <div class="text-[17px] font-medium text-white">{{ following_count }}</div>
+          <div class="text-[11px] text-[#5E5C6A] flex items-center gap-1 justify-center">
+            following <i class="ti ti-chevron-down text-[10px]"></i>
+          </div>
+          <div x-show="followingOpen" x-cloak x-transition
+               class="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-52 bg-surface-card border border-white/[0.15] rounded-xl p-2 z-50 shadow-xl text-left">
+            <p class="text-[11px] text-[#5E5C6A] px-2.5 pb-2 pt-1 tracking-widest uppercase">Following</p>
+            {% for followed in following %}
+            <a href="{% url 'user_detail' followed.username %}"
+               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-input transition-colors">
+              <div class="w-7 h-7 rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
+                {% if followed.profile.photo %}
+                  <img src="{{ followed.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ followed.username }}" />
+                {% else %}
+                  {{ followed.first_name|first|upper }}{{ followed.last_name|first|upper }}
+                {% endif %}
+              </div>
+              <div class="min-w-0">
+                <div class="text-[13px] text-white truncate">{{ followed.get_full_name }}</div>
+                <div class="text-[11px] text-[#5E5C6A]">@{{ followed.username }}</div>
+              </div>
+            </a>
+            {% empty %}
+              <p class="text-[13px] text-[#5E5C6A] px-2.5 py-2">Not following anyone</p>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Follow button -->
+      {% if request.user != user %}
+      <div x-data="{
+        following: {% if is_following %}true{% else %}false{% endif %},
+        async toggle() {
+          const res = await fetch('{% url 'user-follow' user.id %}', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': Alpine.store('csrf'),
+              'Content-Type': 'application/json',
             },
-        }">
-            <span class="count">
-                <span x-text="count + (count === 1 ? ' follower' : ' followers')"></span>
-            </span>
-            <a href="#" class="follow button" @click.prevent="toggle()" x-text="following ? 'Unfollow' : 'Follow'"></a>
-        </div>
-        <div id="image-list" class="image-container">
-            {% include "images/image/list_images.html" with images=user.images_created.all %}
-        </div>
-    {% endwith %}
+            body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
+          });
+          if (res.status === 429) {
+            Alpine.store('messages').push('Too many requests. Please slow down.');
+            return;
+          }
+          const data = await res.json();
+          if (data.status === 'ok') this.following = !this.following;
+        },
+      }">
+        <button @click="toggle()"
+                :class="following
+                  ? 'bg-transparent border-brand/30 text-brand-light hover:bg-brand/10'
+                  : 'bg-brand border-brand text-white hover:opacity-90'"
+                class="flex items-center gap-1.5 px-5 py-2 rounded-xl border text-[13px] font-medium transition-all">
+          <i class="ti ti-user-check text-[14px]" x-show="following" x-cloak></i>
+          <i class="ti ti-user-plus text-[14px]" x-show="!following"></i>
+          <span x-text="following ? 'Following' : 'Follow'"></span>
+        </button>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Image grid -->
+  <div class="grid grid-cols-4 gap-2">
+    {% for image in images %}
+    <a href="{{ image.get_absolute_url }}"
+       class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative group border border-white/[0.06] hover:border-brand/30 transition-colors">
+      {% if image.image %}
+        {% thumbnail image.image "300x300" crop="center" as th %}
+        <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" loading="lazy" />
+        {% endthumbnail %}
+      {% else %}
+        <i class="ti ti-photo text-3xl text-[#5E5C6A]"></i>
+      {% endif %}
+      <div class="absolute inset-0 bg-surface-page/65 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span class="text-white text-[12px] flex items-center gap-1.5">
+          <i class="ti ti-heart"></i> {{ image.total_likes }}
+        </span>
+        <span class="text-white text-[12px] flex items-center gap-1.5">
+          <i class="ti ti-eye"></i> {{ image.total_views }}
+        </span>
+      </div>
+    </a>
+    {% empty %}
+      <div class="col-span-4 text-center py-16 text-[#5E5C6A]">
+        <i class="ti ti-photo-off text-5xl block mb-3"></i>
+        <p class="text-[14px]">No images yet</p>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
 {% endblock %}
