@@ -175,10 +175,10 @@
           <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'create' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Add image</span>
         </a>
-        <a href="{% url 'images:list' %}"
+        <a href="{% url 'images:list' %}?mine=1"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
-                  {% if request.resolver_match.url_name == 'list' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-bookmark text-[17px] {% if request.resolver_match.url_name == 'list' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+                  {% if request.resolver_match.url_name == 'list' and request.GET.mine %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-bookmark text-[17px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">My Bookmarks</span>
           <span class="ml-auto text-[11px] bg-surface-input text-[#9896A4] px-1.5 py-0.5 rounded-full">{{ request.user.images.count }}</span>
         </a>

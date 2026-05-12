@@ -49,7 +49,7 @@
 {% endfor %}
 {% if images.has_next %}
 <div class="col-span-3 h-px"
-     hx-get="{% url 'images:list' %}?images_only=1&page={{ images.next_page_number }}"
+     hx-get="{% url 'images:list' %}?images_only=1&page={{ images.next_page_number }}{% if mine %}&mine=1{% endif %}"
      hx-trigger="intersect once"
      hx-swap="outerHTML"
      hx-indicator="#loading">

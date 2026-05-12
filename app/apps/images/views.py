@@ -90,7 +90,11 @@ def image_detail(request, id, slug):
 
 @login_required
 def image_list(request):
-    images = Image.objects.all().select_related("user", "user__profile")
+    mine = request.GET.get("mine")
+    if mine:
+        images = Image.objects.filter(user=request.user).select_related("user", "user__profile")
+    else:
+        images = Image.objects.all().select_related("user", "user__profile")
     paginator = Paginator(images, 6)
     page = request.GET.get("page")
     images_only = request.GET.get("images_only")
@@ -118,6 +122,7 @@ def image_list(request):
         "section": "images",
         "images": images,
         "following_users": following_users,
+        "mine": mine,
     }
 
     if images_only:
