@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
 from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
@@ -121,6 +123,7 @@ def edit(request):
 @login_required
 def user_list(request):
     filter_type = request.GET.get("filter", "all")
+    users_only = request.GET.get("users_only")
     my_profile = request.user.profile
 
     if filter_type == "following":
@@ -137,7 +140,7 @@ def user_list(request):
         .values("s")
     )
 
-    users = (
+    users_qs = (
         base_qs.select_related("profile")
         .annotate(
             images_count=Count("images", distinct=True),
@@ -149,18 +152,30 @@ def user_list(request):
         .order_by("first_name", "last_name")
     )
 
+    paginator = Paginator(users_qs, 10)
+    page = request.GET.get("page")
+    try:
+        users = paginator.page(page)
+    except PageNotAnInteger:
+        users = paginator.page(1)
+    except EmptyPage:
+        if users_only:
+            return HttpResponse("")
+        users = paginator.page(paginator.num_pages)
+
     following_ids = set(my_profile.following.values_list("user_id", flat=True))
 
-    return render(
-        request,
-        "account/user/list.html",
-        {
-            "section": "people",
-            "users": users,
-            "filter": filter_type,
-            "following_ids": following_ids,
-        },
-    )
+    context = {
+        "section": "people",
+        "users": users,
+        "filter": filter_type,
+        "following_ids": following_ids,
+    }
+
+    if users_only:
+        return render(request, "account/partials/user_cards.html", context)
+
+    return render(request, "account/user/list.html", context)
 
 
 @login_required
