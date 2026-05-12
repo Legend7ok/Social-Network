@@ -4,9 +4,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
+from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
+from django.db.models.functions import Coalesce
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
+
+from apps.images.models import Image
 
 from .forms import UserRegistrationForm, UserEditForm, ProfileEditForm
 from .tasks import send_welcome_email
@@ -116,9 +120,46 @@ def edit(request):
 
 @login_required
 def user_list(request):
-    users = User.objects.filter(is_active=True)
+    filter_type = request.GET.get("filter", "all")
+    my_profile = request.user.profile
+
+    if filter_type == "following":
+        base_qs = User.objects.filter(profile__in=my_profile.following.all())
+    elif filter_type == "followers":
+        base_qs = User.objects.filter(profile__in=my_profile.followers.all())
+    else:
+        base_qs = User.objects.filter(is_active=True).exclude(id=request.user.id)
+
+    image_likes = (
+        Image.objects.filter(user=OuterRef("pk"))
+        .values("user")
+        .annotate(s=Sum("total_likes"))
+        .values("s")
+    )
+
+    users = (
+        base_qs.select_related("profile")
+        .annotate(
+            images_count=Count("images", distinct=True),
+            followers_count=Count("profile__followers", distinct=True),
+            total_likes=Coalesce(
+                Subquery(image_likes, output_field=IntegerField()), 0
+            ),
+        )
+        .order_by("first_name", "last_name")
+    )
+
+    following_ids = set(my_profile.following.values_list("user_id", flat=True))
+
     return render(
-        request, "account/user/list.html", {"section": "people", "users": users}
+        request,
+        "account/user/list.html",
+        {
+            "section": "people",
+            "users": users,
+            "filter": filter_type,
+            "following_ids": following_ids,
+        },
     )
 
 
