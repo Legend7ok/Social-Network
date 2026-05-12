@@ -124,7 +124,7 @@
             x-cloak
             class="absolute right-0 top-11 w-48 bg-surface-card border border-white/[0.15] rounded-xl p-1.5 z-50"
           >
-            <a href="{% url 'user_detail' request.user.username %}"
+            <a href="{% url 'my_profile' %}"
                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
               <i class="ti ti-user text-[15px]"></i> My Profile
             </a>
@@ -184,7 +184,7 @@
         </a>
 
         <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
-        <a href="{% url 'user_detail' request.user.username %}"
+        <a href="{% url 'my_profile' %}"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[#9896A4] hover:text-white transition-colors">
           <i class="ti ti-user-circle text-[17px] text-[#9896A4]"></i>
           <span class="text-[14px]">My Profile</span>
@@ -204,7 +204,7 @@
         </div>
 
         <div class="mt-auto pt-3 border-t border-white/[0.08]">
-          <a href="{% url 'user_detail' request.user.username %}"
+          <a href="{% url 'my_profile' %}"
              class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-input transition-colors">
             <div class="w-[40px] h-[40px] rounded-full bg-brand flex items-center justify-center text-[12px] font-medium text-white shrink-0">
               {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}

@@ -8,7 +8,8 @@ from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
@@ -119,6 +120,56 @@ def edit(request):
         "account/edit.html",
         {"user_form": user_form, "profile_form": profile_form},
     )
+
+
+@login_required
+def my_profile(request):
+    profile = request.user.profile
+    images = list(request.user.images.order_by("-created"))
+    views_map = get_images_views([img.id for img in images])
+    for img in images:
+        img.total_views = views_map.get(img.id, 0)
+
+    total_likes = sum(img.total_likes for img in images)
+
+    follower_profiles = profile.followers.all()
+    following_profiles = profile.following.all()
+
+    followers = (
+        User.objects.filter(profile__in=follower_profiles)
+        .select_related("profile")[:4]
+    )
+    following = (
+        User.objects.filter(profile__in=following_profiles)
+        .select_related("profile")[:4]
+    )
+
+    return render(
+        request,
+        "account/my_profile.html",
+        {
+            "section": "people",
+            "profile": profile,
+            "images": images,
+            "total_likes": total_likes,
+            "followers": followers,
+            "following": following,
+            "follower_count": follower_profiles.count(),
+            "following_count": following_profiles.count(),
+        },
+    )
+
+
+@login_required
+@require_POST
+def profile_photo_update(request):
+    photo = request.FILES.get("photo")
+    if photo:
+        profile = request.user.profile
+        profile.photo = photo
+        profile.save(update_fields=["photo"])
+        messages.success(request, "Photo updated successfully")
+    return redirect("my_profile")
 
 
 @login_required
