@@ -169,10 +169,10 @@
           <i class="ti ti-trophy text-[17px] {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Top Ranking</span>
         </a>
-        <a href="{% url 'images:create' %}"
+        <a href="{% url 'images:upload' %}"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
-                  {% if request.resolver_match.url_name == 'create' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'create' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+                  {% if request.resolver_match.url_name == 'upload' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'upload' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Add image</span>
         </a>
         <a href="{% url 'images:list' %}?mine=1"
