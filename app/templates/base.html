@@ -169,6 +169,13 @@
           <i class="ti ti-trophy text-[17px] {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">Top Ranking</span>
         </a>
+
+        <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
+        <a href="{% url 'my_profile' %}"
+           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[#9896A4] hover:text-white transition-colors">
+          <i class="ti ti-user-circle text-[17px] text-[#9896A4]"></i>
+          <span class="text-[14px]">My Profile</span>
+        </a>
         <a href="{% url 'images:upload' %}"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'upload' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
@@ -181,13 +188,6 @@
           <i class="ti ti-bookmark text-[17px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
           <span class="text-[14px]">My Bookmarks</span>
           <span class="ml-auto text-[11px] bg-surface-input text-[#9896A4] px-1.5 py-0.5 rounded-full">{{ request.user.images.count }}</span>
-        </a>
-
-        <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
-        <a href="{% url 'my_profile' %}"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[#9896A4] hover:text-white transition-colors">
-          <i class="ti ti-user-circle text-[17px] text-[#9896A4]"></i>
-          <span class="text-[14px]">My Profile</span>
         </a>
 
         <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Bookmarks</p>
