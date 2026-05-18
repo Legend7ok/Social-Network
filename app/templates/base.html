@@ -83,7 +83,7 @@
         <a href="{% url 'images:list' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
                   {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> Images
+          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> New Images
         </a>
         <a href="{% url 'user_list' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
@@ -181,7 +181,7 @@
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'upload' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
           <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'upload' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">Add image</span>
+          <span class="text-[14px]">Add Image</span>
         </a>
         <a href="{% url 'images:list' %}?mine=1"
            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
