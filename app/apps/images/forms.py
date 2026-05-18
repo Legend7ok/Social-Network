@@ -37,7 +37,9 @@ class ImageUploadForm(forms.ModelForm):
         fields = ["title", "description", "image"]
 
     def clean_image(self):
-        image = self.cleaned_data["image"]
+        image = self.cleaned_data.get("image")
+        if not image:
+            raise forms.ValidationError("Please select an image file.")
         ext = os.path.splitext(image.name)[1].lstrip(".").lower()
         if ext not in VALID_EXTENSIONS:
             raise forms.ValidationError(
