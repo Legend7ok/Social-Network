@@ -23,6 +23,14 @@
               reader.onload = e => document.getElementById('previewImg').src = e.target.result;
               reader.readAsDataURL(file);
             },
+            handleDrop(e) {
+              const file = e.dataTransfer.files[0];
+              if (!file) return;
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              this.$refs.fileInput.files = dt.files;
+              this.handleFile(file);
+            },
             clearFile() {
               this.hasFile = false;
               this.fileName = '';
@@ -41,7 +49,7 @@
              style="background: rgba(124,58,237,0.04);"
              @click="$refs.fileInput.click()"
              @dragover.prevent
-             @drop.prevent="handleFile($event.dataTransfer.files[0])">
+             @drop.prevent="handleDrop($event)">
           <div class="w-14 h-14 rounded-xl bg-brand/15 flex items-center justify-center">
             <i class="ti ti-cloud-upload text-[28px] text-brand-light"></i>
           </div>
