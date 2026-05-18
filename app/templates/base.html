@@ -82,8 +82,8 @@
         </a>
         <a href="{% url 'images:list' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
-                  {% if request.resolver_match.namespace == 'images' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' %}text-brand-light{% endif %}"></i> Images
+                  {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> Images
         </a>
         <a href="{% url 'user_list' %}"
            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
