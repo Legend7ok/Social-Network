@@ -79,7 +79,7 @@
               <p class="text-[12px] text-[#9896A4] mb-2.5 line-clamp-2">{{ target.description }}</p>
             {% endif %}
             <button @click.prevent="toggle()"
-                    :class="liked ? 'bg-brand/15 text-white border-brand/50' : 'bg-brand/15 text-brand-light border-brand/30'"
+                    :class="liked ? 'bg-brand/15 text-white border-brand/50' : 'bg-transparent text-brand-light border-brand/30'"
                     class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] border transition-colors">
               <i class="ti text-[15px]" :class="liked ? 'ti-heart-filled heart-gradient' : 'ti-heart'"></i>
               <span x-text="count"></span>
