@@ -42,87 +42,90 @@
           @submit="submitting = true">
       {% csrf_token %}
 
-      <!-- Dropzone / Preview -->
-      <div>
-        <div x-show="!hasFile"
-             class="border-[1.5px] border-dashed border-brand/35 rounded-2xl h-52 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors hover:border-brand/60 hover:bg-brand/[0.06]"
-             style="background: rgba(124,58,237,0.04);"
-             @click="$refs.fileInput.click()"
-             @dragover.prevent
-             @drop.prevent="handleDrop($event)">
-          <div class="w-14 h-14 rounded-xl bg-brand/15 flex items-center justify-center">
-            <i class="ti ti-cloud-upload text-[28px] text-brand-light"></i>
+      <div class="flex flex-col gap-4">
+
+        <!-- Dropzone / Preview -->
+        <div>
+          <div x-show="!hasFile"
+               class="border-[1.5px] border-dashed border-brand/35 rounded-2xl h-52 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors hover:border-brand/60 hover:bg-brand/[0.06]"
+               style="background: rgba(124,58,237,0.04);"
+               @click="$refs.fileInput.click()"
+               @dragover.prevent
+               @drop.prevent="handleDrop($event)">
+            <div class="w-14 h-14 rounded-xl bg-brand/15 flex items-center justify-center">
+              <i class="ti ti-cloud-upload text-[28px] text-brand-light"></i>
+            </div>
+            <div class="text-center">
+              <div class="text-[14px] font-medium text-white mb-1">Drop image here</div>
+              <div class="text-[12px] text-[#5E5C6A]">or click to browse</div>
+            </div>
+            <div class="text-[11px] text-[#5E5C6A] px-3 py-1.5 bg-surface-input rounded-full">
+              JPG, PNG, WEBP · max 10MB
+            </div>
           </div>
-          <div class="text-center">
-            <div class="text-[14px] font-medium text-white mb-1">Drop image here</div>
-            <div class="text-[12px] text-[#5E5C6A]">or click to browse</div>
+
+          <div x-show="hasFile" class="relative rounded-2xl overflow-hidden h-52 bg-surface-input">
+            <img id="previewImg" class="w-full h-full object-cover" alt="preview" />
+            <button type="button" @click="clearFile()"
+                    class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                    style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);">
+              <i class="ti ti-x text-[14px] text-[#9896A4]"></i>
+            </button>
+            <div class="absolute bottom-0 left-0 right-0 px-4 py-3"
+                 style="background: linear-gradient(to top, rgba(15,14,19,0.85), transparent);">
+              <div class="text-[12px] text-white truncate" x-text="fileName"></div>
+              <div class="text-[11px] text-[#9896A4]" x-text="fileSize"></div>
+            </div>
           </div>
-          <div class="text-[11px] text-[#5E5C6A] px-3 py-1.5 bg-surface-input rounded-full">
-            JPG, PNG, WEBP · max 10MB
-          </div>
+
+          {% if form.image.errors %}
+            <ul class="mt-2 flex flex-col gap-1">
+              {% for error in form.image.errors %}
+                <li class="text-[12px] text-red-400">{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </div>
 
-        <div x-show="hasFile" class="relative rounded-2xl overflow-hidden h-52 bg-surface-input">
-          <img id="previewImg" class="w-full h-full object-cover" alt="preview" />
-          <button type="button" @click="clearFile()"
-                  class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                  style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);">
-            <i class="ti ti-x text-[14px] text-[#9896A4]"></i>
-          </button>
-          <div class="absolute bottom-0 left-0 right-0 px-4 py-3"
-               style="background: linear-gradient(to top, rgba(15,14,19,0.85), transparent);">
-            <div class="text-[12px] text-white truncate" x-text="fileName"></div>
-            <div class="text-[11px] text-[#9896A4]" x-text="fileSize"></div>
-          </div>
+        <input type="file" name="image" accept="image/*" x-ref="fileInput" class="hidden"
+               @change="handleFile($event.target.files[0])">
+
+        <!-- Title -->
+        <div>
+          <label class="block text-[12px] text-[#9896A4] mb-1.5">
+            Title <span class="text-red-400">*</span>
+          </label>
+          <input type="text" name="title" required
+                 value="{{ form.title.value|default:'' }}"
+                 placeholder="Write a title"
+                 class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] transition-colors
+                        {% if form.title.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
+          {% for error in form.title.errors %}
+            <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+          {% endfor %}
         </div>
 
-        {% if form.image.errors %}
-          <ul class="mt-2 flex flex-col gap-1">
-            {% for error in form.image.errors %}
-              <li class="text-[12px] text-red-400">{{ error }}</li>
-            {% endfor %}
-          </ul>
-        {% endif %}
+        <!-- Description -->
+        <div>
+          <label class="block text-[12px] text-[#9896A4] mb-1.5">Description</label>
+          <textarea name="description" rows="3"
+                    placeholder="Tell about the photo"
+                    class="w-full bg-surface-input border border-white/[0.15] rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors resize-none leading-relaxed">{{ form.description.value|default:'' }}</textarea>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit"
+                :disabled="!hasFile || submitting"
+                :class="hasFile && !submitting
+                  ? 'bg-brand text-white hover:opacity-90 cursor-pointer'
+                  : 'bg-surface-input text-[#5E5C6A] cursor-not-allowed border border-white/[0.08]'"
+                class="flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-[14px] font-medium transition-all self-start">
+          <i class="ti ti-loader-2 animate-spin text-[16px]" x-show="submitting" x-cloak></i>
+          <i class="ti ti-upload text-[16px]" x-show="!submitting"></i>
+          <span x-text="submitting ? 'Uploading...' : 'Upload image'"></span>
+        </button>
+
       </div>
-
-      <input type="file" name="image" accept="image/*" x-ref="fileInput" class="hidden"
-             @change="handleFile($event.target.files[0])">
-
-      <!-- Title -->
-      <div>
-        <label class="block text-[12px] text-[#9896A4] mb-1.5">
-          Title <span class="text-red-400">*</span>
-        </label>
-        <input type="text" name="title" required
-               value="{{ form.title.value|default:'' }}"
-               placeholder="Write a title"
-               class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] transition-colors
-                      {% if form.title.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
-        {% for error in form.title.errors %}
-          <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
-        {% endfor %}
-      </div>
-
-      <!-- Description -->
-      <div>
-        <label class="block text-[12px] text-[#9896A4] mb-1.5">Description</label>
-        <textarea name="description" rows="3"
-                  placeholder="Tell about the photo"
-                  class="w-full bg-surface-input border border-white/[0.15] rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors resize-none leading-relaxed">{{ form.description.value|default:'' }}</textarea>
-      </div>
-
-      <!-- Submit -->
-      <button type="submit"
-              :disabled="!hasFile || submitting"
-              :class="hasFile && !submitting
-                ? 'bg-brand text-white hover:opacity-90 cursor-pointer'
-                : 'bg-surface-input text-[#5E5C6A] cursor-not-allowed border border-white/[0.08]'"
-              class="flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-[14px] font-medium transition-all self-start">
-        <i class="ti ti-loader-2 animate-spin text-[16px]" x-show="submitting" x-cloak></i>
-        <i class="ti ti-upload text-[16px]" x-show="!submitting"></i>
-        <span x-text="submitting ? 'Uploading...' : 'Upload image'"></span>
-      </button>
-
     </form>
   </div>
 </div>
