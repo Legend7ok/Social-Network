@@ -1,16 +1,19 @@
 {% load thumbnail %}
 {% if image.image %}
-<a href="{{ image.image.url }}">
-    {% thumbnail image.image "300" as im %}
-    <img src="{{ im.url }}" class="image-detail">
-    {% endthumbnail %}
+<a href="{{ image.image.url }}" target="_blank" rel="noopener noreferrer">
+  {% thumbnail image.image "300" as im %}
+  <img src="{{ im.url }}" class="block" alt="{{ image.title }}" />
+  {% endthumbnail %}
 </a>
 {% else %}
 <div hx-get="{% url 'images:status' image.id %}"
      hx-trigger="every 2s"
      hx-swap="outerHTML">
-    <div class="flex items-center justify-center bg-gray-100 rounded border border-gray-200" style="width:300px;height:300px;margin:20px 20px 20px 0;">
-        <div role="status" class="w-10 h-10 rounded-full border-4 border-gray-200 border-t-gray-500 animate-spin"></div>
+  <div class="flex items-center justify-center h-64 w-64">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+      <span class="text-[13px] text-[#5E5C6A]">Processing...</span>
     </div>
+  </div>
 </div>
 {% endif %}
