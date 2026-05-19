@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "tabler-icons-filled";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../vendor/fonts/tabler-icons-filled.woff2?v3.44.0") format("woff2"),
+       url("../vendor/fonts/tabler-icons-filled.woff?v3.44.0") format("woff"),
+       url("../vendor/fonts/tabler-icons-filled.ttf?v3.44.0") format("truetype");
+}
+
+.ti.ti-filled {
+  font-family: "tabler-icons-filled" !important;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: #3D3D3D #0F0E13;
