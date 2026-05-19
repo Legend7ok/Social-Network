@@ -352,7 +352,7 @@ def test_image_list_uses_full_template(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"))
     template_names = [t.name for t in response.templates]
-    assert "images/image/list.html" in template_names
+    assert "images/list.html" in template_names
 
 
 @pytest.mark.django_db
@@ -363,7 +363,7 @@ def test_image_list_images_only_uses_partial_template(client, user):
     assert response.status_code == 200
     template_names = [t.name for t in response.templates]
     assert "images/partials/image_cards.html" in template_names
-    assert "images/image/list.html" not in template_names
+    assert "images/list.html" not in template_names
 
 
 @pytest.mark.django_db

@@ -45,7 +45,7 @@ def image_create(request):
         form = ImageBookmarkForm(data=request.GET)
 
     return render(
-        request, "images/image/create.html", {"section": "images", "form": form}
+        request, "images/create.html", {"section": "images", "form": form}
     )
 
 
@@ -77,7 +77,7 @@ def image_detail(request, id, slug):
 
     return render(
         request,
-        "images/image/detail.html",
+        "images/detail.html",
         {
             "section": "images",
             "image": image,
@@ -128,7 +128,7 @@ def image_list(request):
     if images_only:
         return render(request, "images/partials/image_cards.html", context)
 
-    return render(request, "images/image/list.html", context)
+    return render(request, "images/list.html", context)
 
 
 @login_required
@@ -146,7 +146,7 @@ def image_upload(request):
     else:
         form = ImageUploadForm()
     return render(
-        request, "images/image/upload.html", {"section": "images", "form": form}
+        request, "images/upload.html", {"section": "images", "form": form}
     )
 
 
@@ -215,7 +215,7 @@ def image_ranking(request):
         .select_related("profile")[:8]
     )
 
-    return render(request, "images/image/ranking.html", {
+    return render(request, "images/ranking.html", {
         "section": "images",
         "top3": top3,
         "ranking_list": ranking_list,
