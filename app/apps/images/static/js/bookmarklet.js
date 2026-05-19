@@ -33,12 +33,10 @@ function bookmarkletLaunch() {
     bookmarklet.querySelector('#close')
         .addEventListener('click', () => {
             bookmarklet.style.display = 'none';
-        });
+        }, { once: true });
 
     // find images in DOM with minimum dimensions
-    const images = document.querySelectorAll(
-        'img[src$=".jpg"], img[src$=".jpeg"], img[src$=".png"], img[src$=".webp"]'
-    );
+    const images = document.querySelectorAll('img');
     images.forEach(image => {
         if (image.naturalWidth >= minWidth && image.naturalHeight >= minHeight) {
             const imageFound = document.createElement('img');
