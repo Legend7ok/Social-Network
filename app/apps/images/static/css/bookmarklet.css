@@ -1,54 +1,62 @@
 #bookmarklet {
-    background:#fff;
-    border-bottom:8px solid #12c064;
-    font-family:"Helvetica Neue", helvetica, arial, sans-serif !important;
-    padding:10px; overflow:auto;
-    box-shadow:0px 0px 8px 0 #666;
-    position:fixed;
-    width:400px;
-    min-height:200px;
-    top:10px;
-    right:10px;
-    z-index:1000000000000;
+    background: #1C1B20;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: 3px solid #7C3AED;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    padding: 16px;
+    overflow: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    position: fixed;
+    width: 400px;
+    min-height: 200px;
+    top: 12px;
+    right: 12px;
+    z-index: 1000000000000;
+    border-radius: 14px;
 }
 
 #bookmarklet h1 {
-    font-family:"Helvetica Neue", helvetica, arial, sans-serif;
-    font-weight:normal;
-    color:#333;
-    font-size:18px;
-    padding:4px 0 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 500;
+    color: #ffffff;
+    font-size: 14px;
+    padding: 4px 0 14px 0;
+    margin: 0;
 }
 
 #bookmarklet #close {
-    float:right;
-    font-size:18px;
-    text-decoration:none;
-    color:#666;
-    margin-top:-6px;
+    float: right;
+    font-size: 18px;
+    text-decoration: none;
+    color: #5E5C6A;
+    margin-top: -4px;
+    line-height: 1;
 }
 
 #bookmarklet #close:hover {
-    color:#000;
+    color: #ffffff;
 }
 
 #bookmarklet .images {
-    margin-bottom:20px;
-    overflow:auto;
+    margin-bottom: 8px;
+    overflow: auto;
 }
 
 #bookmarklet .images img {
-    border:1px solid #ccc;
-    padding:2px;
-    margin:2px;
-    opacity:0.8;
-    width:90px;
-    float:left;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0;
+    margin: 4px;
+    opacity: 0.85;
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    float: left;
     cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s;
 }
 
-#bookmarklet .images img.selected,
 #bookmarklet .images img:hover {
-    border:1px solid #12c064;
-    opacity:1;
+    border-color: #7C3AED;
+    opacity: 1;
 }
