@@ -152,7 +152,7 @@ def image_upload(request):
 
 def image_status(request, id):
     image = get_object_or_404(Image, id=id)
-    return render(request, "images/image/_image_status.html", {"image": image})
+    return render(request, "images/partials/image_status.html", {"image": image})
 
 
 @login_required()
