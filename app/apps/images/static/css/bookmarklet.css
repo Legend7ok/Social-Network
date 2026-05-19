@@ -1,4 +1,5 @@
 #bookmarklet {
+    display: none;
     background: #1C1B20;
     border: 1px solid rgba(255,255,255,0.1);
     border-top: 3px solid #7C3AED;
