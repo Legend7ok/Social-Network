@@ -227,7 +227,7 @@ def user_list(request):
     if users_only:
         return render(request, "account/partials/user_cards.html", context)
 
-    return render(request, "account/user/list.html", context)
+    return render(request, "account/users/list.html", context)
 
 
 @login_required
@@ -261,7 +261,7 @@ def user_detail(request, username):
 
     return render(
         request,
-        "account/user/detail.html",
+        "account/users/detail.html",
         {
             "section": "people",
             "user": profile_user,
