@@ -63,10 +63,10 @@
            }">
         <button @click="toggle()"
                 :class="liked
-                  ? 'bg-brand border-brand text-white'
+                  ? 'bg-brand/15 border-brand/50 text-white'
                   : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
                 class="flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-medium transition-all">
-          <i class="ti ti-heart text-[15px]"></i>
+          <i class="ti text-[15px]" :class="liked ? 'ti-heart-filled heart-gradient' : 'ti-heart'"></i>
           <span x-text="liked ? 'Unlike' : 'Like'"></span>
           <span class="text-[12px] opacity-60" x-text="count"></span>
         </button>

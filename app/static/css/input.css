@@ -9,8 +9,16 @@
        url("../vendor/fonts/tabler-icons-filled.ttf?v3.44.0") format("truetype");
 }
 
-.ti.ti-filled {
+.ti-heart-filled:before {
   font-family: "tabler-icons-filled" !important;
+  content: "\f67c";
+}
+
+.heart-gradient {
+  background: linear-gradient(135deg, #E91E8C, #C2185B);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 * {
