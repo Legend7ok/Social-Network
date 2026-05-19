@@ -21,7 +21,6 @@
       <span class="flex items-center gap-1.5 text-white text-[13px]">
         <i class="ti ti-heart"></i> {{ image.total_likes }}
       </span>
-      <!-- total_views: not a model field yet, stored in Redis; view needs to annotate queryset -->
       <span class="flex items-center gap-1.5 text-white text-[13px]">
         <i class="ti ti-eye"></i> {{ image.total_views|default:0 }}
       </span>
