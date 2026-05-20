@@ -58,10 +58,9 @@ def home(request):
         )
         cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
 
-    following_users = (
-        User.objects.filter(profile__in=request.user.profile.following.all())
-        .select_related("profile")[:8]
-    )
+    following_users = User.objects.filter(
+        profile__in=request.user.profile.following.all()
+    ).select_related("profile")[:8]
 
     return render(
         request,
@@ -134,14 +133,12 @@ def my_profile(request):
     follower_profiles = profile.followers.all()
     following_profiles = profile.following.all()
 
-    followers = (
-        User.objects.filter(profile__in=follower_profiles)
-        .select_related("profile")[:4]
-    )
-    following = (
-        User.objects.filter(profile__in=following_profiles)
-        .select_related("profile")[:4]
-    )
+    followers = User.objects.filter(profile__in=follower_profiles).select_related(
+        "profile"
+    )[:4]
+    following = User.objects.filter(profile__in=following_profiles).select_related(
+        "profile"
+    )[:4]
 
     return render(
         request,
@@ -196,9 +193,7 @@ def user_list(request):
         .annotate(
             images_count=Count("images", distinct=True),
             followers_count=Count("profile__followers", distinct=True),
-            total_likes=Coalesce(
-                Subquery(image_likes, output_field=IntegerField()), 0
-            ),
+            total_likes=Coalesce(Subquery(image_likes, output_field=IntegerField()), 0),
         )
         .order_by("first_name", "last_name")
     )
@@ -249,14 +244,12 @@ def user_detail(request, username):
 
     is_following = follower_profiles.filter(user=request.user).exists()
 
-    followers = (
-        User.objects.filter(profile__in=follower_profiles)
-        .select_related("profile")[:4]
-    )
-    following = (
-        User.objects.filter(profile__in=following_profiles)
-        .select_related("profile")[:4]
-    )
+    followers = User.objects.filter(profile__in=follower_profiles).select_related(
+        "profile"
+    )[:4]
+    following = User.objects.filter(profile__in=following_profiles).select_related(
+        "profile"
+    )[:4]
 
     return render(
         request,

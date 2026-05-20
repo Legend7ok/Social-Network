@@ -44,9 +44,7 @@ def image_create(request):
     else:
         form = ImageBookmarkForm(data=request.GET)
 
-    return render(
-        request, "images/create.html", {"section": "images", "form": form}
-    )
+    return render(request, "images/create.html", {"section": "images", "form": form})
 
 
 def image_detail(request, id, slug):
@@ -70,9 +68,11 @@ def image_detail(request, id, slug):
     users_like = image.users_like.select_related("profile").all()
 
     following_users = (
-        User.objects.filter(profile__in=request.user.profile.following.all())
-        .select_related("profile")[:8]
-        if request.user.is_authenticated else []
+        User.objects.filter(
+            profile__in=request.user.profile.following.all()
+        ).select_related("profile")[:8]
+        if request.user.is_authenticated
+        else []
     )
 
     return render(
@@ -92,7 +92,9 @@ def image_detail(request, id, slug):
 def image_list(request):
     mine = request.GET.get("mine")
     if mine:
-        images = Image.objects.filter(user=request.user).select_related("user", "user__profile")
+        images = Image.objects.filter(user=request.user).select_related(
+            "user", "user__profile"
+        )
     else:
         images = Image.objects.all().select_related("user", "user__profile")
     paginator = Paginator(images, 6)
@@ -113,10 +115,9 @@ def image_list(request):
     for img in images.object_list:
         img.total_views = views_map.get(img.id, 0)
 
-    following_users = (
-        User.objects.filter(profile__in=request.user.profile.following.all())
-        .select_related("profile")[:8]
-    )
+    following_users = User.objects.filter(
+        profile__in=request.user.profile.following.all()
+    ).select_related("profile")[:8]
 
     context = {
         "section": "images",
@@ -145,9 +146,7 @@ def image_upload(request):
             return redirect(new_image.get_absolute_url())
     else:
         form = ImageUploadForm()
-    return render(
-        request, "images/upload.html", {"section": "images", "form": form}
-    )
+    return render(request, "images/upload.html", {"section": "images", "form": form})
 
 
 def image_status(request, id):
@@ -171,7 +170,9 @@ def image_ranking(request):
     list_ids = get_image_ranking(start=list_start, count=per_page)
     list_images_by_id = {
         img.id: img
-        for img in Image.objects.filter(id__in=list_ids).select_related("user", "user__profile")
+        for img in Image.objects.filter(id__in=list_ids).select_related(
+            "user", "user__profile"
+        )
     }
     ranking_list = []
     for i, img_id in enumerate(list_ids, start=list_start + 1):
@@ -189,17 +190,23 @@ def image_ranking(request):
     next_page = page + 1
 
     if ranking_only:
-        return render(request, "images/partials/ranking_rows.html", {
-            "ranking_list": ranking_list,
-            "has_next": has_next,
-            "next_page": next_page,
-        })
+        return render(
+            request,
+            "images/partials/ranking_rows.html",
+            {
+                "ranking_list": ranking_list,
+                "has_next": has_next,
+                "next_page": next_page,
+            },
+        )
 
     # Top 3 only needed for full page load
     top3_ids = get_image_ranking(start=0, count=3)
     top3_by_id = {
         img.id: img
-        for img in Image.objects.filter(id__in=top3_ids).select_related("user", "user__profile")
+        for img in Image.objects.filter(id__in=top3_ids).select_related(
+            "user", "user__profile"
+        )
     }
     top3_views = get_images_views(top3_ids)
     top3 = []
@@ -210,16 +217,19 @@ def image_ranking(request):
             img.total_views = top3_views.get(img_id, 0)
             top3.append(img)
 
-    following_users = (
-        User.objects.filter(profile__in=request.user.profile.following.all())
-        .select_related("profile")[:8]
-    )
+    following_users = User.objects.filter(
+        profile__in=request.user.profile.following.all()
+    ).select_related("profile")[:8]
 
-    return render(request, "images/ranking.html", {
-        "section": "images",
-        "top3": top3,
-        "ranking_list": ranking_list,
-        "has_next": has_next,
-        "next_page": next_page,
-        "following_users": following_users,
-    })
+    return render(
+        request,
+        "images/ranking.html",
+        {
+            "section": "images",
+            "top3": top3,
+            "ranking_list": ranking_list,
+            "has_next": has_next,
+            "next_page": next_page,
+            "following_users": following_users,
+        },
+    )
