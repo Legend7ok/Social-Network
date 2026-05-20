@@ -54,7 +54,6 @@ services:
     command: celery -A config worker -l info
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.prod
-      PYTHONPATH: /app/app
     env_file: .env
     depends_on:
       db:
@@ -70,7 +69,6 @@ services:
     command: celery -A config beat -l info
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.prod
-      PYTHONPATH: /app/app
     env_file: .env
     depends_on:
       db:
