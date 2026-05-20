@@ -56,7 +56,7 @@ def home(request):
                 "target"
             )[:10]
         )
-        cache.set(cache_key, actions, settings.DASHBOARD_CACHE_TTL)
+        cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
 
     following_users = (
         User.objects.filter(profile__in=request.user.profile.following.all())
@@ -69,7 +69,6 @@ def home(request):
         {
             "section": "home",
             "actions": actions,
-            "site_url": settings.SITE_URL,
             "following_users": following_users,
         },
     )
@@ -176,12 +175,12 @@ def profile_photo_update(request):
 def user_list(request):
     filter_type = request.GET.get("filter", "all")
     users_only = request.GET.get("users_only")
-    my_profile = request.user.profile
+    viewer_profile = request.user.profile
 
     if filter_type == "following":
-        base_qs = User.objects.filter(profile__in=my_profile.following.all())
+        base_qs = User.objects.filter(profile__in=viewer_profile.following.all())
     elif filter_type == "followers":
-        base_qs = User.objects.filter(profile__in=my_profile.followers.all())
+        base_qs = User.objects.filter(profile__in=viewer_profile.followers.all())
     else:
         base_qs = User.objects.filter(is_active=True).exclude(id=request.user.id)
 
@@ -215,7 +214,7 @@ def user_list(request):
             return HttpResponse("")
         users = paginator.page(paginator.num_pages)
 
-    following_ids = set(my_profile.following.values_list("user_id", flat=True))
+    following_ids = set(viewer_profile.following.values_list("user_id", flat=True))
 
     context = {
         "section": "people",

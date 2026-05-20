@@ -155,7 +155,7 @@ def image_status(request, id):
     return render(request, "images/partials/image_status.html", {"image": image})
 
 
-@login_required()
+@login_required
 def image_ranking(request):
     per_page = 10
     ranking_only = request.GET.get("ranking_only")
