@@ -51,7 +51,7 @@ services:
     build:
       context: .
       target: web
-    command: celery -A config worker -l info
+    command: celery -A config worker -l info --uid nobody --gid nogroup
     environment:
       DJANGO_SETTINGS_MODULE: settings.prod
       PYTHONPATH: /app/app

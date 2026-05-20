@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.conf import settings
 
 from core.views import handler429  # noqa: F401
 
 urlpatterns = [
+    path("", RedirectView.as_view(pattern_name="home", permanent=False)),
     path("admin/", admin.site.urls),
     path("account/", include("apps.account.urls")),
     path("social-auth/", include("social_django.urls", namespace="social")),
