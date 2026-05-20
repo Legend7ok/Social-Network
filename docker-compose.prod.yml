@@ -51,9 +51,10 @@ services:
     build:
       context: .
       target: web
-    command: celery -A config worker -l info
+    command: celery -A config worker -l info --uid nobody --gid nogroup
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.prod
+      DJANGO_SETTINGS_MODULE: settings.prod
+      PYTHONPATH: /app/app
     env_file: .env
     depends_on:
       db:
@@ -68,7 +69,8 @@ services:
       target: web
     command: celery -A config beat -l info
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.prod
+      DJANGO_SETTINGS_MODULE: settings.prod
+      PYTHONPATH: /app/app
     env_file: .env
     depends_on:
       db:
