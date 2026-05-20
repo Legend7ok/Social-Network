@@ -41,6 +41,23 @@
   transition: left 450ms cubic-bezier(.77, 0, .18, 1);
 }
 
+@layer components {
+  .errorlist {
+    color: #F87171;
+    font-size: 0.75rem;
+    margin-top: 4px;
+    list-style: none;
+    padding: 0;
+  }
+
+  .helptext {
+    color: #5E5C6A;
+    font-size: 0.75rem;
+    margin-top: 4px;
+    display: block;
+  }
+}
+
 .img-card {
   opacity: 0;
   transform: translateY(20px);
