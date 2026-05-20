@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Images · socnet{% endblock %}
+
+{% block content %}
+<div class="px-6 py-5">
+
+  <!-- Grid -->
+  <div id="images-grid" class="grid grid-cols-3 gap-4">
+    {% include 'images/partials/image_cards.html' %}
+  </div>
+
+  <div id="loading" class="htmx-indicator flex justify-center py-6">
+    <div class="flex items-center gap-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></div>
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+
+{% block sidebar_right %}
+  {% include 'partials/sidebar_following.html' %}
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  const _cardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        _cardObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  function _observeCards() {
+    document.querySelectorAll('.img-card:not(.visible)').forEach((card, i) => {
+      card.style.transitionDelay = `${i * 60}ms`;
+      _cardObserver.observe(card);
+    });
+  }
+
+  _observeCards();
+  document.addEventListener('htmx:afterSwap', _observeCards);
+</script>
+{% endblock %}

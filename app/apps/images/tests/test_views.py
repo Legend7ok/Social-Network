@@ -352,7 +352,7 @@ def test_image_list_uses_full_template(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"))
     template_names = [t.name for t in response.templates]
-    assert "images/image/list.html" in template_names
+    assert "images/list.html" in template_names
 
 
 @pytest.mark.django_db
@@ -362,8 +362,8 @@ def test_image_list_images_only_uses_partial_template(client, user):
     response = client.get(reverse("images:list"), {"images_only": "1"})
     assert response.status_code == 200
     template_names = [t.name for t in response.templates]
-    assert "images/image/list_images.html" in template_names
-    assert "images/image/list.html" not in template_names
+    assert "images/partials/image_cards.html" in template_names
+    assert "images/list.html" not in template_names
 
 
 @pytest.mark.django_db
@@ -391,7 +391,7 @@ def test_image_list_second_page_contains_remaining_images(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"), {"page": "2"})
     assert response.status_code == 200
-    assert len(response.context["images"]) == 2  # 10 images, 8 per page → page 2 has 2
+    assert len(response.context["images"]) == 4  # 10 images, 6 per page → page 2 has 4
 
 
 # ─── View Tests: HTMX infinite scroll sentinel ───────────────────────────────

@@ -1,0 +1,41 @@
+{% for image in ranking_list %}
+<a href="{{ image.get_absolute_url }}"
+   class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors
+          {% if image.user == request.user %}border-brand/50 bg-brand/[0.08] hover:bg-brand/[0.12]{% else %}border-white/[0.08] bg-surface-card hover:border-brand/30 hover:bg-surface-input{% endif %}">
+  <span class="text-[14px] font-medium w-6 text-center shrink-0
+               {% if image.user == request.user %}text-brand-light{% else %}text-[#5E5C6A]{% endif %}">
+    {{ image.rank }}
+  </span>
+  <div class="w-11 h-11 rounded-lg overflow-hidden shrink-0 bg-surface-input flex items-center justify-center">
+    {% if image.image %}
+      <img src="{{ image.image.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" />
+    {% else %}
+      <i class="ti ti-photo text-lg text-[#5E5C6A]"></i>
+    {% endif %}
+  </div>
+  <div class="flex-1 min-w-0">
+    <div class="text-[13px] font-medium text-white truncate">{{ image.title }}</div>
+    <div class="flex items-center gap-1.5 mt-0.5">
+      <span class="text-[11px] text-[#9896A4]">{{ image.user.get_full_name }}</span>
+      {% if image.user == request.user %}
+        <span class="text-[10px] px-1.5 py-px rounded-full"
+              style="background:rgba(124,58,237,0.2); border:0.5px solid rgba(124,58,237,0.4); color:#A78BFA;">Твоя</span>
+      {% endif %}
+    </div>
+  </div>
+  <span class="text-[12px] text-[#5E5C6A] flex items-center gap-1 shrink-0">
+    <i class="ti ti-eye text-[13px]"></i> {{ image.total_views|floatformat:"-1" }}
+  </span>
+  <span class="text-[12px] text-[#5E5C6A] flex items-center gap-1 shrink-0">
+    <i class="ti ti-heart text-[13px]"></i> {{ image.total_likes }}
+  </span>
+</a>
+{% endfor %}
+{% if has_next %}
+<div class="h-px"
+     hx-get="{% url 'images:ranking' %}?ranking_only=1&page={{ next_page }}"
+     hx-trigger="intersect once"
+     hx-swap="outerHTML"
+     hx-indicator="#loading">
+</div>
+{% endif %}

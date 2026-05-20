@@ -55,6 +55,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.site_url",
             ],
         },
     },
@@ -93,7 +94,7 @@ MEDIA_ROOT = BASE_DIR / "media/"
 
 LOGIN_URL = "login"
 LOGOUT_URL = "logout"
-LOGIN_REDIRECT_URL = "dashboard"
+LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 
 AUTHENTICATION_BACKENDS = [
@@ -151,7 +152,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 IMAGE_RANKING_CACHE_KEY = "image_ranking_list"
 IMAGE_RANKING_CACHE_TTL = 60 * 5
 
-DASHBOARD_CACHE_TTL = 60 * 3
+HOME_CACHE_TTL = 60 * 3
 
 CELERY_BEAT_SCHEDULE = {
     "refresh-image-ranking-cache": {

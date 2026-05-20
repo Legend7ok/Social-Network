@@ -31,3 +31,5 @@ celerybeat-schedule-wal
 # Node
 node_modules/
 app/static/css/dist/
+app/static/js/vendor/
+app/static/css/vendor/

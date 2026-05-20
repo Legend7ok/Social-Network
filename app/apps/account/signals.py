@@ -10,4 +10,4 @@ def invalidate_dashboard_cache(sender, instance, created, **kwargs):
     if not created or not hasattr(instance.user, "profile"):
         return
     for profile in instance.user.profile.followers.all():
-        cache.delete(f"dashboard_{profile.user_id}")
+        cache.delete(f"home_{profile.user_id}")
