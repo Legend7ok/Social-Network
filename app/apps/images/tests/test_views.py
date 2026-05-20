@@ -391,7 +391,7 @@ def test_image_list_second_page_contains_remaining_images(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"), {"page": "2"})
     assert response.status_code == 200
-    assert len(response.context["images"]) == 2  # 10 images, 8 per page → page 2 has 2
+    assert len(response.context["images"]) == 4  # 10 images, 6 per page → page 2 has 4
 
 
 # ─── View Tests: HTMX infinite scroll sentinel ───────────────────────────────

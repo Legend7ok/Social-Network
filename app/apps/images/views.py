@@ -7,8 +7,6 @@ from django.http import HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django_ratelimit.decorators import ratelimit
 
-User = get_user_model()
-
 from .forms import ImageBookmarkForm, ImageUploadForm
 from .models import Image
 from .services import (
@@ -21,6 +19,8 @@ from .services import (
 )
 from .tasks import download_image
 from apps.actions.utils import create_action
+
+User = get_user_model()
 
 
 def bookmarklet_launcher(request):

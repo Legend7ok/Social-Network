@@ -146,9 +146,9 @@ def test_image_ranking_shows_most_viewed_first(client, user, image):
 
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:ranking"))
-    most_viewed = response.context["most_viewed"]
-    assert most_viewed[0] == image2
-    assert most_viewed[1] == image
+    top3 = response.context["top3"]
+    assert top3[0] == image2
+    assert top3[1] == image
 
 
 @pytest.mark.django_db
@@ -159,6 +159,6 @@ def test_image_ranking_excludes_stale_redis_entries(client, user, image):
 
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:ranking"))
-    ids = [img.id for img in response.context["most_viewed"]]
+    ids = [img.id for img in response.context["top3"]]
     assert 9999 not in ids
     assert image.id in ids
