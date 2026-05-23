@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -18,6 +19,11 @@ class UserFollowView(APIView):
     @extend_schema(request=FollowSerializer, responses={200: None})
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, is_active=True)
+        if user == request.user:
+            return Response(
+                {"error": "You cannot follow yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = FollowSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

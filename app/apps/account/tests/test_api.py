@@ -57,6 +57,25 @@ def test_user_follow_invalid_action_returns_400(auth_client, second_user):
 
 
 @pytest.mark.django_db
+def test_user_cannot_follow_self(auth_client, user):
+    requester, _ = user
+    url = reverse("user-follow", args=[requester.pk])
+    response = auth_client.post(url, {"action": "follow"}, format="json")
+    assert response.status_code == 400
+    assert not Contact.objects.filter(
+        user_from=requester.profile, user_to=requester.profile
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_user_cannot_unfollow_self(auth_client, user):
+    requester, _ = user
+    url = reverse("user-follow", args=[requester.pk])
+    response = auth_client.post(url, {"action": "unfollow"}, format="json")
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
 def test_user_follow_throttled_after_limit(auth_client, second_user, monkeypatch):
     from core.throttles import FollowRateThrottle
 
