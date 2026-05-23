@@ -20,7 +20,10 @@ class UserFollowView(APIView):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, is_active=True)
         if user == request.user:
-            return Response({"error": "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "You cannot follow yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = FollowSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
