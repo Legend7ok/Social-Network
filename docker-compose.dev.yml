@@ -51,9 +51,9 @@ services:
     build:
       context: .
       target: web
-    command: celery -A config worker -l info
+    command: celery -A app.config worker -l info
     environment:
-      PYTHONPATH: /app/app
+      DJANGO_SETTINGS_MODULE: app.settings.dev
     env_file: .env
     volumes:
       - .:/app
@@ -68,9 +68,9 @@ services:
     build:
       context: .
       target: web
-    command: celery -A config beat -l info
+    command: celery -A app.config beat -l info
     environment:
-      PYTHONPATH: /app/app
+      DJANGO_SETTINGS_MODULE: app.settings.dev
     env_file: .env
     volumes:
       - .:/app
