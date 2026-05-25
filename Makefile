@@ -3,7 +3,7 @@ PROD := docker compose -f docker-compose.prod.yml
 DEV_TEST := $(DEV) --profile test
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
-        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps vendor
+        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps prod-collectstatic vendor
 
 help:
 	@echo "Dev:"
@@ -22,7 +22,8 @@ help:
 	@echo "  make prod-down       Stop and remove prod containers"
 	@echo "  make prod-restart    Restart prod containers"
 	@echo "  make prod-logs       Show prod logs (follow)"
-	@echo "  make prod-ps         Show running prod services"
+	@echo "  make prod-ps             Show running prod services"
+	@echo "  make prod-collectstatic  Upload static files to R2 (run once on deploy)"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make vendor          Install npm deps and copy vendor assets"
@@ -96,3 +97,6 @@ prod-logs:
 
 prod-ps:
 	$(PROD) ps
+
+prod-collectstatic:
+	$(PROD) run --rm web python app/manage.py collectstatic --noinput

@@ -19,7 +19,7 @@ services:
     build:
       context: .
       target: web
-    command: sh -c "python app/manage.py collectstatic --noinput && gunicorn --chdir /app/app -c /app/gunicorn.conf.py config.wsgi:application"
+    command: gunicorn -c /app/gunicorn.conf.py config.wsgi:application
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.prod
     env_file: .env
@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); s.connect((\"localhost\", 8000)); s.close()'"]
       interval: 10s
@@ -51,39 +51,43 @@ services:
     build:
       context: .
       target: web
-    command: celery -A config worker -l info --uid nobody --gid nogroup
+    command: celery -A app.config worker -l info --uid nobody --gid nogroup
     environment:
-      DJANGO_SETTINGS_MODULE: settings.prod
-      PYTHONPATH: /app/app
+      DJANGO_SETTINGS_MODULE: app.settings.prod
     env_file: .env
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   beat:
     build:
       context: .
       target: web
-    command: celery -A config beat -l info
+    command: celery -A app.config beat -l info
     environment:
-      DJANGO_SETTINGS_MODULE: settings.prod
-      PYTHONPATH: /app/app
+      DJANGO_SETTINGS_MODULE: app.settings.prod
     env_file: .env
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:
