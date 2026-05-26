@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Service Unavailable · socnet{% endblock %}
+
+{% block content %}
+<div class="px-7 py-7 flex justify-start">
+  <div class="w-full max-w-[480px] flex flex-col gap-5">
+
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-red-900/40 border border-red-700/40 flex items-center justify-center shrink-0">
+        <i class="ti ti-server-off text-[18px] text-red-400"></i>
+      </div>
+      <h1 class="text-[18px] font-medium text-white">Technical issue</h1>
+    </div>
+
+    <p class="text-[13px] text-[#9896A4]">
+      Something went wrong on our end.<br>
+      Please try again later.
+    </p>
+
+    <a href="javascript:history.back()"
+       class="flex items-center gap-2 px-8 py-3 rounded-xl text-[14px] font-medium bg-brand text-white hover:opacity-90 transition-all self-start">
+      <i class="ti ti-arrow-left text-[16px]"></i>
+      Go back
+    </a>
+
+  </div>
+</div>
+{% endblock %}
