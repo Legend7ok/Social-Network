@@ -1,4 +1,8 @@
+import logging
+from unittest.mock import MagicMock
+
 import pytest
+import redis
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -10,6 +14,20 @@ from apps.images.services import (
     record_image_view,
 )
 from conftest import MINIMAL_PNG
+from core.exceptions import RedisUnavailableError
+
+
+@pytest.fixture
+def broken_redis(monkeypatch):
+    mock = MagicMock()
+    mock.pipeline.side_effect = redis.ConnectionError("down")
+    mock.zrange.side_effect = redis.ConnectionError("down")
+    mock.zcard.side_effect = redis.ConnectionError("down")
+    mock.get.side_effect = redis.ConnectionError("down")
+    mock.mget.side_effect = redis.ConnectionError("down")
+    mock.set.side_effect = redis.ConnectionError("down")
+    monkeypatch.setattr("apps.images.services.r", mock)
+    return mock
 
 
 # ─── record_image_view ───────────────────────────────────────────────────────
@@ -109,6 +127,34 @@ def test_get_image_ranking_returns_all_when_fewer_than_count():
     record_image_view(1)
     record_image_view(2)
     assert len(get_image_ranking(count=10)) == 2
+
+
+# ─── connection error handling ───────────────────────────────────────────────
+
+
+def test_record_image_view_returns_zero_on_connection_error(broken_redis):
+    assert record_image_view(1) == 0
+
+
+def test_record_image_view_logs_on_connection_error(broken_redis, caplog):
+    with caplog.at_level(logging.ERROR, logger="apps.images.services"):
+        record_image_view(1)
+    assert "record_image_view" in caplog.text
+
+
+def test_is_first_view_returns_false_on_connection_error(broken_redis):
+    assert is_first_view(1, "user:1") is False
+
+
+def test_is_first_view_logs_on_connection_error(broken_redis, caplog):
+    with caplog.at_level(logging.ERROR, logger="apps.images.services"):
+        is_first_view(1, "user:1")
+    assert "is_first_view" in caplog.text
+
+
+def test_get_image_ranking_raises_redis_unavailable_on_connection_error(broken_redis):
+    with pytest.raises(RedisUnavailableError):
+        get_image_ranking()
 
 
 # ─── image_ranking view ──────────────────────────────────────────────────────
