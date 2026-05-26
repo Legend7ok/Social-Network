@@ -8,7 +8,11 @@ from core.exceptions import RedisUnavailableError
 logger = logging.getLogger(__name__)
 
 r = redis.Redis(
-    host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    socket_connect_timeout=2,
+    socket_timeout=2,
 )
 
 _REDIS_ERRORS = (redis.ConnectionError, redis.TimeoutError)
