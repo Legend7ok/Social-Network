@@ -34,6 +34,8 @@ class ServiceUnavailableMiddleware:
         if isinstance(exception, ServiceUnavailableError):
             logger.error("Service unavailable: %s", exception, exc_info=True)
             if "application/json" in request.headers.get("Accept", ""):
-                return JsonResponse({"detail": "Service temporarily unavailable"}, status=503)
+                return JsonResponse(
+                    {"detail": "Service temporarily unavailable"}, status=503
+                )
             return render(request, "503.html", status=503)
         return None

@@ -26,7 +26,11 @@ def record_image_view(image_id):
             total_views, _ = pipe.execute()
         return total_views
     except _REDIS_ERRORS:
-        logger.error("Redis unavailable: record_image_view failed for image %s", image_id, exc_info=True)
+        logger.error(
+            "Redis unavailable: record_image_view failed for image %s",
+            image_id,
+            exc_info=True,
+        )
         return 0
 
 
@@ -69,5 +73,9 @@ def is_first_view(image_id, viewer_key, ttl=3600):
         key = f"image:{image_id}:view:{viewer_key}"
         return bool(r.set(key, 1, ex=ttl, nx=True))
     except _REDIS_ERRORS:
-        logger.error("Redis unavailable: is_first_view failed for image %s", image_id, exc_info=True)
+        logger.error(
+            "Redis unavailable: is_first_view failed for image %s",
+            image_id,
+            exc_info=True,
+        )
         return False
