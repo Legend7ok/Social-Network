@@ -1,4 +1,5 @@
 import pytest
+import requests
 from unittest.mock import MagicMock, patch
 
 from apps.images.models import Image
@@ -72,15 +73,16 @@ def test_download_image_silently_ignores_missing_image():
 
 
 @pytest.mark.django_db
-def test_download_image_silently_ignores_request_error(user):
+def test_download_image_raises_on_request_error(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
         title="Test Image",
         url="https://example.com/test.jpg",
     )
-    with patch("apps.images.tasks.requests.get", side_effect=Exception("timeout")):
-        download_image(image.id, image.url)
-
-    image.refresh_from_db()
-    assert not image.image
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=requests.RequestException("timeout"),
+    ):
+        with pytest.raises(requests.RequestException):
+            download_image(image.id, image.url)
