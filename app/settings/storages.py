@@ -25,7 +25,7 @@ if R2_PUBLIC_DOMAIN:
 
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
             **COMMON_R2_OPTIONS,
             "bucket_name": R2_BUCKET,
@@ -34,7 +34,7 @@ STORAGES = {
         },
     },
     "staticfiles": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
             **COMMON_R2_OPTIONS,
             "bucket_name": R2_BUCKET,
