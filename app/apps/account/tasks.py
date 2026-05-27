@@ -25,5 +25,7 @@ def send_welcome_email(user_id):
             recipient_list=[user.email],
         )
     except Exception as exc:
-        logger.error("send_welcome_email: failed to send email to user %s: %s", user_id, exc)
+        logger.error(
+            "send_welcome_email: failed to send email to user %s: %s", user_id, exc
+        )
         raise
