@@ -1,3 +1,4 @@
+import logging
 import os
 from urllib.parse import urlparse
 
@@ -12,6 +13,8 @@ from sorl.thumbnail import get_thumbnail
 from .models import Image
 from .services import get_image_ranking
 
+logger = logging.getLogger(__name__)
+
 
 @shared_task
 def refresh_image_ranking_cache():
@@ -25,16 +28,22 @@ def refresh_image_ranking_cache():
     )
 
 
-@shared_task
+@shared_task(
+    autoretry_for=(requests.RequestException,),
+    max_retries=3,
+    default_retry_delay=60,
+    time_limit=300,
+)
 def download_image(image_id, url):
     try:
         image = Image.objects.get(id=image_id)
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
-        name = f"{slugify(image.title)}.{extension}"
-        image.image.save(name, ContentFile(response.content), save=True)
-        get_thumbnail(image.image, "300x300", crop="center")
-        get_thumbnail(image.image, "300")
-    except Exception:
-        pass
+    except Image.DoesNotExist:
+        logger.warning("download_image: image %s not found, skipping", image_id)
+        return
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
+    name = f"{slugify(image.title)}.{extension}"
+    image.image.save(name, ContentFile(response.content), save=True)
+    get_thumbnail(image.image, "300x300", crop="center")
+    get_thumbnail(image.image, "300")
