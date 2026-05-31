@@ -3,37 +3,37 @@
 {% block title %}People · socnet{% endblock %}
 
 {% block content %}
-<div class="px-6 py-5">
+<div class="px-[26px] py-[22px]">
 
   <!-- Tabs -->
-  <div class="flex border-b border-white/[0.08] mb-5">
+  <div class="flex border-b border-white/[0.08] mb-[22px]">
     <a href="?filter=all"
-       class="px-4 py-2 text-[13px] border-b-2 transition-colors
+       class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if not filter or filter == 'all' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       All
     </a>
     <a href="?filter=following"
-       class="px-4 py-2 text-[13px] border-b-2 transition-colors
+       class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if filter == 'following' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       Following
     </a>
     <a href="?filter=followers"
-       class="px-4 py-2 text-[13px] border-b-2 transition-colors
+       class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if filter == 'followers' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       Followers
     </a>
   </div>
 
   <!-- List -->
-  <div class="flex flex-col gap-2.5">
+  <div class="flex flex-col gap-[11px]">
     {% include 'account/partials/user_cards.html' %}
   </div>
 
-  <div id="loading" class="htmx-indicator flex justify-center py-6">
-    <div class="flex items-center gap-2">
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></div>
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+  <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
     </div>
   </div>
 

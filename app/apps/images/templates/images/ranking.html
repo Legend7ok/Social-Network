@@ -20,10 +20,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="px-6 py-5">
+<div class="px-[26px] py-[22px]">
 
   <!-- Top 3 -->
-  <div class="grid gap-4 mb-6" style="grid-template-columns: 1fr 1.2fr 1fr; align-items: end;">
+  <div class="grid gap-[18px] mb-[26px]" style="grid-template-columns: 1fr 1.2fr 1fr; align-items: end;">
 
     <!-- #2 Silver -->
     <a href="{{ top3.1.get_absolute_url }}"
@@ -34,27 +34,27 @@
           <img src="{{ top3.1.image.url }}" class="w-full h-full object-cover" alt="{{ top3.1.title }}" />
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
-            <i class="ti ti-photo text-4xl text-[#5E5C6A]"></i>
+            <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
           </div>
         {% endif %}
-        <div class="absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-medium"
+        <div class="absolute top-[11px] left-[11px] w-[35px] h-[35px] rounded-full flex items-center justify-center text-[14px] font-medium"
              style="background:rgba(156,163,175,0.12); border:2px solid #9CA3AF; color:#9CA3AF;">2</div>
       </div>
-      <div class="p-3">
-        <div class="text-[13px] font-medium text-white mb-1 truncate">{{ top3.1.title }}</div>
-        <div class="flex items-center gap-1.5 mb-1.5">
-          <div class="w-[18px] h-[18px] rounded-full bg-brand/30 flex items-center justify-center text-[8px] font-medium text-brand-light overflow-hidden shrink-0">
+      <div class="p-[13px]">
+        <div class="text-[14px] font-medium text-white mb-1 truncate">{{ top3.1.title }}</div>
+        <div class="flex items-center gap-[7px] mb-[7px]">
+          <div class="w-[20px] h-[20px] rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.1.user.profile.photo %}
               <img src="{{ top3.1.user.profile.photo.url }}" class="w-full h-full object-cover" />
             {% else %}
               {{ top3.1.user.first_name|first|upper }}{{ top3.1.user.last_name|first|upper }}
             {% endif %}
           </div>
-          <span class="text-[11px] text-[#9896A4]">{{ top3.1.user.get_full_name }}</span>
+          <span class="text-[12px] text-[#9896A4]">{{ top3.1.user.get_full_name }}</span>
         </div>
-        <div class="flex gap-2.5">
-          <span class="text-[12px] flex items-center gap-1" style="color:#9CA3AF;"><i class="ti ti-eye text-[13px]"></i> {{ top3.1.total_views|floatformat:"-1" }}</span>
-          <span class="text-[12px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[13px]"></i> {{ top3.1.total_likes }}</span>
+        <div class="flex gap-[11px]">
+          <span class="text-[13px] flex items-center gap-1" style="color:#9CA3AF;"><i class="ti ti-eye text-[14px]"></i> {{ top3.1.total_views|floatformat:"-1" }}</span>
+          <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[14px]"></i> {{ top3.1.total_likes }}</span>
         </div>
       </div>
     </a>
@@ -68,31 +68,31 @@
           <img src="{{ top3.0.image.url }}" class="w-full h-full object-cover" alt="{{ top3.0.title }}" />
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
-            <i class="ti ti-photo text-5xl text-[#5E5C6A]"></i>
+            <i class="ti ti-photo text-[53px] text-[#5E5C6A]"></i>
           </div>
         {% endif %}
-        <div class="absolute top-2.5 left-2.5 w-9 h-9 rounded-full flex items-center justify-center text-[15px] font-medium"
+        <div class="absolute top-[11px] left-[11px] w-10 h-10 rounded-full flex items-center justify-center text-[17px] font-medium"
              style="background:rgba(245,158,11,0.18); border:2px solid #F59E0B; color:#F59E0B;">1</div>
-        <div class="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium"
+        <div class="absolute top-[11px] right-[11px] flex items-center gap-1 px-[9px] py-1 rounded-lg text-[11px] font-medium"
              style="background:rgba(245,158,11,0.15); border:0.5px solid rgba(245,158,11,0.5); color:#F59E0B;">
-          <i class="ti ti-crown text-[11px]"></i> Топ
+          <i class="ti ti-crown text-[12px]"></i> Топ
         </div>
       </div>
-      <div class="p-3.5">
-        <div class="text-[14px] font-medium text-white mb-1 truncate">{{ top3.0.title }}</div>
-        <div class="flex items-center gap-1.5 mb-2">
-          <div class="w-5 h-5 rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light overflow-hidden shrink-0">
+      <div class="p-[15px]">
+        <div class="text-[15px] font-medium text-white mb-1 truncate">{{ top3.0.title }}</div>
+        <div class="flex items-center gap-[7px] mb-[9px]">
+          <div class="w-[22px] h-[22px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.0.user.profile.photo %}
               <img src="{{ top3.0.user.profile.photo.url }}" class="w-full h-full object-cover" />
             {% else %}
               {{ top3.0.user.first_name|first|upper }}{{ top3.0.user.last_name|first|upper }}
             {% endif %}
           </div>
-          <span class="text-[12px] text-[#9896A4]">{{ top3.0.user.get_full_name }}</span>
+          <span class="text-[13px] text-[#9896A4]">{{ top3.0.user.get_full_name }}</span>
         </div>
-        <div class="flex gap-3">
-          <span class="text-[13px] font-medium flex items-center gap-1" style="color:#F59E0B;"><i class="ti ti-eye text-[14px]"></i> {{ top3.0.total_views|floatformat:"-1" }}</span>
-          <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[14px]"></i> {{ top3.0.total_likes }}</span>
+        <div class="flex gap-[13px]">
+          <span class="text-[14px] font-medium flex items-center gap-1" style="color:#F59E0B;"><i class="ti ti-eye text-[15px]"></i> {{ top3.0.total_views|floatformat:"-1" }}</span>
+          <span class="text-[14px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[15px]"></i> {{ top3.0.total_likes }}</span>
         </div>
       </div>
     </a>
@@ -106,27 +106,27 @@
           <img src="{{ top3.2.image.url }}" class="w-full h-full object-cover" alt="{{ top3.2.title }}" />
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
-            <i class="ti ti-photo text-4xl text-[#5E5C6A]"></i>
+            <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
           </div>
         {% endif %}
-        <div class="absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-medium"
+        <div class="absolute top-[11px] left-[11px] w-[35px] h-[35px] rounded-full flex items-center justify-center text-[14px] font-medium"
              style="background:rgba(180,83,9,0.12); border:2px solid #B45309; color:#B45309;">3</div>
       </div>
-      <div class="p-3">
-        <div class="text-[13px] font-medium text-white mb-1 truncate">{{ top3.2.title }}</div>
-        <div class="flex items-center gap-1.5 mb-1.5">
-          <div class="w-[18px] h-[18px] rounded-full bg-brand/30 flex items-center justify-center text-[8px] font-medium text-brand-light overflow-hidden shrink-0">
+      <div class="p-[13px]">
+        <div class="text-[14px] font-medium text-white mb-1 truncate">{{ top3.2.title }}</div>
+        <div class="flex items-center gap-[7px] mb-[7px]">
+          <div class="w-[20px] h-[20px] rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.2.user.profile.photo %}
               <img src="{{ top3.2.user.profile.photo.url }}" class="w-full h-full object-cover" />
             {% else %}
               {{ top3.2.user.first_name|first|upper }}{{ top3.2.user.last_name|first|upper }}
             {% endif %}
           </div>
-          <span class="text-[11px] text-[#9896A4]">{{ top3.2.user.get_full_name }}</span>
+          <span class="text-[12px] text-[#9896A4]">{{ top3.2.user.get_full_name }}</span>
         </div>
-        <div class="flex gap-2.5">
-          <span class="text-[12px] flex items-center gap-1" style="color:#B45309;"><i class="ti ti-eye text-[13px]"></i> {{ top3.2.total_views|floatformat:"-1" }}</span>
-          <span class="text-[12px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[13px]"></i> {{ top3.2.total_likes }}</span>
+        <div class="flex gap-[11px]">
+          <span class="text-[13px] flex items-center gap-1" style="color:#B45309;"><i class="ti ti-eye text-[14px]"></i> {{ top3.2.total_views|floatformat:"-1" }}</span>
+          <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1"><i class="ti ti-heart text-[14px]"></i> {{ top3.2.total_likes }}</span>
         </div>
       </div>
     </a>
@@ -134,22 +134,22 @@
   </div>
 
   <!-- Divider -->
-  <div class="flex items-center gap-3 mb-4">
+  <div class="flex items-center gap-[13px] mb-[18px]">
     <div class="flex-1 h-px bg-white/[0.08]"></div>
-    <span class="text-[12px] text-[#5E5C6A] tracking-widest uppercase">Другие</span>
+    <span class="text-[13px] text-[#5E5C6A] tracking-widest uppercase">Другие</span>
     <div class="flex-1 h-px bg-white/[0.08]"></div>
   </div>
 
   <!-- List 4+ -->
-  <div class="flex flex-col gap-1.5" id="ranking-list">
+  <div class="flex flex-col gap-[7px]" id="ranking-list">
     {% include 'images/partials/ranking_rows.html' %}
   </div>
 
-  <div id="loading" class="htmx-indicator flex justify-center py-6">
-    <div class="flex items-center gap-2">
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></div>
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
-      <div class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+  <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
     </div>
   </div>
 
