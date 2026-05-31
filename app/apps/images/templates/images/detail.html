@@ -3,24 +3,24 @@
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
 {% block content %}
-<div class="px-6 py-5">
+<div class="px-[26px] py-[22px]">
 
   <!-- Image + meta row -->
-  <div class="flex gap-5 items-start mb-5">
+  <div class="flex gap-[22px] items-start mb-[22px]">
 
     <!-- Left: back + title + image -->
     <div class="shrink-0">
       <a href="javascript:history.back()"
-         class="inline-flex items-center gap-1.5 text-[13px] text-[#5E5C6A] hover:text-white transition-colors mb-3">
-        <i class="ti ti-arrow-left text-[14px]"></i> Back
+         class="inline-flex items-center gap-[7px] text-[14px] text-[#5E5C6A] hover:text-white transition-colors mb-[13px]">
+        <i class="ti ti-arrow-left text-[15px]"></i> Back
       </a>
-      <h1 class="text-[22px] font-semibold text-white mb-3">{{ image.title }}</h1>
+      <h1 class="text-[24px] font-semibold text-white mb-[13px]">{{ image.title }}</h1>
       <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card">
         {% include 'images/partials/image_status.html' %}
       </div>
 
       <!-- Actions row -->
-      <div class="flex items-center gap-2 mt-3"
+      <div class="flex items-center gap-[9px] mt-[13px]"
            x-data="{
              liked: {% if request.user in users_like %}true{% else %}false{% endif %},
              count: {{ image.total_likes }},
@@ -48,18 +48,18 @@
                 :class="liked
                   ? 'bg-brand/15 border-brand/50 text-white'
                   : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
-                class="flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-medium transition-all">
-          <i class="ti text-[15px]" :class="liked ? 'ti-heart-filled heart-gradient' : 'ti-heart'"></i>
+                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
+          <i class="ti text-[17px]" :class="liked ? 'ti-heart-filled heart-gradient' : 'ti-heart'"></i>
           <span x-text="liked ? 'Unlike' : 'Like'"></span>
-          <span class="text-[12px] opacity-60" x-text="count"></span>
+          <span class="text-[13px] opacity-60" x-text="count"></span>
         </button>
-        <div class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4]">
-          <i class="ti ti-eye text-[15px]"></i>
+        <div class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4]">
+          <i class="ti ti-eye text-[17px]"></i>
           <span>{{ total_views|floatformat:"-1" }}</span>
         </div>
         <button @click="navigator.clipboard.writeText(window.location.href); Alpine.store('messages').push('Link copied!')"
-                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] text-[13px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
-          <i class="ti ti-share text-[15px]"></i> Share
+                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+          <i class="ti ti-share text-[17px]"></i> Share
         </button>
       </div>
     </div>
@@ -89,18 +89,18 @@
          }">
 
       {% if image.description %}
-      <div class="px-4 pt-4 pb-3">
-        <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2">Description</p>
-        <p class="text-[14px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
+      <div class="px-[18px] pt-[18px] pb-[13px]">
+        <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[9px]">Description</p>
+        <p class="text-[15px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
       </div>
-      <div class="h-px bg-white/[0.08] mx-4"></div>
+      <div class="h-px bg-white/[0.08] mx-[18px]"></div>
       {% endif %}
 
-      <div class="px-4 pt-3 pb-4">
-        <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-3">Author</p>
+      <div class="px-[18px] pt-[13px] pb-[18px]">
+        <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Author</p>
         <a href="{% url 'user_detail' image.user.username %}"
-           class="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
-          <div class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
+           class="flex items-center gap-[13px] mb-[13px] hover:opacity-80 transition-opacity">
+          <div class="w-11 h-11 rounded-full bg-brand/30 flex items-center justify-center text-[14px] font-medium text-brand-light shrink-0 overflow-hidden">
             {% if image.user.profile.photo %}
               <img src="{{ image.user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
             {% else %}
@@ -108,8 +108,8 @@
             {% endif %}
           </div>
           <div class="min-w-0">
-            <p class="text-[13px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
-            <p class="text-[11px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
+            <p class="text-[14px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
+            <p class="text-[12px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
           </div>
         </a>
         {% if request.user != image.user %}
@@ -117,9 +117,9 @@
                 :class="following
                   ? 'bg-surface-input border-white/[0.15] text-white'
                   : 'bg-brand border-brand text-white'"
-                class="w-full flex items-center justify-center gap-2 py-2 rounded-xl border text-[13px] font-medium transition-all">
-          <i class="ti ti-user-plus text-[14px]" x-show="!following"></i>
-          <i class="ti ti-user-check text-[14px]" x-show="following"></i>
+                class="w-full flex items-center justify-center gap-[9px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
+          <i class="ti ti-user-plus text-[15px]" x-show="!following"></i>
+          <i class="ti ti-user-check text-[15px]" x-show="following"></i>
           <span x-text="following ? 'Following' : 'Follow'"></span>
         </button>
         {% endif %}
@@ -127,10 +127,10 @@
 
       {% with recent=image.user.images.all|slice:":4" %}
       {% if recent %}
-      <div class="h-px bg-white/[0.08] mx-4"></div>
-      <div class="px-4 pt-3 pb-4">
-        <p class="text-[11px] text-[#5E5C6A] tracking-widest uppercase mb-2.5">More from this author</p>
-        <div class="grid grid-cols-2 gap-1.5">
+      <div class="h-px bg-white/[0.08] mx-[18px]"></div>
+      <div class="px-[18px] pt-[13px] pb-[18px]">
+        <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[11px]">More from this author</p>
+        <div class="grid grid-cols-2 gap-[7px]">
           {% for img in recent %}
           <a href="{{ img.get_absolute_url }}"
              class="relative rounded-lg overflow-hidden aspect-square block bg-surface-input border border-white/[0.08] hover:border-brand/40 transition-colors">
@@ -140,7 +140,7 @@
               {% endthumbnail %}
             {% else %}
               <div class="w-full h-full flex items-center justify-center">
-                <i class="ti ti-photo text-lg text-[#5E5C6A]"></i>
+                <i class="ti ti-photo text-[20px] text-[#5E5C6A]"></i>
               </div>
             {% endif %}
           </a>
@@ -154,7 +154,7 @@
   </div>
 
   <!-- Divider -->
-  <div class="h-px bg-white/[0.08] mb-5"></div>
+  <div class="h-px bg-white/[0.08] mb-[22px]"></div>
 
   <!-- Liked by -->
   {% include 'images/partials/liked_by.html' %}

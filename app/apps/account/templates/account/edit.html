@@ -3,64 +3,64 @@
 {% block title %}Edit Profile · socnet{% endblock %}
 
 {% block content %}
-<div class="px-7 py-7 flex justify-start">
-  <div class="w-full max-w-[480px] flex flex-col gap-5">
+<div class="px-[31px] py-[31px] flex justify-start">
+  <div class="w-full max-w-[528px] flex flex-col gap-[22px]">
 
-    <h1 class="text-[18px] font-medium text-white">Edit Profile</h1>
+    <h1 class="text-[20px] font-medium text-white">Edit Profile</h1>
 
-    <form method="post" enctype="multipart/form-data" class="flex flex-col gap-5">
+    <form method="post" enctype="multipart/form-data" class="flex flex-col gap-[22px]">
       {% csrf_token %}
 
       <!-- First name + Last name -->
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-2 gap-[13px]">
         <div>
-          <label class="block text-[12px] text-[#9896A4] mb-1.5">First name</label>
+          <label class="block text-[13px] text-[#9896A4] mb-[7px]">First name</label>
           <input type="text" name="first_name"
                  value="{{ user_form.first_name.value|default:'' }}"
                  placeholder="John"
-                 class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] transition-colors
+                 class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                         {% if user_form.first_name.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
           {% for error in user_form.first_name.errors %}
-            <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+            <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
           {% endfor %}
         </div>
         <div>
-          <label class="block text-[12px] text-[#9896A4] mb-1.5">Last name</label>
+          <label class="block text-[13px] text-[#9896A4] mb-[7px]">Last name</label>
           <input type="text" name="last_name"
                  value="{{ user_form.last_name.value|default:'' }}"
                  placeholder="Doe"
-                 class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] transition-colors
+                 class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                         {% if user_form.last_name.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
           {% for error in user_form.last_name.errors %}
-            <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+            <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
           {% endfor %}
         </div>
       </div>
 
       <!-- Email -->
       <div>
-        <label class="block text-[12px] text-[#9896A4] mb-1.5">
+        <label class="block text-[13px] text-[#9896A4] mb-[7px]">
           Email <span class="text-red-400">*</span>
         </label>
         <input type="email" name="email"
                value="{{ user_form.email.value|default:'' }}"
                placeholder="john@example.com"
-               class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none placeholder-[#5E5C6A] transition-colors
+               class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                       {% if user_form.email.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
         {% for error in user_form.email.errors %}
-          <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+          <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
         {% endfor %}
       </div>
 
       <!-- Date of birth -->
       <div>
-        <label class="block text-[12px] text-[#9896A4] mb-1.5">Date of birth</label>
+        <label class="block text-[13px] text-[#9896A4] mb-[7px]">Date of birth</label>
         <input type="date" name="date_of_birth"
                value="{{ profile_form.date_of_birth.value|default:'' }}"
-               class="w-full bg-surface-input border rounded-xl text-white text-[13px] px-4 py-2.5 outline-none transition-colors
+               class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none transition-colors
                       {% if profile_form.date_of_birth.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
         {% for error in profile_form.date_of_birth.errors %}
-          <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+          <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
         {% endfor %}
       </div>
 
@@ -74,34 +74,34 @@
           this.fileName = file.name;
         },
       }">
-        <label class="block text-[12px] text-[#9896A4] mb-1.5">Profile photo</label>
+        <label class="block text-[13px] text-[#9896A4] mb-[7px]">Profile photo</label>
 
         {% if request.user.profile.photo %}
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-12 h-12 rounded-full overflow-hidden bg-brand/30 shrink-0">
+        <div class="flex items-center gap-[13px] mb-[13px]">
+          <div class="w-[53px] h-[53px] rounded-full overflow-hidden bg-brand/30 shrink-0">
             <img src="{{ request.user.profile.photo.url }}" class="w-full h-full object-cover" alt="current photo" />
           </div>
-          <span class="text-[12px] text-[#5E5C6A]">Current photo</span>
+          <span class="text-[13px] text-[#5E5C6A]">Current photo</span>
         </div>
         {% endif %}
 
-        <div class="flex items-center gap-3 px-4 py-3 bg-surface-input border border-white/[0.15] rounded-xl cursor-pointer hover:border-brand/40 transition-colors"
+        <div class="flex items-center gap-[13px] px-[18px] py-[13px] bg-surface-input border border-white/[0.15] rounded-xl cursor-pointer hover:border-brand/40 transition-colors"
              @click="$refs.photoInput.click()">
-          <i class="ti ti-upload text-[16px] text-[#9896A4]"></i>
-          <span class="text-[13px] text-[#9896A4]" x-text="hasFile ? fileName : 'Choose new photo'"></span>
+          <i class="ti ti-upload text-[18px] text-[#9896A4]"></i>
+          <span class="text-[14px] text-[#9896A4]" x-text="hasFile ? fileName : 'Choose new photo'"></span>
         </div>
         <input type="file" name="photo" accept="image/*" class="hidden" x-ref="photoInput"
                @change="handleFile($event.target.files[0])">
 
         {% for error in profile_form.photo.errors %}
-          <p class="mt-1.5 text-[12px] text-red-400">{{ error }}</p>
+          <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
         {% endfor %}
       </div>
 
       <!-- Submit -->
       <button type="submit"
-              class="flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-[14px] font-medium bg-brand text-white hover:opacity-90 transition-all self-start">
-        <i class="ti ti-check text-[16px]"></i>
+              class="flex items-center justify-center gap-[9px] px-[35px] py-[13px] rounded-xl text-[15px] font-medium bg-brand text-white hover:opacity-90 transition-all self-start">
+        <i class="ti ti-check text-[18px]"></i>
         Save changes
       </button>
 

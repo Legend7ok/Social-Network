@@ -9,7 +9,6 @@
   <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
   <link href="{% static 'css/vendor/tabler-icons.min.css' %}" rel="stylesheet">
   <style>
-    body { zoom: 1.1; }
     [x-cloak] { display: none; }
     html, body { height: 100%; overflow: hidden; }
   </style>
@@ -25,14 +24,14 @@
 
   <!-- Flash messages (Django) -->
   {% if messages %}
-    <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4">
+    <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-sm px-[18px]">
       {% for message in messages %}
         <div
           x-data="{ show: true }"
           x-init="setTimeout(() => show = false, 4000)"
           x-show="show"
           x-transition
-          class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm border
+          class="flex items-center justify-between gap-[13px] px-[18px] py-[13px] rounded-xl text-[15px] border
             {% if message.tags == 'success' %}bg-green-900/60 border-green-700/40 text-green-300
             {% elif message.tags == 'error' %}bg-red-900/60 border-red-700/40 text-red-300
             {% elif message.tags == 'warning' %}bg-orange-900/60 border-orange-700/40 text-orange-300
@@ -40,7 +39,7 @@
         >
           <span>{{ message }}</span>
           <button @click="show = false" class="shrink-0 opacity-60 hover:opacity-100">
-            <i class="ti ti-x text-base"></i>
+            <i class="ti ti-x text-[18px]"></i>
           </button>
         </div>
       {% endfor %}
@@ -48,18 +47,18 @@
   {% endif %}
 
   <!-- Flash messages (Alpine $store) -->
-  <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
+  <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-sm px-[18px] pointer-events-none">
     <template x-for="(msg, i) in $store.messages" :key="i">
       <div
         x-data="{ show: true }"
         x-init="setTimeout(() => show = false, 4000)"
         x-show="show"
         x-transition
-        class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm border bg-red-900/60 border-red-700/40 text-red-300 pointer-events-auto"
+        class="flex items-center justify-between gap-[13px] px-[18px] py-[13px] rounded-xl text-[15px] border bg-red-900/60 border-red-700/40 text-red-300 pointer-events-auto"
       >
         <span x-text="msg"></span>
         <button @click="show = false" class="shrink-0 opacity-60 hover:opacity-100">
-          <i class="ti ti-x text-base"></i>
+          <i class="ti ti-x text-[18px]"></i>
         </button>
       </div>
     </template>
@@ -68,41 +67,41 @@
   {% if request.user.is_authenticated %}
 
     <!-- Navbar -->
-    <header class="h-[52px] shrink-0 bg-surface-card border-b border-white/[0.08] flex items-center px-5 gap-0 z-20">
+    <header class="h-[57px] shrink-0 bg-surface-card border-b border-white/[0.08] flex items-center px-[22px] gap-0 z-20">
 
-      <a href="{% url 'home' %}" class="text-[15px] font-medium text-white tracking-tight mr-7">
+      <a href="{% url 'home' %}" class="text-[17px] font-medium text-white tracking-tight mr-[31px]">
         <span class="text-brand-light">●</span> socnet
       </a>
 
       <nav class="flex gap-0.5 flex-1">
         <a href="{% url 'home' %}"
-           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+           class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
                   {% if request.resolver_match.url_name == 'home' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-home text-[15px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% endif %}"></i> Home
+          <i class="ti ti-home text-[17px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% endif %}"></i> Home
         </a>
         <a href="{% url 'images:list' %}"
-           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+           class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
                   {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-photo text-[15px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> New Images
+          <i class="ti ti-photo text-[17px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> New Images
         </a>
         <a href="{% url 'user_list' %}"
-           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] transition-colors
+           class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
                   {% if request.resolver_match.url_name == 'user_list' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-users text-[15px] {% if request.resolver_match.url_name == 'user_list' %}text-brand-light{% endif %}"></i> People
+          <i class="ti ti-users text-[17px] {% if request.resolver_match.url_name == 'user_list' %}text-brand-light{% endif %}"></i> People
         </a>
       </nav>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-[11px]">
 
         <!-- Search icon -->
-        <button class="w-8 h-8 flex items-center justify-center text-[#9896A4] hover:text-white transition-colors cursor-pointer">
-          <i class="ti ti-search text-lg"></i>
+        <button class="w-[35px] h-[35px] flex items-center justify-center text-[#9896A4] hover:text-white transition-colors cursor-pointer">
+          <i class="ti ti-search text-[20px]"></i>
         </button>
 
 <!-- Avatar dropdown -->
         <div class="relative" x-data="{ open: false }">
           <button @click="open = !open" @keydown.escape="open = false"
-            class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-[12px] font-medium text-white select-none cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-offset-surface-card hover:ring-brand-light transition-all overflow-hidden">
+            class="w-[35px] h-[35px] rounded-full bg-brand flex items-center justify-center text-[13px] font-medium text-white select-none cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-offset-surface-card hover:ring-brand-light transition-all overflow-hidden">
             {% if request.user.profile.photo %}
               {% thumbnail request.user.profile.photo "64x64" crop="center" as av %}
               <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ request.user.username }}" />
@@ -122,26 +121,26 @@
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
             x-cloak
-            class="absolute right-0 top-11 w-48 bg-surface-card border border-white/[0.15] rounded-xl p-1.5 z-50"
+            class="absolute right-0 top-12 w-[211px] bg-surface-card border border-white/[0.15] rounded-xl p-[7px] z-50"
           >
             <a href="{% url 'my_profile' %}"
-               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
-              <i class="ti ti-user text-[15px]"></i> My Profile
+               class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-user text-[17px]"></i> My Profile
             </a>
             <a href="{% url 'edit' %}"
-               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
-              <i class="ti ti-edit text-[15px]"></i> Edit Profile
+               class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-edit text-[17px]"></i> Edit Profile
             </a>
             <a href="{% url 'password_change' %}"
-               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
-              <i class="ti ti-lock text-[15px]"></i> Change Password
+               class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+              <i class="ti ti-lock text-[17px]"></i> Change Password
             </a>
             <div class="h-px bg-white/[0.08] my-1"></div>
             <form method="post" action="{% url 'logout' %}">
               {% csrf_token %}
               <button type="submit"
-                class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-[#F09595] hover:bg-red-900/20 transition-colors">
-                <i class="ti ti-logout text-[15px]"></i> Logout
+                class="w-full flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#F09595] hover:bg-red-900/20 transition-colors">
+                <i class="ti ti-logout text-[17px]"></i> Logout
               </button>
             </form>
           </div>
@@ -154,60 +153,60 @@
     <div class="flex flex-1 overflow-hidden">
 
       <!-- Sidebar -->
-      <aside class="w-[260px] shrink-0 border-r border-white/[0.08] flex flex-col px-2.5 py-2 overflow-y-auto">
+      <aside class="w-[286px] shrink-0 border-r border-white/[0.08] flex flex-col px-[11px] py-[9px] overflow-y-auto">
 
-        <p class="text-[12px] text-[#5E5C6A] px-2 mt-1 mb-1 tracking-widest uppercase">Navigation</p>
+        <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-1 mb-1 tracking-widest uppercase">Navigation</p>
         <a href="{% url 'home' %}"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+           class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'home' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-home text-[17px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">Home</span>
+          <i class="ti ti-home text-[19px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[15px]">Home</span>
         </a>
         <a href="{% url 'images:ranking' %}"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+           class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'ranking' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-trophy text-[17px] {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">Top Ranking</span>
+          <i class="ti ti-trophy text-[19px] {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[15px]">Top Ranking</span>
         </a>
 
-        <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Account</p>
+        <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-[13px] mb-1 tracking-widest uppercase">Account</p>
         <a href="{% url 'my_profile' %}"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+           class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'my_profile' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-user-circle text-[17px] {% if request.resolver_match.url_name == 'my_profile' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">My Profile</span>
+          <i class="ti ti-user-circle text-[19px] {% if request.resolver_match.url_name == 'my_profile' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[15px]">My Profile</span>
         </a>
         <a href="{% url 'images:upload' %}"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+           class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'upload' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-cloud-upload text-[17px] {% if request.resolver_match.url_name == 'upload' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">Add Image</span>
+          <i class="ti ti-cloud-upload text-[19px] {% if request.resolver_match.url_name == 'upload' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[15px]">Add Image</span>
         </a>
         <a href="{% url 'images:list' %}?mine=1"
-           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
+           class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
                   {% if request.resolver_match.url_name == 'list' and request.GET.mine %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
-          <i class="ti ti-bookmark text-[17px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
-          <span class="text-[14px]">My Bookmarks</span>
-          <span class="ml-auto text-[11px] bg-surface-input text-[#9896A4] px-1.5 py-0.5 rounded-full">{{ request.user.images.count }}</span>
+          <i class="ti ti-bookmark text-[19px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+          <span class="text-[15px]">My Bookmarks</span>
+          <span class="ml-auto text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">{{ request.user.images.count }}</span>
         </a>
 
-        <p class="text-[12px] text-[#5E5C6A] px-2 mt-3 mb-1 tracking-widest uppercase">Bookmarks</p>
-        <div class="bg-brand/10 border border-brand/30 rounded-xl p-3 mx-0">
-          <div class="flex items-center gap-2 mb-1.5">
-            <i class="ti ti-bookmark-plus text-[15px] text-brand-light"></i>
-            <span class="text-[13px] font-medium text-white">Bookmark it</span>
+        <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-[13px] mb-1 tracking-widest uppercase">Bookmarks</p>
+        <div class="bg-brand/10 border border-brand/30 rounded-xl p-[13px] mx-0">
+          <div class="flex items-center gap-[9px] mb-[7px]">
+            <i class="ti ti-bookmark-plus text-[17px] text-brand-light"></i>
+            <span class="text-[14px] font-medium text-white">Bookmark it</span>
           </div>
-          <p class="text-[10px] text-[#5E5C6A] leading-snug mb-2">Drag the button to your bookmarks toolbar</p>
+          <p class="text-[11px] text-[#5E5C6A] leading-snug mb-[9px]">Drag the button to your bookmarks toolbar</p>
           <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
-             class="block bg-brand rounded-md py-1.5 text-[11px] font-medium text-white text-center cursor-grab select-none">
+             class="block bg-brand rounded-md py-[7px] text-[12px] font-medium text-white text-center cursor-grab select-none">
             ⊕ Bookmark it
           </a>
         </div>
 
-        <div class="mt-auto pt-3 border-t border-white/[0.08]">
+        <div class="mt-auto pt-[13px] border-t border-white/[0.08]">
           <a href="{% url 'my_profile' %}"
-             class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-input transition-colors">
-            <div class="w-[40px] h-[40px] rounded-full bg-brand flex items-center justify-center text-[12px] font-medium text-white shrink-0 overflow-hidden">
+             class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg hover:bg-surface-input transition-colors">
+            <div class="w-[44px] h-[44px] rounded-full bg-brand flex items-center justify-center text-[13px] font-medium text-white shrink-0 overflow-hidden">
               {% if request.user.profile.photo %}
                 {% thumbnail request.user.profile.photo "80x80" crop="center" as av %}
                 <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ request.user.username }}" />
@@ -217,8 +216,8 @@
               {% endif %}
             </div>
             <div class="min-w-0">
-              <p class="text-[13px] font-medium text-white truncate">{{ request.user.get_full_name }}</p>
-              <p class="text-[11px] text-[#5E5C6A]">@{{ request.user.username }}</p>
+              <p class="text-[14px] font-medium text-white truncate">{{ request.user.get_full_name }}</p>
+              <p class="text-[12px] text-[#5E5C6A]">@{{ request.user.username }}</p>
             </div>
           </a>
         </div>
