@@ -24,7 +24,7 @@
 
   <!-- Flash messages (Django) -->
   {% if messages %}
-    <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-sm px-[18px]">
+    <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-[422px] px-[18px]">
       {% for message in messages %}
         <div
           x-data="{ show: true }"
@@ -47,7 +47,7 @@
   {% endif %}
 
   <!-- Flash messages (Alpine $store) -->
-  <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-sm px-[18px] pointer-events-none">
+  <div class="fixed top-[62px] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-[9px] w-full max-w-[422px] px-[18px] pointer-events-none">
     <template x-for="(msg, i) in $store.messages" :key="i">
       <div
         x-data="{ show: true }"
