@@ -46,9 +46,9 @@
         <!-- Image post (bookmark or upload) -->
         {% if target.title and "bookmark" in action.verb or target.title and "upload" in action.verb %}
           <a href="{{ target.get_absolute_url }}">
-            <div class="bg-surface-input h-[220px] overflow-hidden flex items-center justify-center">
+            <div class="bg-surface-input aspect-[4/3] overflow-hidden flex items-center justify-center">
               {% if target.image %}
-                {% thumbnail target.image "640x200" crop="center" as im %}
+                {% thumbnail target.image "640x480" crop="center" as im %}
                 <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ target.title }}">
                 {% endthumbnail %}
               {% else %}
