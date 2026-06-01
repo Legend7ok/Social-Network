@@ -65,7 +65,7 @@
     </div>
 
     <!-- Right: description + author (one card) -->
-    <div class="rounded-xl border border-white/[0.08] bg-surface-card min-w-0 flex-1 self-start"
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card min-w-0 flex-1 max-w-[360px] self-start"
          x-data="{
            following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
            async toggle() {
