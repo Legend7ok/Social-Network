@@ -1,3 +1,4 @@
+{% load thumbnail %}
 <aside class="w-[264px] shrink-0 border-l border-white/[0.08] px-[18px] py-[22px] overflow-y-auto flex flex-col">
 
   <p class="text-[13px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Following</p>
@@ -7,7 +8,9 @@
        class="flex items-center gap-[13px] hover:opacity-80 transition-opacity">
       <div class="w-[42px] h-[42px] rounded-full bg-brand/30 flex items-center justify-center text-[12px] font-medium text-brand-light shrink-0 overflow-hidden">
         {% if u.profile.photo %}
-          <img src="{{ u.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
+          {% thumbnail u.profile.photo THUMBS.avatar_md crop="center" as av %}
+          <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
+          {% endthumbnail %}
         {% else %}
           {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
         {% endif %}

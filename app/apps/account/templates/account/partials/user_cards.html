@@ -1,3 +1,4 @@
+{% load thumbnail %}
 {% for profile_user in users %}
 <div class="bg-surface-card border border-white/[0.08] rounded-2xl px-[22px] py-[18px] flex items-center gap-[18px]
             hover:border-brand/30 transition-all hover:-translate-y-px">
@@ -7,7 +8,9 @@
     <div class="w-[62px] h-[62px] rounded-full bg-brand/30 flex items-center justify-center text-[20px] font-medium text-brand-light overflow-hidden"
          style="box-shadow: 0 0 0 2px rgba(124,58,237,0.25), 0 0 0 4px rgba(99,102,241,0.08);">
       {% if profile_user.profile.photo %}
-        <img src="{{ profile_user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ profile_user.username }}" />
+        {% thumbnail profile_user.profile.photo THUMBS.avatar_md crop="center" as av %}
+        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ profile_user.username }}" />
+        {% endthumbnail %}
       {% else %}
         {{ profile_user.first_name|first|upper }}{{ profile_user.last_name|first|upper }}
       {% endif %}

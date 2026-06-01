@@ -13,7 +13,9 @@
     <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden shrink-0"
          style="border: 2px solid rgba(124,58,237,0.4);">
       {% if user.profile.photo %}
-        <img src="{{ user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ user.username }}" />
+        {% thumbnail user.profile.photo THUMBS.avatar_lg crop="center" as av %}
+        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ user.username }}" />
+        {% endthumbnail %}
       {% else %}
         {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
       {% endif %}
@@ -62,7 +64,9 @@
                class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg hover:bg-surface-input transition-colors">
               <div class="w-[31px] h-[31px] rounded-full bg-brand/30 flex items-center justify-center text-[11px] font-medium text-brand-light shrink-0 overflow-hidden">
                 {% if follower.profile.photo %}
-                  <img src="{{ follower.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ follower.username }}" />
+                  {% thumbnail follower.profile.photo THUMBS.avatar_md crop="center" as av %}
+                  <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ follower.username }}" />
+                  {% endthumbnail %}
                 {% else %}
                   {{ follower.first_name|first|upper }}{{ follower.last_name|first|upper }}
                 {% endif %}
@@ -95,7 +99,9 @@
                class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg hover:bg-surface-input transition-colors">
               <div class="w-[31px] h-[31px] rounded-full bg-brand/30 flex items-center justify-center text-[11px] font-medium text-brand-light shrink-0 overflow-hidden">
                 {% if followed.profile.photo %}
-                  <img src="{{ followed.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ followed.username }}" />
+                  {% thumbnail followed.profile.photo THUMBS.avatar_md crop="center" as av %}
+                  <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ followed.username }}" />
+                  {% endthumbnail %}
                 {% else %}
                   {{ followed.first_name|first|upper }}{{ followed.last_name|first|upper }}
                 {% endif %}
@@ -155,7 +161,7 @@
     <a href="{{ image.get_absolute_url }}"
        class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative group border border-white/[0.06] hover:border-brand/30 transition-colors">
       {% if image.image %}
-        {% thumbnail image.image "300x300" crop="center" as th %}
+        {% thumbnail image.image THUMBS.content_card crop="center" as th %}
         <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" loading="lazy" />
         {% endthumbnail %}
       {% else %}

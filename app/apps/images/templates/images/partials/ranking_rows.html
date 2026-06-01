@@ -1,3 +1,4 @@
+{% load thumbnail %}
 {% for image in ranking_list %}
 <a href="{{ image.get_absolute_url }}"
    class="flex items-center gap-[13px] px-[15px] py-[11px] rounded-xl border transition-colors
@@ -8,7 +9,9 @@
   </span>
   <div class="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-surface-input flex items-center justify-center">
     {% if image.image %}
-      <img src="{{ image.image.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" />
+      {% thumbnail image.image THUMBS.content_square crop="center" as th %}
+      <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" />
+      {% endthumbnail %}
     {% else %}
       <i class="ti ti-photo text-[20px] text-[#5E5C6A]"></i>
     {% endif %}

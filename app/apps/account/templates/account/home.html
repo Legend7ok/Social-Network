@@ -14,7 +14,7 @@
       <a href="{% url 'user_detail' action.user.username %}"
          class="w-10 h-10 rounded-full bg-brand/40 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
         {% if action.user.profile.photo %}
-          {% thumbnail action.user.profile.photo "72x72" crop="center" as im %}
+          {% thumbnail action.user.profile.photo THUMBS.avatar_md crop="center" as im %}
           <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ action.user.username }}">
           {% endthumbnail %}
         {% else %}
@@ -48,7 +48,7 @@
           <a href="{{ target.get_absolute_url }}">
             <div class="bg-surface-input aspect-[4/3] overflow-hidden flex items-center justify-center">
               {% if target.image %}
-                {% thumbnail target.image "640x480" crop="center" as im %}
+                {% thumbnail target.image THUMBS.content_card crop="center" as im %}
                 <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ target.title }}">
                 {% endthumbnail %}
               {% else %}
@@ -105,7 +105,7 @@
             <a href="{% url 'user_detail' target.username %}"
                class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
               {% if target.profile.photo %}
-                {% thumbnail target.profile.photo "72x72" crop="center" as im %}
+                {% thumbnail target.profile.photo THUMBS.avatar_md crop="center" as im %}
                 <img src="{{ im.url }}" class="w-full h-full object-cover">
                 {% endthumbnail %}
               {% else %}
@@ -131,7 +131,7 @@
             <a href="{{ target.get_absolute_url }}"
                class="w-[75px] h-[75px] rounded-lg bg-surface-input overflow-hidden shrink-0 flex items-center justify-center">
               {% if target.image %}
-                {% thumbnail target.image "136x136" crop="center" as im %}
+                {% thumbnail target.image THUMBS.content_square crop="center" as im %}
                 <img src="{{ im.url }}" class="w-full h-full object-cover">
                 {% endthumbnail %}
               {% else %}

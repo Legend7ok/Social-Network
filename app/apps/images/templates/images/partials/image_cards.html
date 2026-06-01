@@ -6,7 +6,7 @@
 
   <div class="aspect-[4/3] bg-surface-input relative overflow-hidden">
     {% if image.image %}
-      {% thumbnail image.image "640x480" crop="center" as im %}
+      {% thumbnail image.image THUMBS.content_card crop="center" as im %}
       <img src="{{ im.url }}"
            class="w-full h-full object-cover"
            alt="{{ image.title }}"
@@ -32,7 +32,7 @@
     <div class="flex items-center gap-[9px]">
       <div class="w-[22px] h-[22px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
         {% if image.user.profile.photo %}
-          {% thumbnail image.user.profile.photo "40x40" crop="center" as avatar %}
+          {% thumbnail image.user.profile.photo THUMBS.avatar_sm crop="center" as avatar %}
           <img src="{{ avatar.url }}" class="w-full h-full object-cover" alt="{{ image.user.username }}" />
           {% endthumbnail %}
         {% else %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load thumbnail %}
 
 {% block title %}Top Ranking · socnet{% endblock %}
 
@@ -31,7 +32,9 @@
        style="background:#1C1B20; animation: glow-silver 2s ease-in-out infinite;">
       <div class="relative overflow-hidden" style="aspect-ratio:4/3; border-radius:14px 14px 0 0; background: linear-gradient(135deg,#1E2038,#2A1C30);">
         {% if top3.1.image %}
-          <img src="{{ top3.1.image.url }}" class="w-full h-full object-cover" alt="{{ top3.1.title }}" />
+          {% thumbnail top3.1.image THUMBS.content_card crop="center" as th %}
+          <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ top3.1.title }}" />
+          {% endthumbnail %}
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
             <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
@@ -45,7 +48,9 @@
         <div class="flex items-center gap-[7px] mb-[7px]">
           <div class="w-[20px] h-[20px] rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.1.user.profile.photo %}
-              <img src="{{ top3.1.user.profile.photo.url }}" class="w-full h-full object-cover" />
+              {% thumbnail top3.1.user.profile.photo THUMBS.avatar_sm crop="center" as av %}
+              <img src="{{ av.url }}" class="w-full h-full object-cover" />
+              {% endthumbnail %}
             {% else %}
               {{ top3.1.user.first_name|first|upper }}{{ top3.1.user.last_name|first|upper }}
             {% endif %}
@@ -65,7 +70,9 @@
        style="background:#1C1B20; animation: glow-gold 2s ease-in-out infinite;">
       <div class="relative overflow-hidden" style="aspect-ratio:4/3; border-radius:14px 14px 0 0; background: linear-gradient(135deg,#2D2640,#1E2038);">
         {% if top3.0.image %}
-          <img src="{{ top3.0.image.url }}" class="w-full h-full object-cover" alt="{{ top3.0.title }}" />
+          {% thumbnail top3.0.image THUMBS.content_card crop="center" as th %}
+          <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ top3.0.title }}" />
+          {% endthumbnail %}
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
             <i class="ti ti-photo text-[53px] text-[#5E5C6A]"></i>
@@ -83,7 +90,9 @@
         <div class="flex items-center gap-[7px] mb-[9px]">
           <div class="w-[22px] h-[22px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.0.user.profile.photo %}
-              <img src="{{ top3.0.user.profile.photo.url }}" class="w-full h-full object-cover" />
+              {% thumbnail top3.0.user.profile.photo THUMBS.avatar_sm crop="center" as av %}
+              <img src="{{ av.url }}" class="w-full h-full object-cover" />
+              {% endthumbnail %}
             {% else %}
               {{ top3.0.user.first_name|first|upper }}{{ top3.0.user.last_name|first|upper }}
             {% endif %}
@@ -103,7 +112,9 @@
        style="background:#1C1B20; animation: glow-bronze 2s ease-in-out infinite;">
       <div class="relative overflow-hidden" style="aspect-ratio:4/3; border-radius:14px 14px 0 0; background: linear-gradient(135deg,#241C30,#1C2028);">
         {% if top3.2.image %}
-          <img src="{{ top3.2.image.url }}" class="w-full h-full object-cover" alt="{{ top3.2.title }}" />
+          {% thumbnail top3.2.image THUMBS.content_card crop="center" as th %}
+          <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ top3.2.title }}" />
+          {% endthumbnail %}
         {% else %}
           <div class="w-full h-full flex items-center justify-center">
             <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
@@ -117,7 +128,9 @@
         <div class="flex items-center gap-[7px] mb-[7px]">
           <div class="w-[20px] h-[20px] rounded-full bg-brand/30 flex items-center justify-center text-[9px] font-medium text-brand-light overflow-hidden shrink-0">
             {% if top3.2.user.profile.photo %}
-              <img src="{{ top3.2.user.profile.photo.url }}" class="w-full h-full object-cover" />
+              {% thumbnail top3.2.user.profile.photo THUMBS.avatar_sm crop="center" as av %}
+              <img src="{{ av.url }}" class="w-full h-full object-cover" />
+              {% endthumbnail %}
             {% else %}
               {{ top3.2.user.first_name|first|upper }}{{ top3.2.user.last_name|first|upper }}
             {% endif %}

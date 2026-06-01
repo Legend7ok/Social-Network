@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load thumbnail %}
 
 {% block title %}Edit Profile · socnet{% endblock %}
 
@@ -79,7 +80,9 @@
         {% if request.user.profile.photo %}
         <div class="flex items-center gap-[13px] mb-[13px]">
           <div class="w-[53px] h-[53px] rounded-full overflow-hidden bg-brand/30 shrink-0">
-            <img src="{{ request.user.profile.photo.url }}" class="w-full h-full object-cover" alt="current photo" />
+            {% thumbnail request.user.profile.photo THUMBS.avatar_md crop="center" as av %}
+            <img src="{{ av.url }}" class="w-full h-full object-cover" alt="current photo" />
+            {% endthumbnail %}
           </div>
           <span class="text-[13px] text-[#5E5C6A]">Current photo</span>
         </div>

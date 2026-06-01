@@ -120,7 +120,9 @@
            class="flex items-center gap-[13px] mb-[13px] hover:opacity-80 transition-opacity">
           <div class="w-11 h-11 rounded-full bg-brand/30 flex items-center justify-center text-[14px] font-medium text-brand-light shrink-0 overflow-hidden">
             {% if image.user.profile.photo %}
-              <img src="{{ image.user.profile.photo.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
+              {% thumbnail image.user.profile.photo THUMBS.avatar_md crop="center" as av %}
+              <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
+              {% endthumbnail %}
             {% else %}
               {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
             {% endif %}
@@ -153,7 +155,7 @@
           <a href="{{ img.get_absolute_url }}"
              class="relative rounded-lg overflow-hidden aspect-square block bg-surface-input border border-white/[0.08] hover:border-brand/40 transition-colors">
             {% if img.image %}
-              {% thumbnail img.image "300x300" crop="center" as th %}
+              {% thumbnail img.image THUMBS.content_square crop="center" as th %}
               <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ img.title }}" />
               {% endthumbnail %}
             {% else %}

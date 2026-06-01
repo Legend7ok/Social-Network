@@ -1,7 +1,7 @@
 {% load thumbnail %}
 {% if image.image %}
 <a href="{{ image.image.url }}" target="_blank" rel="noopener noreferrer">
-  {% thumbnail image.image "400" as im %}
+  {% thumbnail image.image THUMBS.detail_main as im %}
   <img src="{{ im.url }}" class="block" alt="{{ image.title }}" />
   {% endthumbnail %}
 </a>
