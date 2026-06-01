@@ -64,8 +64,34 @@
       </div>
     </div>
 
-    <!-- Right: description + author (one card) -->
-    <div class="rounded-xl border border-white/[0.08] bg-surface-card min-w-0 flex-1 max-w-[360px] self-start"
+    <!-- Meta columns: equal height so their bottoms align -->
+    <div class="flex-1 min-w-0 flex gap-[22px] items-stretch">
+
+    <!-- Middle: description + comments -->
+    <div class="flex-1 min-w-0">
+      <div class="rounded-xl border border-white/[0.08] bg-surface-card h-full">
+
+        <div class="px-[18px] pt-[18px] pb-[18px]">
+          <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[9px]">Description</p>
+          {% if image.description %}
+          <p class="text-[15px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
+          {% else %}
+          <p class="text-[14px] text-[#5E5C6A] italic">No description provided.</p>
+          {% endif %}
+        </div>
+
+        <div class="h-px bg-white/[0.08] mx-[18px]"></div>
+
+        <div class="px-[18px] pt-[18px] pb-[18px]">
+          <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Comments</p>
+          <p class="text-[14px] text-[#5E5C6A] italic">No comments yet.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: author + more from -->
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-[360px] shrink-0"
          x-data="{
            following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
            async toggle() {
@@ -88,15 +114,7 @@
            },
          }">
 
-      {% if image.description %}
-      <div class="px-[18px] pt-[18px] pb-[13px]">
-        <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[9px]">Description</p>
-        <p class="text-[15px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
-      </div>
-      <div class="h-px bg-white/[0.08] mx-[18px]"></div>
-      {% endif %}
-
-      <div class="px-[18px] pt-[13px] pb-[18px]">
+      <div class="px-[18px] pt-[18px] pb-[18px]">
         <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Author</p>
         <a href="{% url 'user_detail' image.user.username %}"
            class="flex items-center gap-[13px] mb-[13px] hover:opacity-80 transition-opacity">
@@ -150,6 +168,7 @@
       {% endif %}
       {% endwith %}
 
+    </div>
     </div>
   </div>
 
