@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
@@ -30,4 +31,4 @@ def remember_old_photo(sender, instance, **kwargs):
 @receiver(post_save, sender=Profile)
 def generate_avatar_on_photo_change(sender, instance, **kwargs):
     if instance.photo and instance.photo.name != instance._old_photo:
-        generate_avatar_thumbnails.delay(instance.id)
+        transaction.on_commit(lambda: generate_avatar_thumbnails.delay(instance.id))
