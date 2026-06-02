@@ -2,8 +2,10 @@ import pytest
 import requests
 from unittest.mock import MagicMock, patch
 
+from django.conf import settings
+
 from apps.images.models import Image
-from apps.images.tasks import download_image
+from apps.images.tasks import download_image, generate_image_thumbnails
 from conftest import MINIMAL_PNG
 
 
@@ -64,7 +66,42 @@ def test_download_image_pregenerates_thumbnails(user):
         with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
             download_image(image.id, image.url)
 
-    assert mock_thumb.call_count == 2
+    assert mock_thumb.call_count == 3
+
+
+@pytest.mark.django_db
+def test_generate_image_thumbnails_creates_content_set(image):
+    with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+        generate_image_thumbnails(image.id)
+
+    thumbs = settings.THUMBNAILS
+    calls = mock_thumb.call_args_list
+    assert mock_thumb.call_count == 3
+    # content_card / content_square are cropped; detail_main keeps the full image
+    assert calls[0].args[1] == thumbs["content_card"]
+    assert calls[0].kwargs == {"crop": "center"}
+    assert calls[1].args[1] == thumbs["content_square"]
+    assert calls[1].kwargs == {"crop": "center"}
+    assert calls[2].args[1] == thumbs["detail_main"]
+    assert calls[2].kwargs == {}
+
+
+@pytest.mark.django_db
+def test_generate_image_thumbnails_missing_image_skips():
+    with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+        generate_image_thumbnails(9999)
+    mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_generate_image_thumbnails_no_file_skips(user):
+    user_obj, _ = user
+    img = Image.objects.create(
+        user=user_obj, title="No File", url="https://example.com/x.jpg"
+    )
+    with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+        generate_image_thumbnails(img.id)
+    mock_thumb.assert_not_called()
 
 
 @pytest.mark.django_db
