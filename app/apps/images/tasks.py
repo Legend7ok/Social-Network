@@ -65,5 +65,4 @@ def download_image(image_id, url):
     extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
     name = f"{slugify(image.title)}.{extension}"
     image.image.save(name, ContentFile(response.content), save=True)
-    get_thumbnail(image.image, "300x300", crop="center")
-    get_thumbnail(image.image, "300")
+    generate_image_thumbnails(image_id)
