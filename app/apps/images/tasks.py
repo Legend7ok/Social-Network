@@ -28,6 +28,26 @@ def refresh_image_ranking_cache():
     )
 
 
+@shared_task
+def generate_image_thumbnails(image_id):
+    try:
+        image = Image.objects.get(id=image_id)
+    except Image.DoesNotExist:
+        logger.warning(
+            "generate_image_thumbnails: image %s not found, skipping", image_id
+        )
+        return
+    if not image.image:
+        logger.warning(
+            "generate_image_thumbnails: image %s has no file, skipping", image_id
+        )
+        return
+    thumbs = settings.THUMBNAILS
+    get_thumbnail(image.image, thumbs["content_card"], crop="center")
+    get_thumbnail(image.image, thumbs["content_square"], crop="center")
+    get_thumbnail(image.image, thumbs["detail_main"])
+
+
 @shared_task(
     autoretry_for=(requests.RequestException,),
     max_retries=3,
