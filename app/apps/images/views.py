@@ -142,9 +142,7 @@ def image_upload(request):
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
-            transaction.on_commit(
-                lambda: generate_image_thumbnails.delay(new_image.id)
-            )
+            transaction.on_commit(lambda: generate_image_thumbnails.delay(new_image.id))
             create_action(request.user, "uploaded image", new_image)
             messages.success(request, "Image uploaded successfully")
             return redirect(new_image.get_absolute_url())
