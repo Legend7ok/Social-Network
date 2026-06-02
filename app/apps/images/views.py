@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import transaction
 from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageBookmarkForm, ImageUploadForm
@@ -17,7 +18,7 @@ from .services import (
     get_images_views,
     is_first_view,
 )
-from .tasks import download_image
+from .tasks import download_image, generate_image_thumbnails
 from apps.actions.utils import create_action
 
 User = get_user_model()
@@ -141,6 +142,7 @@ def image_upload(request):
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
+            transaction.on_commit(lambda: generate_image_thumbnails.delay(new_image.id))
             create_action(request.user, "uploaded image", new_image)
             messages.success(request, "Image uploaded successfully")
             return redirect(new_image.get_absolute_url())

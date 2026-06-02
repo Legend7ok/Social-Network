@@ -276,13 +276,36 @@ def test_image_upload_post_valid_creates_image_and_redirects(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
-    with patch("PIL.Image.open"):
+    with (
+        patch("PIL.Image.open"),
+        patch("apps.images.views.generate_image_thumbnails.delay"),
+    ):
         response = client.post(
             reverse("images:upload"),
             {"title": "Uploaded Image", "description": "test", "image": img_file},
         )
     assert response.status_code == 302
     assert Image.objects.filter(title="Uploaded Image", user=user_obj).exists()
+
+
+@pytest.mark.django_db
+def test_image_upload_dispatches_thumbnail_generation(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
+    with (
+        patch("PIL.Image.open"),
+        patch("apps.images.views.generate_image_thumbnails.delay") as mock_delay,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            client.post(
+                reverse("images:upload"),
+                {"title": "Dispatched", "description": "", "image": img_file},
+            )
+    new_image = Image.objects.get(title="Dispatched", user=user_obj)
+    mock_delay.assert_called_once_with(new_image.id)
 
 
 @pytest.mark.django_db
