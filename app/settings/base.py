@@ -170,17 +170,17 @@ CELERY_BEAT_SCHEDULE = {
 THUMBNAIL_KVSTORE = "sorl.thumbnail.kvstores.cached_db_kvstore.KVStore"
 THUMBNAIL_CACHE = "default"
 
-# Centralized thumbnail geometries — single source of truth.
+# Centralized thumbnail geometries - single source of truth.
 # Templates read these via the `core.context_processors.thumbnails` processor
 # (exposed as `THUMBS`); the Celery pre-generation task imports the same dict,
 # so generated sizes always match what the templates request (no cache-key drift).
 THUMBNAILS = {
-    "content_card": "640x480",  # 4:3 crop — image list, profile grid, ranking top-3, feed banner
-    "content_square": "200x200",  # 1:1 crop — detail "More from", feed compact like, ranking rows
-    "detail_main": "400",  # width only, no crop — main image on the detail page
-    "avatar_sm": "48x48",  # crop — author chip in image cards, ranking top-3 avatars
-    "avatar_md": "80x80",  # crop — navbar, sidebars, feed, detail author, liked_by, dropdowns, user cards, edit
-    "avatar_lg": "192x192",  # crop — main profile avatar
+    "content_card": "640x480",  # 4:3 crop - image list, profile grid, ranking top-3, feed banner
+    "content_square": "200x200",  # 1:1 crop - detail "More from", feed compact like, ranking rows
+    "detail_main": "640",  # width only, no crop - main image on the detail page
+    "avatar_sm": "48x48",  # crop - author chip in image cards, ranking top-3 avatars
+    "avatar_md": "80x80",  # crop - navbar, sidebars, feed, detail author, liked_by, dropdowns, user cards, edit
+    "avatar_lg": "192x192",  # crop - main profile avatar
 }
 
 RATELIMIT_IP_META_KEY = "HTTP_X_FORWARDED_FOR"
