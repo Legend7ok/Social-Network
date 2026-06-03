@@ -5,11 +5,13 @@
 {% block content %}
 <div
   x-data="{ isRegister: false }"
-  class="relative w-[836px] h-[506px] bg-surface-card border border-white/[0.15] rounded-2xl overflow-hidden flex"
+  class="relative w-full max-w-[420px] lg:max-w-none lg:w-[836px] lg:h-[506px] m-[16px] bg-surface-card border border-white/[0.15] rounded-2xl overflow-hidden flex"
 >
 
-  <!-- Sign In (left panel) -->
-  <div class="w-1/2 h-full flex flex-col items-center justify-center px-[31px] py-[35px] shrink-0">
+  <!-- Sign In (left panel). On phones: shown only when not in register mode.
+       lg:!flex forces it visible on desktop despite x-show (overlay covers the other half). -->
+  <div x-show="!isRegister"
+       class="w-full lg:w-1/2 lg:h-full flex lg:flex! flex-col items-center justify-center px-[31px] py-[35px] lg:shrink-0">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Sign in</h1>
 
     {% if form.errors %}
@@ -65,10 +67,16 @@
         Sign in
       </button>
     </form>
+
+    <p class="lg:hidden text-[13px] text-[#5E5C6A] mt-[18px]">
+      Don't have an account?
+      <button type="button" @click="isRegister = true" class="text-brand-light hover:underline font-medium">Register</button>
+    </p>
   </div>
 
-  <!-- Register (right panel) -->
-  <div class="w-1/2 h-full flex flex-col items-center justify-center px-[31px] py-[35px] shrink-0">
+  <!-- Register (right panel). On phones: shown only in register mode. -->
+  <div x-show="isRegister"
+       class="w-full lg:w-1/2 lg:h-full flex lg:flex! flex-col items-center justify-center px-[31px] py-[35px] lg:shrink-0">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Create account</h1>
 
     <!-- Social auth -->
@@ -119,11 +127,16 @@
         Create account
       </button>
     </form>
+
+    <p class="lg:hidden text-[13px] text-[#5E5C6A] mt-[18px]">
+      Already have an account?
+      <button type="button" @click="isRegister = false" class="text-brand-light hover:underline font-medium">Sign in</button>
+    </p>
   </div>
 
-  <!-- Sliding overlay — covers register panel by default (isRegister: false) -->
+  <!-- Sliding overlay (desktop only) — covers register panel by default (isRegister: false) -->
   <div
-    class="overlay-panel absolute top-0 bottom-0 w-1/2 z-10 flex flex-col items-center justify-center px-[31px] py-[35px] bg-brand rounded-xl"
+    class="overlay-panel absolute top-0 bottom-0 w-1/2 z-10 hidden lg:flex flex-col items-center justify-center px-[31px] py-[35px] bg-brand rounded-xl"
     style="left: 50%"
     :style="isRegister ? 'left: 0%' : 'left: 50%'"
   >
