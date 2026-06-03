@@ -3,13 +3,13 @@
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
 {% block content %}
-<div class="px-[26px] py-[22px]">
+<div class="px-[16px] lg:px-[26px] py-[22px]">
 
-  <!-- Image + meta row -->
-  <div class="flex gap-[22px] items-start mb-[22px]">
+  <!-- Image + meta row: stacked on phones, three columns from lg up -->
+  <div class="flex flex-col lg:flex-row gap-[22px] lg:items-start mb-[22px]">
 
     <!-- Left: back + title + image -->
-    <div class="shrink-0">
+    <div class="w-full lg:flex-[4] lg:max-w-[640px] min-w-0">
       <a href="javascript:history.back()"
          class="inline-flex items-center gap-[7px] text-[14px] text-[#5E5C6A] hover:text-white transition-colors mb-[13px]">
         <i class="ti ti-arrow-left text-[15px]"></i> Back
@@ -64,11 +64,11 @@
       </div>
     </div>
 
-    <!-- Meta columns: equal height so their bottoms align -->
-    <div class="flex-1 min-w-0 flex gap-[22px] items-stretch">
+    <!-- Meta columns: stacked on phones, equal-height side-by-side from lg up -->
+    <div class="w-full lg:flex-[5] min-w-0 flex flex-col lg:flex-row gap-[22px] lg:items-stretch">
 
     <!-- Middle: description + comments -->
-    <div class="flex-1 min-w-0">
+    <div class="w-full lg:flex-1 min-w-0">
       <div class="rounded-xl border border-white/[0.08] bg-surface-card h-full">
 
         <div class="px-[18px] pt-[18px] pb-[18px]">
@@ -91,7 +91,7 @@
     </div>
 
     <!-- Right: author + more from -->
-    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-[360px] shrink-0"
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full lg:w-[320px] lg:shrink-0"
          x-data="{
            following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
            async toggle() {
