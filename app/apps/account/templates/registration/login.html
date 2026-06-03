@@ -4,14 +4,32 @@
 
 {% block content %}
 <div
-  x-data="{ isRegister: false }"
-  class="relative w-full max-w-[420px] lg:max-w-none lg:w-[836px] lg:h-[506px] m-[16px] bg-surface-card border border-white/[0.15] rounded-2xl overflow-hidden flex"
+  x-data="{
+    isRegister: false,
+    isMobile: window.matchMedia('(max-width: 1023px)').matches,
+    init() {
+      window.matchMedia('(max-width: 1023px)').addEventListener('change', e => this.isMobile = e.matches);
+    },
+  }"
+  class="relative w-full max-w-[420px] lg:max-w-none lg:w-[836px] h-[540px] lg:h-[506px] m-[16px] bg-surface-card border border-white/[0.15] rounded-2xl overflow-hidden flex"
 >
 
-  <!-- Sign In (left panel). On phones: shown only when not in register mode.
-       lg:!flex forces it visible on desktop despite x-show (overlay covers the other half). -->
-  <div x-show="!isRegister"
-       class="w-full lg:w-1/2 lg:h-full flex lg:flex! flex-col items-center justify-center px-[31px] py-[35px] lg:shrink-0">
+  <!-- Sign In (left panel). On phones: collapsible split — expands to fill, or
+       shrinks to a 56px vertical strip (tap to expand). On desktop both panels are
+       half-width and the sliding overlay covers one of them. -->
+  <div @click="isMobile && isRegister && (isRegister = false)"
+       :class="!isMobile ? '' : (isRegister ? 'w-[56px] cursor-pointer bg-brand hover:opacity-90' : 'w-[calc(100%_-_56px)]')"
+       class="relative h-full shrink-0 flex flex-col items-center justify-center px-[31px] py-[35px] transition-[width,background-color] duration-500 ease-in-out
+              lg:w-1/2 lg:shrink-0">
+
+    <!-- Collapsed vertical label (mobile only) -->
+    <span x-show="isMobile && isRegister" x-cloak
+          class="absolute inset-0 flex items-center justify-center -rotate-90 text-[14px] font-semibold text-white tracking-wide whitespace-nowrap select-none">
+      Sign in
+    </span>
+
+    <!-- Panel content -->
+    <div x-show="!isMobile || !isRegister" class="w-full flex flex-col items-center">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Sign in</h1>
 
     {% if form.errors %}
@@ -67,16 +85,23 @@
         Sign in
       </button>
     </form>
-
-    <p class="lg:hidden text-[13px] text-[#5E5C6A] mt-[18px]">
-      Don't have an account?
-      <button type="button" @click="isRegister = true" class="text-brand-light hover:underline font-medium">Register</button>
-    </p>
+    </div>
   </div>
 
-  <!-- Register (right panel). On phones: shown only in register mode. -->
-  <div x-show="isRegister"
-       class="w-full lg:w-1/2 lg:h-full flex lg:flex! flex-col items-center justify-center px-[31px] py-[35px] lg:shrink-0">
+  <!-- Register (right panel). On phones: collapsible split — mirror of Sign in. -->
+  <div @click="isMobile && !isRegister && (isRegister = true)"
+       :class="!isMobile ? '' : (isRegister ? 'w-[calc(100%_-_56px)]' : 'w-[56px] cursor-pointer bg-brand hover:opacity-90')"
+       class="relative h-full shrink-0 flex flex-col items-center justify-center px-[31px] py-[35px] transition-[width,background-color] duration-500 ease-in-out
+              lg:w-1/2 lg:shrink-0">
+
+    <!-- Collapsed vertical label (mobile only) -->
+    <span x-show="isMobile && !isRegister" x-cloak
+          class="absolute inset-0 flex items-center justify-center rotate-90 text-[14px] font-semibold text-white tracking-wide whitespace-nowrap select-none">
+      Register
+    </span>
+
+    <!-- Panel content -->
+    <div x-show="!isMobile || isRegister" class="w-full flex flex-col items-center">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Create account</h1>
 
     <!-- Social auth -->
@@ -127,11 +152,7 @@
         Create account
       </button>
     </form>
-
-    <p class="lg:hidden text-[13px] text-[#5E5C6A] mt-[18px]">
-      Already have an account?
-      <button type="button" @click="isRegister = false" class="text-brand-light hover:underline font-medium">Sign in</button>
-    </p>
+    </div>
   </div>
 
   <!-- Sliding overlay (desktop only) — covers register panel by default (isRegister: false) -->
