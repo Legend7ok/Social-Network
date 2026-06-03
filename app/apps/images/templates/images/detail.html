@@ -5,11 +5,11 @@
 {% block content %}
 <div class="px-[16px] lg:px-[26px] py-[22px]">
 
-  <!-- Image + meta row: stacked on phones, two columns from lg up -->
-  <div class="flex flex-col lg:flex-row gap-[22px] lg:items-start mb-[22px]">
+  <!-- Image + meta row: stacked up to tablets, two columns from xl up -->
+  <div class="flex flex-col xl:flex-row gap-[22px] xl:items-start mb-[22px]">
 
     <!-- Left: back + title + image -->
-    <div class="w-full lg:flex-[4] lg:max-w-[640px] min-w-0">
+    <div class="w-full xl:flex-[4] xl:max-w-[640px] min-w-0">
       <a href="javascript:history.back()"
          class="inline-flex items-center gap-[7px] text-[14px] text-[#5E5C6A] hover:text-white transition-colors mb-[13px]">
         <i class="ti ti-arrow-left text-[15px]"></i> Back
@@ -65,7 +65,7 @@
     </div>
 
     <!-- Right column: description + author + more from (single card) -->
-    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full lg:flex-[3] min-w-0"
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full xl:flex-[3] min-w-0"
          x-data="{
            following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
            async toggle() {
