@@ -172,11 +172,13 @@
            @click="navOpen = false"
            class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
-      <!-- Sidebar: fixed slide-in drawer on phones, normal column on desktop -->
+      <!-- Sidebar: fixed slide-in drawer on phones, normal column on desktop.
+           Hidden-by-default in static class (avoids drawer flashing before Alpine boots);
+           Alpine only forces it open via the important translate-x-0! -->
       <aside @click="navOpen = false"
-             :class="navOpen ? 'translate-x-0' : '-translate-x-full'"
+             :class="{ 'translate-x-0!': navOpen }"
              class="fixed inset-y-0 left-0 z-40 w-[286px] bg-surface-page transition-transform duration-200 ease-out
-                    lg:static lg:z-auto lg:translate-x-0
+                    -translate-x-full lg:static lg:z-auto lg:translate-x-0
                     shrink-0 border-r border-white/[0.08] flex flex-col px-[11px] py-[9px] overflow-y-auto">
 
         <!-- Close button (phones only) -->
