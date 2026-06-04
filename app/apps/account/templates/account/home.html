@@ -32,8 +32,13 @@
             <a href="{{ action.target.get_absolute_url }}"
                class="text-[13px] text-brand-light hover:underline">{{ action.target.title }}</a>
           {% elif action.target.username %}
-            <a href="{% url 'user_detail' action.target.username %}"
-               class="text-[13px] text-brand-light hover:underline">@{{ action.target.username }}</a>
+            {% if action.target == request.user %}
+              <a href="{% url 'my_profile' %}"
+                 class="text-[13px] text-brand-light hover:underline">you</a>
+            {% else %}
+              <a href="{% url 'user_detail' action.target.username %}"
+                 class="text-[13px] text-brand-light hover:underline">@{{ action.target.username }}</a>
+            {% endif %}
           {% endif %}
         {% endif %}
       </div>
@@ -117,11 +122,13 @@
               <p class="text-[13px] text-[#9896A4] mt-0.5">
                 {{ target.images.count }} images · {{ target.profile.followers.count }} followers
               </p>
+              {% if target != request.user %}
               <button @click.prevent="toggle()"
                       :class="following ? 'bg-brand/15 text-brand-light border border-brand/30' : 'bg-brand text-white'"
                       class="mt-[9px] px-[15px] py-1 rounded-lg text-[13px] font-medium transition-colors"
                       x-text="following ? 'Following' : '+ Follow'">
               </button>
+              {% endif %}
             </div>
           </div>
 
