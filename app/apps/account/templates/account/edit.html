@@ -4,7 +4,7 @@
 {% block title %}Edit Profile · socnet{% endblock %}
 
 {% block content %}
-<div class="px-[31px] py-[31px] flex justify-start">
+<div class="px-[16px] lg:px-[31px] py-[31px] flex justify-start">
   <div class="w-full max-w-[528px] flex flex-col gap-[22px]">
 
     <h1 class="text-[20px] font-medium text-white">Edit Profile</h1>
@@ -13,7 +13,7 @@
       {% csrf_token %}
 
       <!-- First name + Last name -->
-      <div class="grid grid-cols-2 gap-[13px]">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-[13px]">
         <div>
           <label class="block text-[13px] text-[#9896A4] mb-[7px]">First name</label>
           <input type="text" name="first_name"

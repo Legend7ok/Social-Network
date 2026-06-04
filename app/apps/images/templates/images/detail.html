@@ -3,13 +3,13 @@
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
 {% block content %}
-<div class="px-[26px] py-[22px]">
+<div class="px-[16px] lg:px-[26px] py-[22px]">
 
-  <!-- Image + meta row -->
-  <div class="flex gap-[22px] items-start mb-[22px]">
+  <!-- Image + meta row: stacked up to tablets, two columns from xl up -->
+  <div class="flex flex-col xl:flex-row gap-[22px] xl:items-start mb-[22px]">
 
     <!-- Left: back + title + image -->
-    <div class="shrink-0">
+    <div class="w-full xl:flex-[4] xl:max-w-[640px] min-w-0">
       <a href="javascript:history.back()"
          class="inline-flex items-center gap-[7px] text-[14px] text-[#5E5C6A] hover:text-white transition-colors mb-[13px]">
         <i class="ti ti-arrow-left text-[15px]"></i> Back
@@ -64,34 +64,8 @@
       </div>
     </div>
 
-    <!-- Meta columns: equal height so their bottoms align -->
-    <div class="flex-1 min-w-0 flex gap-[22px] items-stretch">
-
-    <!-- Middle: description + comments -->
-    <div class="flex-1 min-w-0">
-      <div class="rounded-xl border border-white/[0.08] bg-surface-card h-full">
-
-        <div class="px-[18px] pt-[18px] pb-[18px]">
-          <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[9px]">Description</p>
-          {% if image.description %}
-          <p class="text-[15px] text-[#9896A4] leading-relaxed">{{ image.description }}</p>
-          {% else %}
-          <p class="text-[14px] text-[#5E5C6A] italic">No description provided.</p>
-          {% endif %}
-        </div>
-
-        <div class="h-px bg-white/[0.08] mx-[18px]"></div>
-
-        <div class="px-[18px] pt-[18px] pb-[18px]">
-          <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Comments</p>
-          <p class="text-[14px] text-[#5E5C6A] italic">No comments yet.</p>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Right: author + more from -->
-    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-[360px] shrink-0"
+    <!-- Right column: description + author + more from (single card) -->
+    <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full xl:flex-[3] min-w-0"
          x-data="{
            following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
            async toggle() {
@@ -114,6 +88,19 @@
            },
          }">
 
+      <!-- Description -->
+      <div class="px-[18px] pt-[18px] pb-[18px]">
+        <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[9px]">Description</p>
+        {% if image.description %}
+        <p class="text-[15px] text-[#9896A4] leading-relaxed break-words">{{ image.description }}</p>
+        {% else %}
+        <p class="text-[14px] text-[#5E5C6A] italic">No description provided.</p>
+        {% endif %}
+      </div>
+
+      <div class="h-px bg-white/[0.08] mx-[18px]"></div>
+
+      <!-- Author -->
       <div class="px-[18px] pt-[18px] pb-[18px]">
         <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Author</p>
         <a href="{% url 'user_detail' image.user.username %}"
@@ -170,7 +157,6 @@
       {% endif %}
       {% endwith %}
 
-    </div>
     </div>
   </div>
 

@@ -4,7 +4,7 @@
 {% block title %}Home · socnet{% endblock %}
 
 {% block content %}
-<div class="max-w-[704px] mx-auto px-[22px] py-[22px]">
+<div class="max-w-[704px] mx-auto px-[16px] sm:px-[22px] py-[22px]">
 
   {% for action in actions %}
   <div class="bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden mb-[13px]">
@@ -21,7 +21,7 @@
           {{ action.user.first_name|first|upper }}{{ action.user.last_name|first|upper }}
         {% endif %}
       </a>
-      <div>
+      <div class="min-w-0 flex-1">
         <a href="{% url 'user_detail' action.user.username %}"
            class="text-[14px] font-medium text-white hover:text-brand-light transition-colors">
           {{ action.user.get_full_name }}
@@ -32,8 +32,13 @@
             <a href="{{ action.target.get_absolute_url }}"
                class="text-[13px] text-brand-light hover:underline">{{ action.target.title }}</a>
           {% elif action.target.username %}
-            <a href="{% url 'user_detail' action.target.username %}"
-               class="text-[13px] text-brand-light hover:underline">@{{ action.target.username }}</a>
+            {% if action.target == request.user %}
+              <a href="{% url 'my_profile' %}"
+                 class="text-[13px] text-brand-light hover:underline">you</a>
+            {% else %}
+              <a href="{% url 'user_detail' action.target.username %}"
+                 class="text-[13px] text-brand-light hover:underline">@{{ action.target.username }}</a>
+            {% endif %}
           {% endif %}
         {% endif %}
       </div>
@@ -117,11 +122,13 @@
               <p class="text-[13px] text-[#9896A4] mt-0.5">
                 {{ target.images.count }} images · {{ target.profile.followers.count }} followers
               </p>
+              {% if target != request.user %}
               <button @click.prevent="toggle()"
                       :class="following ? 'bg-brand/15 text-brand-light border border-brand/30' : 'bg-brand text-white'"
                       class="mt-[9px] px-[15px] py-1 rounded-lg text-[13px] font-medium transition-colors"
                       x-text="following ? 'Following' : '+ Follow'">
               </button>
+              {% endif %}
             </div>
           </div>
 
@@ -138,7 +145,7 @@
                 <i class="ti ti-photo text-[26px] text-[#5E5C6A]"></i>
               {% endif %}
             </a>
-            <div>
+            <div class="min-w-0">
               <a href="{{ target.get_absolute_url }}"
                  class="text-[14px] font-medium text-white hover:text-brand-light transition-colors block mb-[7px]">
                 {{ target.title }}

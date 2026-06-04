@@ -3,10 +3,10 @@
 {% block title %}Images · socnet{% endblock %}
 
 {% block content %}
-<div class="px-[26px] py-[22px]">
+<div class="px-[16px] lg:px-[26px] py-[22px]">
 
-  <!-- Grid -->
-  <div id="images-grid" class="grid grid-cols-3 gap-[18px]">
+  <!-- Grid: 1 column on phones, 2 on tablets, 3 from xl up -->
+  <div id="images-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-[12px] sm:gap-[18px]">
     {% include 'images/partials/image_cards.html' %}
   </div>
 

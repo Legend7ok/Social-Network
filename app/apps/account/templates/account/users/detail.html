@@ -4,10 +4,10 @@
 {% block title %}{{ user.get_full_name }} · socnet{% endblock %}
 
 {% block content %}
-<div class="px-[31px] py-[26px]">
+<div class="px-[16px] lg:px-[31px] py-[26px]">
 
-  <!-- Profile header -->
-  <div class="flex items-start gap-[22px] pb-[26px] border-b border-white/[0.08] mb-[26px]">
+  <!-- Profile header: avatar on top on phones, beside content from sm up -->
+  <div class="flex flex-col sm:flex-row items-start gap-[22px] pb-[26px] border-b border-white/[0.08] mb-[26px]">
 
     <!-- Avatar -->
     <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden shrink-0"
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Stats row -->
-      <div class="flex items-center gap-[22px] mb-[18px]"
+      <div class="flex items-center gap-[14px] sm:gap-[22px] mb-[18px]"
            x-data="{ followersOpen: false, followingOpen: false }"
            @click.outside="followersOpen = false; followingOpen = false">
 
@@ -155,8 +155,8 @@
     </div>
   </div>
 
-  <!-- Image grid -->
-  <div class="grid grid-cols-4 gap-[9px]">
+  <!-- Image grid: 3 columns up to tablets, 4 from xl up -->
+  <div class="grid grid-cols-3 xl:grid-cols-4 gap-[9px]">
     {% for image in images %}
     <a href="{{ image.get_absolute_url }}"
        class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative group border border-white/[0.06] hover:border-brand/30 transition-colors">
@@ -177,7 +177,7 @@
       </div>
     </a>
     {% empty %}
-      <div class="col-span-4 text-center py-[70px] text-[#5E5C6A]">
+      <div class="col-span-full text-center py-[70px] text-[#5E5C6A]">
         <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
         <p class="text-[15px]">No images yet</p>
       </div>

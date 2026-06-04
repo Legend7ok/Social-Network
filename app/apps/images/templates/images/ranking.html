@@ -21,10 +21,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="px-[26px] py-[22px]">
+<div class="px-[16px] lg:px-[26px] py-[22px]">
 
-  <!-- Top 3 -->
-  <div class="grid gap-[18px] mb-[26px]" style="grid-template-columns: 1fr 1.2fr 1fr; align-items: end;">
+  <!-- Top 3: stacked on phones, podium (1fr 1.2fr 1fr, bottom-aligned) from lg up -->
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr_1fr] gap-[18px] mb-[26px] lg:items-end">
 
     <!-- #2 Silver -->
     <a href="{{ top3.1.get_absolute_url }}"
@@ -66,7 +66,7 @@
 
     <!-- #1 Gold -->
     <a href="{{ top3.0.get_absolute_url }}"
-       class="block rounded-2xl cursor-pointer transition-transform hover:-translate-y-1"
+       class="block rounded-2xl cursor-pointer transition-transform hover:-translate-y-1 order-first lg:order-none"
        style="background:#1C1B20; animation: glow-gold 2s ease-in-out infinite;">
       <div class="relative overflow-hidden" style="aspect-ratio:4/3; border-radius:14px 14px 0 0; background: linear-gradient(135deg,#2D2640,#1E2038);">
         {% if top3.0.image %}
@@ -82,7 +82,7 @@
              style="background:rgba(245,158,11,0.18); border:2px solid #F59E0B; color:#F59E0B;">1</div>
         <div class="absolute top-[11px] right-[11px] flex items-center gap-1 px-[9px] py-1 rounded-lg text-[11px] font-medium"
              style="background:rgba(245,158,11,0.15); border:0.5px solid rgba(245,158,11,0.5); color:#F59E0B;">
-          <i class="ti ti-crown text-[12px]"></i> Топ
+          <i class="ti ti-crown text-[12px]"></i> Top
         </div>
       </div>
       <div class="p-[15px]">
@@ -149,7 +149,7 @@
   <!-- Divider -->
   <div class="flex items-center gap-[13px] mb-[18px]">
     <div class="flex-1 h-px bg-white/[0.08]"></div>
-    <span class="text-[13px] text-[#5E5C6A] tracking-widest uppercase">Другие</span>
+    <span class="text-[13px] text-[#5E5C6A] tracking-widest uppercase">Others</span>
     <div class="flex-1 h-px bg-white/[0.08]"></div>
   </div>
 
