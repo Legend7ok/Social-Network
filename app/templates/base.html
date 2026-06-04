@@ -10,8 +10,10 @@
   <link href="{% static 'css/vendor/tabler-icons.min.css' %}" rel="stylesheet">
   <style>
     [x-cloak] { display: none; }
-    html, body { height: 100%; }
-    @media (min-width: 1024px) { html, body { overflow: hidden; } }
+    /* Fixed-height shell only on desktop: there main scrolls and the navbar stays put.
+       On phones body must grow with content so the sticky navbar's containing block
+       spans the whole document (otherwise the burger scrolls away after one screen). */
+    @media (min-width: 1024px) { html, body { height: 100%; overflow: hidden; } }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
