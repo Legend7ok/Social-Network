@@ -94,6 +94,10 @@ STATICFILES_DIRS = [BASE_DIR / "app" / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media/"
 
+# Max size for user-uploaded files (kept below nginx client_max_body_size 10M so
+# the friendly form error fires before nginx returns a raw 413).
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+
 LOGIN_URL = "login"
 LOGOUT_URL = "logout"
 LOGIN_REDIRECT_URL = "home"

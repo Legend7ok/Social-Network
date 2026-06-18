@@ -2,9 +2,8 @@ from django import forms
 from urllib.parse import urlparse
 import os
 
+from core.validators import VALID_IMAGE_EXTENSIONS, validate_image_upload
 from .models import Image
-
-VALID_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 
 
 class ImageBookmarkForm(forms.ModelForm):
@@ -23,9 +22,9 @@ class ImageBookmarkForm(forms.ModelForm):
         if not extension:
             raise forms.ValidationError("URL must have a file extension")
 
-        if extension not in VALID_EXTENSIONS:
+        if extension not in VALID_IMAGE_EXTENSIONS:
             raise forms.ValidationError(
-                "URL must end with one of {}".format(VALID_EXTENSIONS)
+                "URL must end with one of {}".format(VALID_IMAGE_EXTENSIONS)
             )
 
         return url
@@ -40,9 +39,5 @@ class ImageUploadForm(forms.ModelForm):
         image = self.cleaned_data.get("image")
         if not image:
             raise forms.ValidationError("Please select an image file.")
-        ext = os.path.splitext(image.name)[1].lstrip(".").lower()
-        if ext not in VALID_EXTENSIONS:
-            raise forms.ValidationError(
-                "File must be one of {}".format(VALID_EXTENSIONS)
-            )
+        validate_image_upload(image)
         return image
