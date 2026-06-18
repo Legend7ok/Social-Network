@@ -4,7 +4,11 @@ from django.dispatch import receiver
 from .models import Image
 
 
-@receiver(m2m_changed, sender=Image.users_like.through)
+@receiver(
+    m2m_changed,
+    sender=Image.users_like.through,
+    dispatch_uid="images_users_like_changed",
+)
 def users_like_changed(sender, instance, action, **kwargs):
     if action == "post_add":
         Image.objects.filter(pk=instance.pk).update(total_likes=F("total_likes") + 1)

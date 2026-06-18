@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -319,6 +320,21 @@ def test_image_upload_post_invalid_extension_shows_errors(client, user):
     )
     assert response.status_code == 200
     assert response.context["form"].errors
+
+
+@pytest.mark.django_db
+def test_image_upload_post_oversized_shows_errors(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    big = b"\x89PNG" + b"x" * (settings.MAX_UPLOAD_SIZE + 1)
+    big_file = SimpleUploadedFile("big.png", big, content_type="image/png")
+    response = client.post(
+        reverse("images:upload"),
+        {"title": "Too Big", "description": "", "image": big_file},
+    )
+    assert response.status_code == 200
+    assert response.context["form"].errors
+    assert not Image.objects.filter(title="Too Big").exists()
 
 
 # ─── View Tests: image_status ────────────────────────────────────────────────

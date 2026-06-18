@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
+
+from core.validators import validate_image_upload
 from .models import Profile
 
 
@@ -46,3 +48,16 @@ class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ["date_of_birth", "photo"]
+
+    def clean_photo(self):
+        photo = self.cleaned_data.get("photo")
+        if photo:
+            validate_image_upload(photo)
+        return photo
+
+
+class ProfilePhotoForm(ProfileEditForm):
+    """Photo-only submit (navbar/profile dropdown); inherits clean_photo."""
+
+    class Meta(ProfileEditForm.Meta):
+        fields = ["photo"]

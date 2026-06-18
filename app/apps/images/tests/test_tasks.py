@@ -18,7 +18,7 @@ def test_download_image_saves_file(user):
         url="https://example.com/test.jpg",
     )
     mock_resp = MagicMock()
-    mock_resp.content = MINIMAL_PNG
+    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
     mock_resp.raise_for_status = MagicMock()
 
     with patch("apps.images.tasks.requests.get", return_value=mock_resp):
@@ -39,7 +39,7 @@ def test_download_image_filename_uses_slugified_title(user):
         url="https://example.com/photo.png",
     )
     mock_resp = MagicMock()
-    mock_resp.content = MINIMAL_PNG
+    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
     mock_resp.raise_for_status = MagicMock()
 
     with patch("apps.images.tasks.requests.get", return_value=mock_resp):
@@ -59,7 +59,7 @@ def test_download_image_pregenerates_thumbnails(user):
         url="https://example.com/test.jpg",
     )
     mock_resp = MagicMock()
-    mock_resp.content = MINIMAL_PNG
+    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
     mock_resp.raise_for_status = MagicMock()
 
     with patch("apps.images.tasks.requests.get", return_value=mock_resp):
@@ -107,6 +107,27 @@ def test_generate_image_thumbnails_no_file_skips(user):
 @pytest.mark.django_db
 def test_download_image_silently_ignores_missing_image():
     download_image(9999, "https://example.com/test.jpg")
+
+
+@pytest.mark.django_db
+def test_download_image_discards_oversized_file(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Huge Image",
+        url="https://example.com/huge.jpg",
+    )
+    oversized = b"x" * (settings.MAX_UPLOAD_SIZE + 1)
+    mock_resp = MagicMock()
+    mock_resp.iter_content = MagicMock(return_value=[oversized])
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
+        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+            download_image(image.id, image.url)
+
+    assert not Image.objects.filter(id=image.id).exists()
+    mock_thumb.assert_not_called()
 
 
 @pytest.mark.django_db

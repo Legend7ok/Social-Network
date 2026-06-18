@@ -60,9 +60,25 @@ def download_image(image_id, url):
     except Image.DoesNotExist:
         logger.warning("download_image: image %s not found, skipping", image_id)
         return
-    response = requests.get(url, timeout=10)
+    response = requests.get(url, timeout=10, stream=True)
     response.raise_for_status()
+
+    chunks = []
+    size = 0
+    for chunk in response.iter_content(chunk_size=8192):
+        size += len(chunk)
+        if size > settings.MAX_UPLOAD_SIZE:
+            response.close()
+            logger.warning(
+                "download_image: %s exceeds MAX_UPLOAD_SIZE, discarding image %s",
+                url,
+                image_id,
+            )
+            image.delete()
+            return
+        chunks.append(chunk)
+
     extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
     name = f"{slugify(image.title)}.{extension}"
-    image.image.save(name, ContentFile(response.content), save=True)
+    image.image.save(name, ContentFile(b"".join(chunks)), save=True)
     generate_image_thumbnails(image_id)

@@ -16,7 +16,12 @@ from django_ratelimit.decorators import ratelimit
 from apps.images.models import Image
 from apps.images.services import get_images_views
 
-from .forms import UserRegistrationForm, UserEditForm, ProfileEditForm
+from .forms import (
+    UserRegistrationForm,
+    UserEditForm,
+    ProfileEditForm,
+    ProfilePhotoForm,
+)
 from .tasks import send_welcome_email
 from .models import Profile
 from apps.actions.utils import create_action
@@ -159,12 +164,14 @@ def my_profile(request):
 @login_required
 @require_POST
 def profile_photo_update(request):
-    photo = request.FILES.get("photo")
-    if photo:
-        profile = request.user.profile
-        profile.photo = photo
-        profile.save(update_fields=["photo"])
+    form = ProfilePhotoForm(
+        instance=request.user.profile, data=request.POST, files=request.FILES
+    )
+    if form.is_valid():
+        form.save()
         messages.success(request, "Photo updated successfully")
+    else:
+        messages.error(request, form.errors.get("photo", ["Invalid photo"])[0])
     return redirect("my_profile")
 
 
