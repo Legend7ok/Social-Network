@@ -11,14 +11,14 @@ USE_X_FORWARDED_PORT = True
 # Security: Django owns these (nginx is a pure reverse proxy, static/media on R2).
 # Keeping them here means they are versioned, reviewed and validated by
 # `manage.py check --deploy`; the duplicate add_header lines were removed from nginx.
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
-SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
