@@ -9,9 +9,7 @@ from .models import Profile
 from .tasks import generate_avatar_thumbnails
 
 
-@receiver(
-    post_save, sender=Action, dispatch_uid="account_invalidate_dashboard_cache"
-)
+@receiver(post_save, sender=Action, dispatch_uid="account_invalidate_dashboard_cache")
 def invalidate_dashboard_cache(sender, instance, created, **kwargs):
     if not created or not hasattr(instance.user, "profile"):
         return
