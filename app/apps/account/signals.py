@@ -9,7 +9,9 @@ from .models import Profile
 from .tasks import generate_avatar_thumbnails
 
 
-@receiver(post_save, sender=Action)
+@receiver(
+    post_save, sender=Action, dispatch_uid="account_invalidate_dashboard_cache"
+)
 def invalidate_dashboard_cache(sender, instance, created, **kwargs):
     if not created or not hasattr(instance.user, "profile"):
         return
@@ -17,7 +19,7 @@ def invalidate_dashboard_cache(sender, instance, created, **kwargs):
         cache.delete(f"home_{profile.user_id}")
 
 
-@receiver(pre_save, sender=Profile)
+@receiver(pre_save, sender=Profile, dispatch_uid="account_remember_old_photo")
 def remember_old_photo(sender, instance, **kwargs):
     if not instance.pk:
         instance._old_photo = None
@@ -28,7 +30,9 @@ def remember_old_photo(sender, instance, **kwargs):
         instance._old_photo = None
 
 
-@receiver(post_save, sender=Profile)
+@receiver(
+    post_save, sender=Profile, dispatch_uid="account_generate_avatar_on_photo_change"
+)
 def generate_avatar_on_photo_change(sender, instance, **kwargs):
     if instance.photo and instance.photo.name != instance._old_photo:
         transaction.on_commit(lambda: generate_avatar_thumbnails.delay(instance.id))
