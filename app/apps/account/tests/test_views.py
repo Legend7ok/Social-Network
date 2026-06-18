@@ -1,11 +1,15 @@
 from datetime import date
+from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.account.models import Profile
+from conftest import MINIMAL_PNG
 
 
 @pytest.mark.django_db
@@ -223,3 +227,41 @@ def test_user_detail_renders_following_true_when_following(client, user, second_
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[target.username]))
     assert b"following: true" in response.content
+
+
+@pytest.mark.django_db
+def test_profile_photo_update_saves_valid_photo(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
+    with (
+        patch("PIL.Image.open"),
+        django_capture_on_commit_callbacks(execute=False),
+    ):
+        response = client.post(reverse("profile_photo"), {"photo": photo})
+    assert response.status_code == 302
+    user_obj.profile.refresh_from_db()
+    assert user_obj.profile.photo
+
+
+@pytest.mark.django_db
+def test_profile_photo_update_rejects_oversized(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    big = b"\x89PNG" + b"x" * (settings.MAX_UPLOAD_SIZE + 1)
+    big_file = SimpleUploadedFile("big.png", big, content_type="image/png")
+    client.post(reverse("profile_photo"), {"photo": big_file})
+    user_obj.profile.refresh_from_db()
+    assert not user_obj.profile.photo
+
+
+@pytest.mark.django_db
+def test_profile_photo_update_rejects_invalid_extension(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    gif_file = SimpleUploadedFile("avatar.gif", b"GIF89a", content_type="image/gif")
+    client.post(reverse("profile_photo"), {"photo": gif_file})
+    user_obj.profile.refresh_from_db()
+    assert not user_obj.profile.photo
