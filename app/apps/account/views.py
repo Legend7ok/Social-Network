@@ -83,10 +83,7 @@ def register(request):
         user_form = UserRegistrationForm(request.POST)
         if user_form.is_valid():
             with transaction.atomic():
-                new_user = user_form.save(commit=False)
-                new_user.set_password(user_form.cleaned_data["password"])
-                new_user.save()
-
+                new_user = user_form.save()
                 create_action(new_user, "has created an account")
 
             send_welcome_email.delay(new_user.id)

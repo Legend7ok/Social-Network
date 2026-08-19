@@ -46,10 +46,8 @@ def test_logout_post_logs_out(client, user):
 def test_register_creates_profile(client):
     payload = {
         "username": "bob",
-        "first_name": "Bob",
         "email": "bob@example.com",
-        "password": "secret123",
-        "password2": "secret123",
+        "password": "Str0ngPassphrase!42",
     }
 
     response = client.post(reverse("register"), data=payload)
