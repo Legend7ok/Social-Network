@@ -23,7 +23,6 @@ from .forms import (
     ProfilePhotoForm,
 )
 from .tasks import send_welcome_email
-from .models import Profile
 from apps.actions.utils import create_action
 from apps.actions.models import Action
 
@@ -88,7 +87,6 @@ def register(request):
                 new_user.set_password(user_form.cleaned_data["password"])
                 new_user.save()
 
-                Profile.objects.create(user=new_user)
                 create_action(new_user, "has created an account")
 
             send_welcome_email.delay(new_user.id)
