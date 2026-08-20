@@ -1,8 +1,6 @@
 import logging
-from unittest.mock import MagicMock
 
 import pytest
-import redis
 
 from apps.images.models import Image
 from apps.images.services import (
@@ -14,19 +12,6 @@ from apps.images.services import (
     record_image_view,
 )
 from core.exceptions import RedisUnavailableError
-
-
-@pytest.fixture
-def broken_redis(monkeypatch):
-    mock = MagicMock()
-    mock.pipeline.side_effect = redis.ConnectionError("down")
-    mock.get.side_effect = redis.ConnectionError("down")
-    mock.mget.side_effect = redis.ConnectionError("down")
-    mock.set.side_effect = redis.ConnectionError("down")
-    mock.smembers.side_effect = redis.ConnectionError("down")
-    monkeypatch.setattr("apps.images.services.r", mock)
-    return mock
-
 
 # ─── record_image_view ───────────────────────────────────────────────────────
 

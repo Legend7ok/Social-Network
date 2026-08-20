@@ -620,3 +620,42 @@ def test_image_ranking_sentinel_keeps_the_current_sort(client, user):
     )
 
     assert b"page=2&amp;sort=likes" in response.content
+
+
+# ─── View Tests: pages survive a Redis outage ────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_detail_serves_stored_views_when_redis_is_down(
+    client, broken_redis, image
+):
+    Image.objects.filter(id=image.id).update(total_views=42)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.status_code == 200
+    assert response.context["total_views"] == 42
+
+
+@pytest.mark.django_db
+def test_image_list_renders_when_redis_is_down(client, broken_redis, user, image):
+    user_obj, password = user
+    Image.objects.filter(id=image.id).update(total_views=42)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"))
+
+    assert response.status_code == 200
+    assert [img.total_views for img in response.context["images"]] == [42]
+
+
+@pytest.mark.django_db
+def test_image_ranking_renders_when_redis_is_down(client, broken_redis, user):
+    user_obj, password = user
+    top, bottom = make_ranked_images(user_obj, [(30, 0), (1, 0)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    assert response.status_code == 200
+    assert list(response.context["top3"]) == [top, bottom]
