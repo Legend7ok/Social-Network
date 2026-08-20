@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import password_validation
-from django.contrib.auth.forms import UsernameField
+from django.contrib.auth.forms import AuthenticationForm, UsernameField
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Lower
@@ -8,11 +8,26 @@ from django.db.models.functions import Lower
 from core.validators import validate_image_upload
 from .models import Profile
 
+EMAIL_MAX_LENGTH = 254
+
 
 def users_with_email(email):
     """Matches on Lower("email") so the lookup hits the auth_user_email_ci_uniq
     index; iexact would compile to UPPER() and force a full scan instead."""
     return User.objects.annotate(email_lower=Lower("email")).filter(email_lower=email)
+
+
+class EmailOrUsernameAuthenticationForm(AuthenticationForm):
+    """Sign-in takes an email address as well as a username."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The parent sizes this field after the username column, which stops at
+        # 150 characters and would turn away a longer address.
+        field = self.fields["username"]
+        field.max_length = EMAIL_MAX_LENGTH
+        field.widget.attrs["maxlength"] = EMAIL_MAX_LENGTH
+        field.label = "Email or username"
 
 
 class UserRegistrationForm(forms.ModelForm):

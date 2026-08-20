@@ -1,6 +1,10 @@
 import pytest
 
-from apps.account.forms import UserEditForm, UserRegistrationForm
+from apps.account.forms import (
+    EmailOrUsernameAuthenticationForm,
+    UserEditForm,
+    UserRegistrationForm,
+)
 
 STRONG_PASSWORD = "Str0ngPassphrase!42"
 
@@ -65,6 +69,24 @@ def test_saving_lower_cases_the_email_and_hashes_the_password():
     assert new_user.email == "bob@example.com"
     assert new_user.password != STRONG_PASSWORD
     assert new_user.check_password(STRONG_PASSWORD)
+
+
+# ─── sign in ──────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_sign_in_accepts_an_address_longer_than_a_username(make_user):
+    """Django sizes this field after the username column (150), but addresses
+    are allowed 254 characters."""
+    long_email = "a" * 240 + "@e.com"
+    user_obj, password = make_user("longmail", long_email, "testpass321")
+
+    form = EmailOrUsernameAuthenticationForm(
+        data={"username": long_email, "password": password}
+    )
+
+    assert form.is_valid(), form.errors
+    assert form.get_user() == user_obj
 
 
 # ─── profile edit ─────────────────────────────────────────────────────────────

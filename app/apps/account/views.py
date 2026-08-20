@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import RedirectURLMixin
 from django.core.cache import cache
 from django.db import transaction
@@ -21,6 +20,7 @@ from apps.images.models import Image
 from apps.images.services import get_images_views
 
 from .forms import (
+    EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
     UserEditForm,
     ProfileEditForm,
@@ -90,6 +90,7 @@ class LoginView(auth_views.LoginView):
     side's blank form alongside its own."""
 
     template_name = "registration/login.html"
+    form_class = EmailOrUsernameAuthenticationForm
     redirect_authenticated_user = True
 
     def get_context_data(self, **kwargs):
@@ -119,7 +120,9 @@ class RegisterView(RedirectURLMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["register_form"] = context["form"]
-        context.setdefault("login_form", AuthenticationForm(self.request))
+        context.setdefault(
+            "login_form", EmailOrUsernameAuthenticationForm(self.request)
+        )
         # Keep the page someone was sent here from across a failed attempt.
         context[self.redirect_field_name] = self.get_redirect_url()
         # Tells the template which of the two panels to open.
