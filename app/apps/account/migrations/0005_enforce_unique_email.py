@@ -2,7 +2,7 @@
 
 from django.conf import settings
 from django.db import migrations
-from django.db.models import Count
+from django.db.models import Count, F
 from django.db.models.functions import Lower
 
 # Partial: social logins may leave the address empty, and several blank strings
@@ -17,12 +17,16 @@ DROP_INDEX = "DROP INDEX IF EXISTS auth_user_email_ci_uniq;"
 
 
 def normalize_emails(apps, schema_editor):
-    """Lower-case every stored address, then refuse to go on if that leaves two
+    """Lower-case the stored addresses, then refuse to go on if that leaves two
     accounts sharing one — the index below would fail with an opaque error."""
     User = apps.get_model(settings.AUTH_USER_MODEL)
     db_alias = schema_editor.connection.alias
 
-    User.objects.using(db_alias).exclude(email="").update(email=Lower("email"))
+    # Touch only the rows that actually differ: rewriting every row would lock
+    # the whole table and leave a dead version of each one behind.
+    User.objects.using(db_alias).exclude(email="").annotate(
+        lowered=Lower("email")
+    ).exclude(email=F("lowered")).update(email=Lower("email"))
 
     duplicates = list(
         User.objects.using(db_alias)
