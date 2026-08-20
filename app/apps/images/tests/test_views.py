@@ -715,6 +715,28 @@ def test_image_list_second_page_contains_remaining_images(client, user):
     assert len(response.context["images"]) == 4  # 10 images, 6 per page → page 2 has 4
 
 
+@pytest.mark.django_db
+def test_image_list_shows_owner_controls_on_my_images(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"), {"mine": "1"})
+
+    assert reverse("images:edit", args=[image.id]).encode() in response.content
+    assert reverse("images:delete", args=[image.id]).encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_list_hides_owner_controls_on_the_common_list(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"))
+
+    assert reverse("images:edit", args=[image.id]).encode() not in response.content
+    assert reverse("images:delete", args=[image.id]).encode() not in response.content
+
+
 # ─── View Tests: HTMX infinite scroll sentinel ───────────────────────────────
 
 

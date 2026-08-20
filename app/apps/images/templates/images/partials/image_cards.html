@@ -1,6 +1,25 @@
 {% load thumbnail %}
 
 {% for image in images %}
+<div class="relative">
+{% if mine %}
+  <!-- Kept outside the card link: a link cannot contain other controls -->
+  <div class="absolute top-[9px] right-[9px] z-10 flex items-center gap-[5px]">
+    <a href="{% url 'images:edit' image.id %}"
+       class="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-white transition-colors"
+       style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
+       title="Edit">
+      <i class="ti ti-pencil text-[14px]"></i>
+    </a>
+    <button type="button"
+            @click="$dispatch('confirm-delete', { url: '{% url 'images:delete' image.id %}', title: '{{ image.title|escapejs }}' })"
+            class="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-red-400 transition-colors"
+            style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
+            title="Delete">
+      <i class="ti ti-trash text-[14px]"></i>
+    </button>
+  </div>
+{% endif %}
 <a href="{{ image.get_absolute_url }}"
    class="img-card bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden block">
 
@@ -45,6 +64,7 @@
   </div>
 
 </a>
+</div>
 {% endfor %}
 {% if images.has_next %}
 <div class="col-span-full h-px"
