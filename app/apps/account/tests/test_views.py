@@ -162,6 +162,81 @@ def test_register_redirects_authenticated_user(client, user):
     assert response["Location"] == reverse("home")
 
 
+@pytest.mark.django_db
+def test_login_page_carries_both_forms(client):
+    """One page holds sign-in and sign-up, so both forms have to reach it."""
+    response = client.get(reverse("login"))
+
+    assert "login_form" in response.context
+    assert "register_form" in response.context
+
+
+@pytest.mark.django_db
+def test_failed_registration_opens_the_register_panel(client):
+    response = client.post(
+        reverse("register"),
+        {
+            "username": "bob",
+            "email": "not-an-address",
+            "password": "Str0ngPassphrase!42",
+        },
+    )
+
+    assert response.context["show_register"] is True
+
+
+@pytest.mark.django_db
+def test_register_returns_to_the_page_that_sent_you(client):
+    response = client.post(
+        reverse("register"),
+        {
+            "username": "bob",
+            "email": "bob@example.com",
+            "password": "Str0ngPassphrase!42",
+            "next": reverse("user_list"),
+        },
+    )
+
+    assert response["Location"] == reverse("user_list")
+
+
+@pytest.mark.django_db
+def test_register_ignores_a_next_pointing_off_the_site(client):
+    """Otherwise a crafted link would send a freshly signed-in person away."""
+    response = client.post(
+        reverse("register"),
+        {
+            "username": "bob",
+            "email": "bob@example.com",
+            "password": "Str0ngPassphrase!42",
+            "next": "https://evil.example.com/",
+        },
+    )
+
+    assert response["Location"] == reverse("home")
+
+
+@pytest.mark.django_db
+def test_welcome_email_waits_for_the_transaction(
+    client, django_capture_on_commit_callbacks
+):
+    """Dispatching before the commit races the worker to the new row."""
+    with patch("apps.account.views.send_welcome_email.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            client.post(
+                reverse("register"),
+                {
+                    "username": "bob",
+                    "email": "bob@example.com",
+                    "password": "Str0ngPassphrase!42",
+                },
+            )
+            mock_delay.assert_not_called()
+
+    new_user = get_user_model().objects.get(username="bob")
+    mock_delay.assert_called_once_with(new_user.id)
+
+
 # ─── edit ─────────────────────────────────────────────────────────────────────
 
 
