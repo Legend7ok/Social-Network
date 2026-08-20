@@ -120,6 +120,8 @@ class RegisterView(RedirectURLMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["register_form"] = context["form"]
         context.setdefault("login_form", AuthenticationForm(self.request))
+        # Keep the page someone was sent here from across a failed attempt.
+        context[self.redirect_field_name] = self.get_redirect_url()
         # Tells the template which of the two panels to open.
         context["show_register"] = True
         return context
