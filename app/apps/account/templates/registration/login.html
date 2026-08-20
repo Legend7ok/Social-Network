@@ -192,10 +192,12 @@
     </div>
   </div>
 
-  <!-- Sliding overlay (desktop only) — covers register panel by default (isRegister: false) -->
+  <!-- Sliding overlay (desktop only) — covers whichever panel is not in use.
+       Its starting side is rendered server-side so it does not jump once Alpine
+       takes over, which is visible when a failed sign-up opens the right panel. -->
   <div
     class="overlay-panel absolute top-0 bottom-0 w-1/2 z-10 hidden lg:flex flex-col items-center justify-center px-[31px] py-[35px] bg-brand rounded-xl"
-    style="left: 50%"
+    style="left: {% if show_register %}0%{% else %}50%{% endif %}"
     :style="isRegister ? 'left: 0%' : 'left: 50%'"
   >
     <h2 class="text-[22px] font-medium text-white mb-[9px]"

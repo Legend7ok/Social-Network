@@ -98,7 +98,7 @@ class LoginView(auth_views.LoginView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["login_form"] = context["form"]
-        context.setdefault("register_form", UserRegistrationForm())
+        context["register_form"] = UserRegistrationForm()
         return context
 
 
@@ -131,9 +131,7 @@ class RegisterView(RedirectURLMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["register_form"] = context["form"]
-        context.setdefault(
-            "login_form", EmailOrUsernameAuthenticationForm(self.request)
-        )
+        context["login_form"] = EmailOrUsernameAuthenticationForm(self.request)
         # Keep the page someone was sent here from across a failed attempt.
         context[self.redirect_field_name] = self.get_redirect_url()
         # Tells the template which of the two panels to open.

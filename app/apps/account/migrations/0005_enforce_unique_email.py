@@ -5,15 +5,25 @@ from django.db import migrations
 from django.db.models import Count, F
 from django.db.models.functions import Lower
 
-# Partial: social logins may leave the address empty, and several blank strings
-# must stay allowed. Case-insensitive: one person owns one address whatever
-# case they type it in.
-CREATE_INDEX = """
-    CREATE UNIQUE INDEX auth_user_email_ci_uniq
-    ON auth_user (LOWER(email))
-    WHERE email <> '';
-"""
-DROP_INDEX = "DROP INDEX IF EXISTS auth_user_email_ci_uniq;"
+INDEX_NAME = "auth_user_email_ci_uniq"
+
+
+def create_email_index(apps, schema_editor):
+    """Partial: social logins may leave the address empty, and several blank
+    strings must stay allowed. Case-insensitive: one person owns one address
+    whatever case they type it in."""
+    table = apps.get_model(settings.AUTH_USER_MODEL)._meta.db_table
+    quote = schema_editor.quote_name
+    schema_editor.execute(
+        f"CREATE UNIQUE INDEX {quote(INDEX_NAME)} ON {quote(table)} "
+        "(LOWER(email)) WHERE email <> ''"
+    )
+
+
+def drop_email_index(apps, schema_editor):
+    schema_editor.execute(
+        f"DROP INDEX IF EXISTS {schema_editor.quote_name(INDEX_NAME)}"
+    )
 
 
 def normalize_emails(apps, schema_editor):
@@ -50,7 +60,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # No reverse: the original casing is gone once lowered.
-        migrations.RunPython(normalize_emails, migrations.RunPython.noop),
-        migrations.RunSQL(sql=CREATE_INDEX, reverse_sql=DROP_INDEX),
+        # No reverse: the original casing is gone once lowered. Elidable because
+        # a squashed history starts from data the forms already lower-case.
+        migrations.RunPython(
+            normalize_emails, migrations.RunPython.noop, elidable=True
+        ),
+        migrations.RunPython(create_email_index, drop_email_index),
     ]
