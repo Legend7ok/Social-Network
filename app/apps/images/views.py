@@ -6,6 +6,8 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageBookmarkForm, ImageUploadForm
@@ -154,6 +156,18 @@ def image_upload(request):
     else:
         form = ImageUploadForm()
     return render(request, "images/upload.html", {"section": "images", "form": form})
+
+
+@login_required
+@require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_delete(request, id):
+    # Filtering by author means someone else's image is a 404 rather than a
+    # 403: there is nothing to say about images that are not yours.
+    image = get_object_or_404(Image, id=id, user=request.user)
+    image.delete()
+    messages.success(request, "Image deleted")
+    return redirect(f"{reverse('images:list')}?mine=1")
 
 
 def image_status(request, id):

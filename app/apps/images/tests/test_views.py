@@ -338,6 +338,71 @@ def test_image_upload_post_oversized_shows_errors(client, user):
     assert not Image.objects.filter(title="Too Big").exists()
 
 
+# ─── View Tests: image_delete ────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_delete_redirects_anonymous_user(client, image):
+    response = client.post(reverse("images:delete", args=[image.id]))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+    assert Image.objects.filter(id=image.id).exists()
+
+
+@pytest.mark.django_db
+def test_image_delete_rejects_get(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:delete", args=[image.id]))
+
+    assert response.status_code == 405
+    assert Image.objects.filter(id=image.id).exists()
+
+
+@pytest.mark.django_db
+def test_image_delete_removes_own_image_and_redirects(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:delete", args=[image.id]))
+
+    assert response.status_code == 302
+    assert response["Location"] == f"{reverse('images:list')}?mine=1"
+    assert not Image.objects.filter(id=image.id).exists()
+
+
+@pytest.mark.django_db
+def test_image_delete_shows_success_message(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:delete", args=[image.id]), follow=True)
+
+    assert [str(m) for m in response.context["messages"]] == ["Image deleted"]
+
+
+@pytest.mark.django_db
+def test_image_delete_refuses_someone_elses_image(client, second_user, image):
+    other_user, password = second_user
+    client.login(username=other_user.username, password=password)
+
+    response = client.post(reverse("images:delete", args=[image.id]))
+
+    assert response.status_code == 404
+    assert Image.objects.filter(id=image.id).exists()
+
+
+@pytest.mark.django_db
+def test_image_delete_returns_404_for_unknown_id(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(reverse("images:delete", args=[9999]))
+
+    assert response.status_code == 404
+
+
 # ─── View Tests: image_status ────────────────────────────────────────────────
 
 
