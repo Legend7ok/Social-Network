@@ -3,9 +3,16 @@ from django.contrib.auth import password_validation
 from django.contrib.auth.forms import UsernameField
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db.models.functions import Lower
 
 from core.validators import validate_image_upload
 from .models import Profile
+
+
+def users_with_email(email):
+    """Matches on Lower("email") so the lookup hits the auth_user_email_ci_uniq
+    index; iexact would compile to UPPER() and force a full scan instead."""
+    return User.objects.annotate(email_lower=Lower("email")).filter(email_lower=email)
 
 
 class UserRegistrationForm(forms.ModelForm):
@@ -31,8 +38,8 @@ class UserRegistrationForm(forms.ModelForm):
         return username
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        if User.objects.filter(email=email).exists():
+        email = self.cleaned_data["email"].lower()
+        if users_with_email(email).exists():
             raise forms.ValidationError("Email already in use")
         return email
 
@@ -61,10 +68,8 @@ class UserEditForm(forms.ModelForm):
         fields = ["first_name", "last_name", "email"]
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        qs = User.objects.exclude(id=self.instance.id).filter(email=email)
-
-        if qs.exists():
+        email = self.cleaned_data["email"].lower()
+        if users_with_email(email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("Email already in use")
         return email
 

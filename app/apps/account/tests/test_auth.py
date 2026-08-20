@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 
 from apps.account.authentication import EmailAuthBackend
 
@@ -39,18 +40,27 @@ def test_authenticate_nonexistent_email_returns_none(backend):
 
 
 @pytest.mark.django_db
-def test_authenticate_duplicate_email_returns_none(backend):
+def test_duplicate_email_rejected_whatever_the_case():
+    """Two accounts on one address used to break login for both of them; the
+    database now refuses the second one, casing included."""
     User = get_user_model()
     User.objects.create_user(
         username="user1", email="same@example.com", password="pass1"
     )
-    User.objects.create_user(
-        username="user2", email="same@example.com", password="pass2"
-    )
-    result = backend.authenticate(
-        request=None, username="same@example.com", password="pass1"
-    )
-    assert result is None
+    with pytest.raises(IntegrityError):
+        User.objects.create_user(
+            username="user2", email="SAME@example.com", password="pass2"
+        )
+
+
+@pytest.mark.django_db
+def test_blank_emails_stay_allowed():
+    """Social logins may hand us no address at all, so blanks must not collide."""
+    User = get_user_model()
+    User.objects.create_user(username="user1", email="", password="pass1")
+    User.objects.create_user(username="user2", email="", password="pass2")
+
+    assert User.objects.filter(email="").count() == 2
 
 
 # ─── get_user ─────────────────────────────────────────────────────────────────
