@@ -385,29 +385,32 @@ def test_image_upload_post_oversized_shows_errors(client, user):
 
 
 @pytest.mark.django_db
-def test_image_detail_shows_delete_button_to_the_author(client, user, image):
+def test_image_detail_shows_owner_controls_to_the_author(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
+    assert reverse("images:edit", args=[image.id]).encode() in response.content
     assert reverse("images:delete", args=[image.id]).encode() in response.content
 
 
 @pytest.mark.django_db
-def test_image_detail_hides_delete_button_from_others(client, second_user, image):
+def test_image_detail_hides_owner_controls_from_others(client, second_user, image):
     other_user, password = second_user
     client.login(username=other_user.username, password=password)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
+    assert reverse("images:edit", args=[image.id]).encode() not in response.content
     assert reverse("images:delete", args=[image.id]).encode() not in response.content
 
 
 @pytest.mark.django_db
-def test_image_detail_hides_delete_button_from_anonymous(client, image):
+def test_image_detail_hides_owner_controls_from_anonymous(client, image):
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
+    assert reverse("images:edit", args=[image.id]).encode() not in response.content
     assert reverse("images:delete", args=[image.id]).encode() not in response.content
 
 

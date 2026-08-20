@@ -63,6 +63,11 @@
         </button>
 
         {% if request.user == image.user %}
+        <a href="{% url 'images:edit' image.id %}"
+           class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+          <i class="ti ti-pencil text-[17px]"></i> Edit
+        </a>
+
         <div x-data="{ confirming: false }" @keydown.escape.window="confirming = false">
           <button @click="confirming = true"
                   class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-red-400 hover:border-red-700/50 transition-all">
