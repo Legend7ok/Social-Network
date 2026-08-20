@@ -47,6 +47,48 @@ def record_image_view(image_id):
         return 0
 
 
+def get_dirty_image_ids():
+    """Images that collected views since the last flush."""
+    try:
+        return sorted(int(image_id) for image_id in r.smembers(DIRTY_IMAGES_KEY))
+    except _REDIS_ERRORS as e:
+        raise RedisUnavailableError("Redis unavailable") from e
+
+
+def read_view_deltas(image_ids):
+    """Buffered view counts, keyed by image id."""
+    try:
+        values = r.mget([_delta_key(image_id) for image_id in image_ids])
+    except _REDIS_ERRORS as e:
+        raise RedisUnavailableError("Redis unavailable") from e
+    return {image_id: int(value or 0) for image_id, value in zip(image_ids, values)}
+
+
+def clear_view_deltas(deltas):
+    """
+    Give back the counts that made it into the database.
+
+    Subtracts instead of resetting, so views that arrived while the flush was
+    running survive; an image only leaves the dirty set once its counter is
+    fully drained.
+    """
+    try:
+        with r.pipeline() as pipe:
+            for image_id, delta in deltas.items():
+                pipe.decrby(_delta_key(image_id), delta)
+            remainders = pipe.execute()
+        drained = [
+            image_id
+            for image_id, remainder in zip(deltas, remainders)
+            if remainder <= 0
+        ]
+        if drained:
+            r.srem(DIRTY_IMAGES_KEY, *drained)
+    except _REDIS_ERRORS as e:
+        raise RedisUnavailableError("Redis unavailable") from e
+    return drained
+
+
 def get_image_ranking(start=0, count=10):
     try:
         end = start + count - 1

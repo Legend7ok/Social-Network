@@ -5,7 +5,16 @@ from unittest.mock import MagicMock, patch
 from django.conf import settings
 
 from apps.images.models import Image
-from apps.images.tasks import download_image, generate_image_thumbnails
+from apps.images.services import (
+    DIRTY_IMAGES_KEY,
+    clear_view_deltas,
+    record_image_view,
+)
+from apps.images.tasks import (
+    download_image,
+    flush_image_views,
+    generate_image_thumbnails,
+)
 from conftest import MINIMAL_PNG
 
 
@@ -144,3 +153,81 @@ def test_download_image_raises_on_request_error(user):
     ):
         with pytest.raises(requests.RequestException):
             download_image(image.id, image.url)
+
+
+# ─── flush_image_views ───────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_flush_image_views_adds_buffered_views_to_stored_total(image):
+    Image.objects.filter(id=image.id).update(total_views=100)
+    record_image_view(image.id)
+    record_image_view(image.id)
+
+    assert flush_image_views() == 1
+
+    image.refresh_from_db()
+    assert image.total_views == 102
+
+
+@pytest.mark.django_db
+def test_flush_image_views_drains_redis_and_dirty_set(fake_redis, image):
+    record_image_view(image.id)
+
+    flush_image_views()
+
+    assert int(fake_redis.get(f"image:{image.id}:views")) == 0
+    assert fake_redis.smembers(DIRTY_IMAGES_KEY) == set()
+
+
+@pytest.mark.django_db
+def test_flush_image_views_is_not_double_counted_on_repeat(image):
+    record_image_view(image.id)
+
+    flush_image_views()
+    flush_image_views()
+
+    image.refresh_from_db()
+    assert image.total_views == 1
+
+
+@pytest.mark.django_db
+def test_flush_image_views_keeps_views_arriving_during_the_flush(fake_redis, image):
+    record_image_view(image.id)
+    # A view lands after the task read the counter but before it drains it.
+    record_image_view(image.id)
+    clear_view_deltas({image.id: 1})
+
+    assert int(fake_redis.get(f"image:{image.id}:views")) == 1
+    assert fake_redis.smembers(DIRTY_IMAGES_KEY) == {str(image.id).encode()}
+
+
+@pytest.mark.django_db
+def test_flush_image_views_forgets_deleted_images(fake_redis):
+    record_image_view(9999)
+
+    assert flush_image_views() == 0
+    assert fake_redis.smembers(DIRTY_IMAGES_KEY) == set()
+
+
+@pytest.mark.django_db
+def test_flush_image_views_without_dirty_images_does_nothing():
+    assert flush_image_views() == 0
+
+
+@pytest.mark.django_db
+def test_flush_image_views_handles_several_images(user, image):
+    user_obj, _ = user
+    other = Image.objects.create(
+        user=user_obj, title="Other", url="https://example.com/other.png"
+    )
+    record_image_view(image.id)
+    record_image_view(other.id)
+    record_image_view(other.id)
+
+    assert flush_image_views() == 2
+
+    image.refresh_from_db()
+    other.refresh_from_db()
+    assert image.total_views == 1
+    assert other.total_views == 2

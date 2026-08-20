@@ -6,12 +6,49 @@ import requests
 from celery import shared_task
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db.models import F
 from django.utils.text import slugify
 from sorl.thumbnail import get_thumbnail
 
 from .models import Image
+from .services import clear_view_deltas, get_dirty_image_ids, read_view_deltas
 
 logger = logging.getLogger(__name__)
+
+FLUSH_BATCH_SIZE = 500
+
+
+@shared_task
+def flush_image_views():
+    """
+    Move buffered view counts from Redis into Image.total_views.
+
+    The database is written first and Redis is only drained afterwards: a crash
+    in between replays a batch on the next run, which is far better than the
+    reverse order, where it would silently drop the views instead.
+    """
+    image_ids = get_dirty_image_ids()
+    flushed = 0
+
+    for start in range(0, len(image_ids), FLUSH_BATCH_SIZE):
+        batch = image_ids[start : start + FLUSH_BATCH_SIZE]
+        deltas = read_view_deltas(batch)
+        pending = {image_id: delta for image_id, delta in deltas.items() if delta > 0}
+
+        if pending:
+            images = list(Image.objects.filter(id__in=pending).only("id"))
+            for image in images:
+                image.total_views = F("total_views") + pending[image.id]
+            Image.objects.bulk_update(images, ["total_views"])
+            flushed += len(images)
+
+        # Deleted images and drained counters are cleared too, so their ids do
+        # not linger in the dirty set forever.
+        clear_view_deltas(deltas)
+
+    if flushed:
+        logger.info("flush_image_views: flushed views for %s images", flushed)
+    return flushed
 
 
 @shared_task
