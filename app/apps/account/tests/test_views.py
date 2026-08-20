@@ -163,6 +163,25 @@ def test_register_redirects_authenticated_user(client, user):
 
 
 @pytest.mark.django_db
+def test_register_get_carries_next_to_the_login_page(client):
+    response = client.get(reverse("register"), {"next": reverse("user_list")})
+
+    assert response["Location"] == f"{reverse('login')}?next={reverse('user_list')}"
+
+
+@pytest.mark.django_db
+def test_register_response_is_not_cached(client):
+    """A filled-in sign-up form must not sit in a cache or come back with the
+    browser's back button."""
+    response = client.post(
+        reverse("register"),
+        {"username": "bob", "email": "not-an-address", "password": "x"},
+    )
+
+    assert "no-store" in response["Cache-Control"]
+
+
+@pytest.mark.django_db
 def test_login_page_carries_both_forms(client):
     """One page holds sign-in and sign-up, so both forms have to reach it."""
     response = client.get(reverse("login"))

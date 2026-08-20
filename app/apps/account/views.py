@@ -2,15 +2,17 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import RedirectURLMixin
+from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect, resolve_url
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 from django.views.generic import FormView
 from django.utils import timezone
@@ -100,6 +102,9 @@ class LoginView(auth_views.LoginView):
         return context
 
 
+# The same guards Django puts on its own LoginView: keep the password out of
+# error reports, and keep the filled-in form out of caches and the back button.
+@method_decorator([sensitive_post_parameters(), never_cache], name="dispatch")
 @method_decorator(
     ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
 )
@@ -114,8 +119,14 @@ class RegisterView(RedirectURLMixin, FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        # The form lives on the login page; nothing to show on its own.
-        return redirect("login")
+        # The form lives on the login page; nothing to show on its own. Carry
+        # the page they were sent from along, or it is lost on the way there.
+        redirect_to = self.get_redirect_url()
+        if not redirect_to:
+            return redirect("login")
+        return redirect_to_login(
+            redirect_to, resolve_url("login"), self.redirect_field_name
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
