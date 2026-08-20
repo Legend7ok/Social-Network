@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from urllib.parse import urlparse
 import os
 
@@ -36,6 +37,10 @@ class ImageEditForm(forms.ModelForm):
     class Meta:
         model = Image
         fields = ["title", "description"]
+
+    def save(self, commit=True):
+        self.instance.edited_at = timezone.now()
+        return super().save(commit=commit)
 
 
 class ImageUploadForm(forms.ModelForm):

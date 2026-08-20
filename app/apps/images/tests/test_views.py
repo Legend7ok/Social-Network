@@ -508,6 +508,37 @@ def test_image_edit_rejects_an_empty_title(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_edit_stamps_the_edit_time(client, user, image):
+    user_obj, password = user
+    assert image.edited_at is None
+    client.login(username=user_obj.username, password=password)
+
+    client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Renamed Image", "description": ""},
+    )
+
+    image.refresh_from_db()
+    assert image.edited_at is not None
+
+
+@pytest.mark.django_db
+def test_image_detail_marks_an_edited_image(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    detail_url = reverse("images:detail", args=[image.id, image.slug])
+
+    assert b"edited" not in client.get(detail_url).content
+
+    client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Test Image", "description": "New words"},
+    )
+
+    assert b"edited" in client.get(detail_url).content
+
+
+@pytest.mark.django_db
 def test_image_edit_ignores_a_posted_file(client, user, image):
     user_obj, password = user
     original_file = image.image.name
