@@ -1,4 +1,5 @@
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
@@ -92,6 +93,19 @@ def test_blank_emails_stay_allowed():
     User.objects.create_user(username="user2", email="", password="pass2")
 
     assert User.objects.filter(email="").count() == 2
+
+
+# ─── social login ─────────────────────────────────────────────────────────────
+
+
+def test_social_login_associates_before_it_creates():
+    """Signing in with Google or GitHub on an address that already has an
+    account must join the two, not attempt a second row the index refuses."""
+    steps = settings.SOCIAL_AUTH_PIPELINE
+
+    assert steps.index(
+        "social_core.pipeline.social_auth.associate_by_email"
+    ) < steps.index("social_core.pipeline.user.create_user")
 
 
 # ─── get_user ─────────────────────────────────────────────────────────────────

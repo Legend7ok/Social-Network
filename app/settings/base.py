@@ -117,11 +117,20 @@ SOCIAL_AUTH_PIPELINE = [
     "social_core.pipeline.social_auth.auth_allowed",
     "social_core.pipeline.social_auth.social_user",
     "social_core.pipeline.user.get_username",
+    # Hand the social login to the account that already owns this address
+    # instead of creating a second one, which the unique email index refuses.
+    # Safe with these two providers only because both hand over an address the
+    # person has proven they control: Google verifies it, GitHub only lets a
+    # verified address be the primary one.
+    "social_core.pipeline.social_auth.associate_by_email",
     "social_core.pipeline.user.create_user",
     "social_core.pipeline.social_auth.associate_user",
     "social_core.pipeline.social_auth.load_extra_data",
     "social_core.pipeline.user.user_details",
 ]
+
+# Store the address the same way the forms do, so one person keeps one row.
+SOCIAL_AUTH_FORCE_EMAIL_LOWERCASE = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env(
     "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", default="dummy-key"
