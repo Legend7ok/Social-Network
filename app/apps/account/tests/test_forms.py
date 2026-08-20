@@ -117,3 +117,32 @@ def test_edit_accepts_your_own_email_in_another_case(user):
     )
 
     assert form.is_valid(), form.errors
+
+
+@pytest.mark.django_db
+def test_edit_refuses_to_clear_the_email(user):
+    """Saving an empty address used to go through and leave the owner with no
+    way to sign in by email and no way to reset a password."""
+    user_obj, _ = user
+
+    form = UserEditForm(
+        {"first_name": "", "last_name": "", "email": ""}, instance=user_obj
+    )
+
+    assert not form.is_valid()
+    assert form.errors["email"] == ["This field is required."]
+
+
+@pytest.mark.django_db
+def test_edit_allows_moving_to_a_free_address(user):
+    user_obj, _ = user
+
+    form = UserEditForm(
+        {"first_name": "", "last_name": "", "email": "Alice.New@Example.com"},
+        instance=user_obj,
+    )
+    assert form.is_valid(), form.errors
+
+    form.save()
+    user_obj.refresh_from_db()
+    assert user_obj.email == "alice.new@example.com"

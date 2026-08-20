@@ -43,7 +43,7 @@
         <label class="block text-[13px] text-[#9896A4] mb-[7px]">
           Email <span class="text-red-400">*</span>
         </label>
-        <input type="email" name="email"
+        <input type="email" name="email" required
                value="{{ user_form.email.value|default:'' }}"
                placeholder="john@example.com"
                class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors

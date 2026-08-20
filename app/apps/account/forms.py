@@ -8,7 +8,7 @@ from django.db.models.functions import Lower
 from core.validators import validate_image_upload
 from .models import Profile
 
-EMAIL_MAX_LENGTH = 254
+EMAIL_MAX_LENGTH = User._meta.get_field("email").max_length
 
 
 def users_with_email(email):
@@ -39,7 +39,9 @@ class UserRegistrationForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
         strip=False,
     )
-    email = forms.EmailField(label="Email", required=True)
+    # Declared here because the model leaves email optional, while an account
+    # without one has no way back in: no email sign-in, no password reset.
+    email = forms.EmailField(label="Email", required=True, max_length=EMAIL_MAX_LENGTH)
 
     class Meta:
         model = User
@@ -78,6 +80,10 @@ class UserRegistrationForm(forms.ModelForm):
 
 
 class UserEditForm(forms.ModelForm):
+    # Same reason as on registration: clearing the address would lock the owner
+    # out of their own account. Changing it stays allowed.
+    email = forms.EmailField(label="Email", required=True, max_length=EMAIL_MAX_LENGTH)
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email"]
