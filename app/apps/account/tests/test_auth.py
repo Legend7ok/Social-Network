@@ -40,6 +40,37 @@ def test_authenticate_nonexistent_email_returns_none(backend):
 
 
 @pytest.mark.django_db
+def test_authenticate_accepts_any_casing(backend, user):
+    user_obj, password = user
+    result = backend.authenticate(
+        request=None, username=user_obj.email.upper(), password=password
+    )
+    assert result == user_obj
+
+
+@pytest.mark.django_db
+def test_authenticate_rejects_inactive_user(backend, user):
+    user_obj, password = user
+    user_obj.is_active = False
+    user_obj.save()
+
+    result = backend.authenticate(
+        request=None, username=user_obj.email, password=password
+    )
+    assert result is None
+
+
+@pytest.mark.django_db
+def test_authenticate_blank_email_returns_none(backend, make_user):
+    """A blank address is shared by every social account that came without one,
+    so it must never be treated as a lookup value."""
+    make_user("nomail", "", "testpass789")
+
+    result = backend.authenticate(request=None, username="", password="testpass789")
+    assert result is None
+
+
+@pytest.mark.django_db
 def test_duplicate_email_rejected_whatever_the_case():
     """Two accounts on one address used to break login for both of them; the
     database now refuses the second one, casing included."""
