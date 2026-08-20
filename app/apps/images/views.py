@@ -60,9 +60,8 @@ def image_detail(request, id, slug):
                 request.session.create()
             viewer_key = f"session:{request.session.session_key}"
         if is_first_view(image.id, viewer_key):
-            total_views = record_image_view(image.id)
-        else:
-            total_views = get_image_views(image.id)
+            record_image_view(image.id)
+        total_views = get_image_views(image.id)
     else:
         total_views = 0
 
