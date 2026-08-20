@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from apps.images.forms import ImageBookmarkForm, ImageUploadForm
 from apps.images.models import Image
+from apps.images.services import record_image_view
 from conftest import MINIMAL_PNG
 
 
@@ -472,3 +473,150 @@ def test_image_list_partial_no_sentinel_on_last_page(client, user):
     response = client.get(reverse("images:list"), {"images_only": "1", "page": "2"})
     assert response.status_code == 200
     assert b"hx-get" not in response.content
+
+
+# ─── View Tests: image_ranking ───────────────────────────────────────────────
+
+
+def make_ranked_images(user_obj, scores):
+    """Create images with fixed view/like counts: scores is (views, likes) per image."""
+    images = []
+    for i, (views, likes) in enumerate(scores):
+        image = Image.objects.create(
+            user=user_obj,
+            title=f"Ranked {i}",
+            url=f"https://example.com/ranked{i}.png",
+        )
+        Image.objects.filter(id=image.id).update(total_views=views, total_likes=likes)
+        image.refresh_from_db()
+        images.append(image)
+    return images
+
+
+@pytest.mark.django_db
+def test_image_ranking_redirects_anonymous_user(client):
+    response = client.get(reverse("images:ranking"))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_ranking_returns_200_with_section_context(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    response = client.get(reverse("images:ranking"))
+    assert response.status_code == 200
+    assert response.context["section"] == "images"
+
+
+@pytest.mark.django_db
+def test_image_ranking_orders_podium_by_views(client, user):
+    user_obj, password = user
+    low, high, mid = make_ranked_images(user_obj, [(1, 90), (30, 0), (10, 50)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    assert list(response.context["top3"]) == [high, mid, low]
+
+
+@pytest.mark.django_db
+def test_image_ranking_orders_podium_by_likes_when_asked(client, user):
+    user_obj, password = user
+    most_liked, most_viewed = make_ranked_images(user_obj, [(1, 90), (30, 0)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"), {"sort": "likes"})
+
+    assert response.context["sort"] == "likes"
+    assert list(response.context["top3"]) == [most_liked, most_viewed]
+
+
+@pytest.mark.django_db
+def test_image_ranking_falls_back_to_views_for_unknown_sort(client, user):
+    user_obj, password = user
+    most_liked, most_viewed = make_ranked_images(user_obj, [(1, 90), (30, 0)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"), {"sort": "bogus"})
+
+    assert response.context["sort"] == "views"
+    assert list(response.context["top3"]) == [most_viewed, most_liked]
+
+
+@pytest.mark.django_db
+def test_image_ranking_shows_live_view_counts(client, user):
+    user_obj, password = user
+    (image,) = make_ranked_images(user_obj, [(100, 0)])
+    record_image_view(image.id)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    assert response.context["top3"][0].total_views == 101
+
+
+@pytest.mark.django_db
+def test_image_ranking_list_starts_below_the_podium(client, user):
+    user_obj, password = user
+    images = make_ranked_images(user_obj, [(score, 0) for score in range(5, 0, -1)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    ranking_list = response.context["ranking_list"]
+    assert list(ranking_list) == images[3:]
+    assert [img.rank for img in ranking_list] == [4, 5]
+
+
+@pytest.mark.django_db
+def test_image_ranking_second_page_continues_numbering(client, user):
+    user_obj, password = user
+    make_ranked_images(user_obj, [(score, 0) for score in range(20, 0, -1)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"), {"page": "2"})
+
+    # 20 images: 3 on the podium, 10 on the first page, the rest here.
+    ranks = [img.rank for img in response.context["ranking_list"]]
+    assert ranks == [14, 15, 16, 17, 18, 19, 20]
+    assert response.context["has_next"] is False
+
+
+@pytest.mark.django_db
+def test_image_ranking_only_uses_partial_template(client, user):
+    user_obj, password = user
+    make_ranked_images(user_obj, [(5, 0), (4, 0), (3, 0), (2, 0)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"), {"ranking_only": "1"})
+
+    template_names = [t.name for t in response.templates]
+    assert "images/partials/ranking_rows.html" in template_names
+    assert "images/ranking.html" not in template_names
+
+
+@pytest.mark.django_db
+def test_image_ranking_empty_page_with_ranking_only_returns_empty_body(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(
+        reverse("images:ranking"), {"page": "999", "ranking_only": "1"}
+    )
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+@pytest.mark.django_db
+def test_image_ranking_sentinel_keeps_the_current_sort(client, user):
+    user_obj, password = user
+    make_ranked_images(user_obj, [(score, 0) for score in range(20, 0, -1)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(
+        reverse("images:ranking"), {"ranking_only": "1", "sort": "likes"}
+    )
+
+    assert b"page=2&amp;sort=likes" in response.content

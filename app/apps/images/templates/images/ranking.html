@@ -23,6 +23,20 @@
 {% block content %}
 <div class="px-[16px] lg:px-[26px] py-[22px]">
 
+  <!-- Sort switch -->
+  <div class="flex items-center gap-[9px] mb-[22px]">
+    <a href="?sort=views"
+       class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-xl border text-[14px] font-medium transition-all
+              {% if sort == 'views' %}bg-brand/15 border-brand/50 text-white{% else %}bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white{% endif %}">
+      <i class="ti ti-eye text-[16px]"></i> Most viewed
+    </a>
+    <a href="?sort=likes"
+       class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-xl border text-[14px] font-medium transition-all
+              {% if sort == 'likes' %}bg-brand/15 border-brand/50 text-white{% else %}bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white{% endif %}">
+      <i class="ti ti-heart text-[16px]"></i> Most liked
+    </a>
+  </div>
+
   <!-- Top 3: stacked on phones, podium (1fr 1.2fr 1fr, bottom-aligned) from lg up -->
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr_1fr] gap-[18px] mb-[26px] lg:items-end">
 

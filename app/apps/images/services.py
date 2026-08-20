@@ -35,8 +35,7 @@ def record_image_view(image_id):
         with r.pipeline() as pipe:
             pipe.incr(_delta_key(image_id))
             pipe.sadd(DIRTY_IMAGES_KEY, image_id)
-            pipe.zincrby("image_ranking", 1, image_id)
-            delta, _, _ = pipe.execute()
+            delta, _ = pipe.execute()
         return delta
     except _REDIS_ERRORS:
         logger.error(
@@ -87,22 +86,6 @@ def clear_view_deltas(deltas):
     except _REDIS_ERRORS as e:
         raise RedisUnavailableError("Redis unavailable") from e
     return drained
-
-
-def get_image_ranking(start=0, count=10):
-    try:
-        end = start + count - 1
-        ids = r.zrange("image_ranking", start, end, desc=True)
-        return [int(id) for id in ids]
-    except _REDIS_ERRORS as e:
-        raise RedisUnavailableError("Redis unavailable") from e
-
-
-def get_image_ranking_count():
-    try:
-        return r.zcard("image_ranking")
-    except _REDIS_ERRORS as e:
-        raise RedisUnavailableError("Redis unavailable") from e
 
 
 def get_image_views(image_id):
