@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.views import RedirectURLMixin
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
@@ -9,7 +11,9 @@ from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django.views.generic import FormView
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
@@ -77,21 +81,63 @@ def home(request):
     )
 
 
-@ratelimit(key="ip", rate="10/h", method="POST", block=True)
-def register(request):
-    if request.method == "POST":
-        user_form = UserRegistrationForm(request.POST)
-        if user_form.is_valid():
-            with transaction.atomic():
-                new_user = user_form.save()
-                create_action(new_user, "has created an account")
+# The views in this project are functions; these two are the exception. Signing
+# in extends Django's own LoginView — writing it as a function would mean
+# copying its handling of CSRF, caching, the next parameter and the axes hooks —
+# and the sign-up view stays a class to match the page it shares.
+class LoginView(auth_views.LoginView):
+    """Signing in and signing up share one page, so each view renders the other
+    side's blank form alongside its own."""
 
-            send_welcome_email.delay(new_user.id)
-            return render(request, "account/register_done.html", {"new_user": new_user})
-    else:
-        user_form = UserRegistrationForm()
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
 
-    return render(request, "account/register.html", {"user_form": user_form})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["login_form"] = context["form"]
+        context.setdefault("register_form", UserRegistrationForm())
+        return context
+
+
+@method_decorator(
+    ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
+)
+class RegisterView(RedirectURLMixin, FormView):
+    template_name = "registration/login.html"
+    form_class = UserRegistrationForm
+    next_page = settings.LOGIN_REDIRECT_URL
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.get_default_redirect_url())
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        # The form lives on the login page; nothing to show on its own.
+        return redirect("login")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["register_form"] = context["form"]
+        context.setdefault("login_form", AuthenticationForm(self.request))
+        # Tells the template which of the two panels to open.
+        context["show_register"] = True
+        return context
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            new_user = form.save()
+            create_action(new_user, "has created an account")
+
+        transaction.on_commit(lambda: send_welcome_email.delay(new_user.id))
+        # The account was just created here, so there is nothing to authenticate
+        # against; name the backend Django would have used.
+        auth_login(
+            self.request,
+            new_user,
+            backend="django.contrib.auth.backends.ModelBackend",
+        )
+        return redirect(self.get_success_url())
 
 
 @login_required

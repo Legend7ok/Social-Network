@@ -15,7 +15,8 @@ def test_register_rate_limit_returns_429(client):
                 "password": "Str0ngPassphrase!42",
             },
         )
-        assert response.status_code == 200
+        assert response.status_code == 302
+        client.logout()
 
     response = client.post(
         url,

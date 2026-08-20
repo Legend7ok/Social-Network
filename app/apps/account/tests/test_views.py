@@ -52,11 +52,13 @@ def test_register_creates_profile(client):
 
     response = client.post(reverse("register"), data=payload)
 
-    assert response.status_code == 200
+    assert response.status_code == 302
+    assert response["Location"] == reverse("home")
 
     user_model = get_user_model()
     user_obj = user_model.objects.get(username="bob")
     assert Profile.objects.filter(user=user_obj).exists()
+    assert client.session["_auth_user_id"] == str(user_obj.pk)
 
 
 @pytest.mark.django_db
@@ -126,26 +128,38 @@ def test_home_returns_200(client, user):
 
 
 @pytest.mark.django_db
-def test_register_get_shows_form(client):
+def test_register_get_redirects_to_the_login_page(client):
+    """The sign-up form lives on the login page, so /register/ has nothing of
+    its own to show."""
     response = client.get(reverse("register"))
-    assert response.status_code == 200
-    assert "user_form" in response.context
+    assert response.status_code == 302
+    assert response["Location"] == reverse("login")
 
 
 @pytest.mark.django_db
-def test_register_post_password_mismatch_shows_errors(client):
+def test_register_post_weak_password_shows_errors(client):
     response = client.post(
         reverse("register"),
         {
             "username": "bob",
-            "first_name": "Bob",
             "email": "bob@example.com",
             "password": "secret123",
-            "password2": "different",
         },
     )
     assert response.status_code == 200
-    assert response.context["user_form"].errors
+    assert response.context["register_form"].errors["password"]
+    assert not get_user_model().objects.filter(username="bob").exists()
+
+
+@pytest.mark.django_db
+def test_register_redirects_authenticated_user(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("register"))
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse("home")
 
 
 # ─── edit ─────────────────────────────────────────────────────────────────────
