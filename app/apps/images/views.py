@@ -58,8 +58,13 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(
-        Image.objects.select_related("user", "user__profile"), id=id, slug=slug
+        Image.objects.select_related("user", "user__profile"), id=id
     )
+    # Stale links redirect instead of 404. Temporary: a cached permanent one
+    # would loop if a title is ever renamed back.
+    if slug != image.slug:
+        return redirect(image.get_absolute_url())
+
     if image.image:
         if request.user.is_authenticated:
             viewer_key = f"user:{request.user.id}"

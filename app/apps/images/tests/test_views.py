@@ -24,7 +24,7 @@ def test_image_slug_auto_generated_from_title(image):
 
 
 @pytest.mark.django_db
-def test_image_slug_not_overwritten_if_set(user):
+def test_image_slug_follows_the_title(user):
     user_obj, _ = user
     img_file = SimpleUploadedFile("test.png", MINIMAL_PNG, content_type="image/png")
     img = Image.objects.create(
@@ -34,7 +34,26 @@ def test_image_slug_not_overwritten_if_set(user):
         url="https://example.com/test.png",
         image=img_file,
     )
-    assert img.slug == "my-custom-slug"
+    assert img.slug == "test-image"
+
+
+@pytest.mark.django_db
+def test_image_slug_is_rebuilt_when_the_title_changes(image):
+    image.title = "Renamed Image"
+    image.save()
+
+    image.refresh_from_db()
+    assert image.slug == "renamed-image"
+
+
+@pytest.mark.django_db
+def test_image_slug_falls_back_when_the_title_has_no_letters(user):
+    user_obj, _ = user
+    img = Image.objects.create(
+        user=user_obj, title="🔥🔥🔥", url="https://example.com/fire.png"
+    )
+    assert img.slug == "image"
+    assert img.get_absolute_url()
 
 
 @pytest.mark.django_db
@@ -204,6 +223,33 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
 def test_image_detail_returns_404_for_unknown_id(client):
     response = client.get(reverse("images:detail", args=[9999, "no-such-slug"]))
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_image_detail_redirects_a_stale_slug_to_the_current_one(client, image):
+    stale_url = reverse("images:detail", args=[image.id, "old-title"])
+
+    response = client.get(stale_url)
+
+    assert response.status_code == 302
+    assert response["Location"] == image.get_absolute_url()
+
+
+@pytest.mark.django_db
+def test_image_detail_redirect_is_temporary(client, image):
+    # A permanent redirect would be cached by the browser, so renaming an image
+    # back to an earlier title would bounce readers between two addresses.
+    response = client.get(reverse("images:detail", args=[image.id, "old-title"]))
+
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_image_detail_does_not_count_a_view_when_redirecting(client, image):
+    with patch("apps.images.views.record_image_view") as mock_record:
+        client.get(reverse("images:detail", args=[image.id, "old-title"]))
+
+    mock_record.assert_not_called()
 
 
 @pytest.mark.django_db

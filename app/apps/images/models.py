@@ -35,8 +35,7 @@ class Image(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.title, allow_unicode=True)
+        self.slug = slugify(self.title, allow_unicode=True) or "image"
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
