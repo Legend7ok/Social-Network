@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.images.forms import ImageBookmarkForm, ImageUploadForm
+from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
 from apps.images.services import record_image_view
 from conftest import MINIMAL_PNG
@@ -409,6 +409,115 @@ def test_image_detail_hides_delete_button_from_anonymous(client, image):
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
     assert reverse("images:delete", args=[image.id]).encode() not in response.content
+
+
+# ─── View Tests: image_edit ──────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_image_edit_redirects_anonymous_user(client, image):
+    response = client.get(reverse("images:edit", args=[image.id]))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_edit_get_shows_form_with_current_values(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:edit", args=[image.id]))
+
+    assert response.status_code == 200
+    assert isinstance(response.context["form"], ImageEditForm)
+    assert response.context["form"].initial["title"] == image.title
+
+
+@pytest.mark.django_db
+def test_image_edit_refuses_someone_elses_image(client, second_user, image):
+    other_user, password = second_user
+    client.login(username=other_user.username, password=password)
+
+    response = client.get(reverse("images:edit", args=[image.id]))
+
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_image_edit_saves_title_and_description(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Renamed Image", "description": "New words"},
+    )
+
+    image.refresh_from_db()
+    assert response.status_code == 302
+    assert image.title == "Renamed Image"
+    assert image.description == "New words"
+
+
+@pytest.mark.django_db
+def test_image_edit_redirects_to_the_new_address(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Renamed Image", "description": ""},
+    )
+
+    image.refresh_from_db()
+    assert response["Location"] == image.get_absolute_url()
+    assert "renamed-image" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_edit_shows_success_message(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Renamed Image", "description": ""},
+        follow=True,
+    )
+
+    assert [str(m) for m in response.context["messages"]] == ["Image updated"]
+
+
+@pytest.mark.django_db
+def test_image_edit_rejects_an_empty_title(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "", "description": "New words"},
+    )
+
+    image.refresh_from_db()
+    assert response.status_code == 200
+    assert response.context["form"].errors
+    assert image.title == "Test Image"
+
+
+@pytest.mark.django_db
+def test_image_edit_ignores_a_posted_file(client, user, image):
+    user_obj, password = user
+    original_file = image.image.name
+    client.login(username=user_obj.username, password=password)
+    replacement = SimpleUploadedFile("other.png", MINIMAL_PNG, content_type="image/png")
+
+    client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": "Renamed Image", "description": "", "image": replacement},
+    )
+
+    image.refresh_from_db()
+    assert image.image.name == original_file
 
 
 # ─── View Tests: image_delete ────────────────────────────────────────────────

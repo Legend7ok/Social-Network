@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
-from .forms import ImageBookmarkForm, ImageUploadForm
+from .forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from .models import Image
 from .services import (
     record_image_view,
@@ -161,6 +161,27 @@ def image_upload(request):
     else:
         form = ImageUploadForm()
     return render(request, "images/upload.html", {"section": "images", "form": form})
+
+
+@login_required
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_edit(request, id):
+    image = get_object_or_404(Image, id=id, user=request.user)
+
+    if request.method == "POST":
+        form = ImageEditForm(request.POST, instance=image)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Image updated")
+            return redirect(image.get_absolute_url())
+    else:
+        form = ImageEditForm(instance=image)
+
+    return render(
+        request,
+        "images/edit.html",
+        {"section": "images", "form": form, "image": image},
+    )
 
 
 @login_required

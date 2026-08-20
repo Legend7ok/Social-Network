@@ -30,6 +30,14 @@ class ImageBookmarkForm(forms.ModelForm):
         return url
 
 
+class ImageEditForm(forms.ModelForm):
+    # The file itself stays put: views, likes, thumbnails and the ranking are
+    # all tied to it, so swapping it would silently rewrite an image's history.
+    class Meta:
+        model = Image
+        fields = ["title", "description"]
+
+
 class ImageUploadForm(forms.ModelForm):
     class Meta:
         model = Image
