@@ -19,6 +19,27 @@ def test_send_welcome_email_sends_correct_email(user):
 
 
 @pytest.mark.django_db
+def test_welcome_email_greets_by_username_when_there_is_no_name(user):
+    """Registration never asks for a name, so greeting by it left "Hi , "."""
+    user_obj, _ = user
+    send_welcome_email(user_obj.id)
+
+    assert f"Hi {user_obj.username}," in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_welcome_email_greets_by_name_when_there_is_one(user):
+    user_obj, _ = user
+    user_obj.first_name = "Alice"
+    user_obj.last_name = "Smith"
+    user_obj.save()
+
+    send_welcome_email(user_obj.id)
+
+    assert "Hi Alice Smith," in mail.outbox[0].body
+
+
+@pytest.mark.django_db
 def test_send_welcome_email_silently_ignores_missing_user(db):
     send_welcome_email(9999)
 

@@ -20,10 +20,12 @@ def send_welcome_email(user_id):
     except User.DoesNotExist:
         logger.warning("send_welcome_email: user %s not found, skipping", user_id)
         return
+    # Registration only asks for a username, so a first name is the exception.
+    greeting = user.get_full_name() or user.username
     try:
         send_mail(
             subject="Welcome to Social Network",
-            message=f"Hi {user.first_name}, thanks for joining!",
+            message=f"Hi {greeting}, thanks for joining!",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
