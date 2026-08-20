@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 
+from apps.actions.models import Action
+from apps.actions.utils import create_action
 from apps.images.models import Image
 from apps.images.services import (
     DIRTY_IMAGES_KEY,
@@ -11,6 +13,7 @@ from apps.images.services import (
     record_image_view,
 )
 from apps.images.tasks import (
+    delete_image_artifacts,
     download_image,
     flush_image_views,
     generate_image_thumbnails,
@@ -213,6 +216,74 @@ def test_flush_image_views_forgets_deleted_images(fake_redis):
 @pytest.mark.django_db
 def test_flush_image_views_without_dirty_images_does_nothing():
     assert flush_image_views() == 0
+
+
+# ─── delete_image_artifacts ──────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_clears_view_counters(fake_redis, image):
+    record_image_view(image.id)
+
+    delete_image_artifacts(image.id, "")
+
+    assert fake_redis.get(f"image:{image.id}:views") is None
+    assert fake_redis.smembers(DIRTY_IMAGES_KEY) == set()
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_removes_actions_pointing_at_the_image(user, image):
+    user_obj, _ = user
+    create_action(user_obj, "uploaded image", image)
+
+    delete_image_artifacts(image.id, "")
+
+    assert not Action.objects.filter(verb="uploaded image").exists()
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_keeps_actions_of_other_images(user, image):
+    user_obj, _ = user
+    other = Image.objects.create(
+        user=user_obj, title="Other", url="https://example.com/other.png"
+    )
+    create_action(user_obj, "uploaded image", other)
+
+    delete_image_artifacts(image.id, "")
+
+    assert Action.objects.filter(target_id=other.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_removes_file_and_thumbnails(image):
+    file_name = image.image.name
+
+    with patch("apps.images.tasks.delete_thumbnails") as mock_delete:
+        delete_image_artifacts(image.id, file_name)
+
+    mock_delete.assert_called_once_with(file_name)
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_skips_storage_when_there_is_no_file(image):
+    with patch("apps.images.tasks.delete_thumbnails") as mock_delete:
+        delete_image_artifacts(image.id, "")
+
+    mock_delete.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_delete_image_artifacts_can_be_repeated(fake_redis, user, image):
+    user_obj, _ = user
+    create_action(user_obj, "uploaded image", image)
+    record_image_view(image.id)
+
+    with patch("apps.images.tasks.delete_thumbnails"):
+        delete_image_artifacts(image.id, image.image.name)
+        delete_image_artifacts(image.id, image.image.name)
+
+    assert not Action.objects.filter(target_id=image.id).exists()
+    assert fake_redis.get(f"image:{image.id}:views") is None
 
 
 @pytest.mark.django_db

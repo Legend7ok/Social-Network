@@ -46,6 +46,26 @@ def record_image_view(image_id):
         return 0
 
 
+def forget_image_views(image_id):
+    """
+    Drop the counters of an image that no longer exists.
+
+    Failure is not fatal: the next flush finds no row to update and clears the
+    leftovers anyway, so the buffer heals itself.
+    """
+    try:
+        with r.pipeline() as pipe:
+            pipe.delete(_delta_key(image_id))
+            pipe.srem(DIRTY_IMAGES_KEY, image_id)
+            pipe.execute()
+    except _REDIS_ERRORS:
+        logger.error(
+            "Redis unavailable: forget_image_views failed for image %s",
+            image_id,
+            exc_info=True,
+        )
+
+
 def get_dirty_image_ids():
     """Images that collected views since the last flush."""
     try:

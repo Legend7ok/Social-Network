@@ -5,13 +5,22 @@ from urllib.parse import urlparse
 import requests
 from celery import shared_task
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db.models import F
 from django.utils.text import slugify
+from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
+from apps.actions.models import Action
+
 from .models import Image
-from .services import clear_view_deltas, get_dirty_image_ids, read_view_deltas
+from .services import (
+    clear_view_deltas,
+    forget_image_views,
+    get_dirty_image_ids,
+    read_view_deltas,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +58,31 @@ def flush_image_views():
     if flushed:
         logger.info("flush_image_views: flushed views for %s images", flushed)
     return flushed
+
+
+@shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
+def delete_image_artifacts(image_id, file_name):
+    """
+    Clean up everything a deleted image leaves behind.
+
+    Django does not remove files when a row goes away, the activity feed points
+    at images through a generic relation without a foreign key, and the view
+    counters live outside the database — so all three are dropped here. Every
+    step is safe to repeat, which is what makes retrying the task harmless.
+    """
+    forget_image_views(image_id)
+
+    Action.objects.filter(
+        target_ct=ContentType.objects.get_for_model(Image),
+        target_id=image_id,
+    ).delete()
+
+    if file_name:
+        # Removes the stored file together with its thumbnails and the key
+        # store entries pointing at them.
+        delete_thumbnails(file_name)
+
+    logger.info("delete_image_artifacts: cleaned up after image %s", image_id)
 
 
 @shared_task
