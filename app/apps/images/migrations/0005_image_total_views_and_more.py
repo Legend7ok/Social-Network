@@ -16,11 +16,6 @@ class Migration(migrations.Migration):
             name="total_views",
             field=models.PositiveIntegerField(default=0),
         ),
-        migrations.AddField(
-            model_name="image",
-            name="updated",
-            field=models.DateTimeField(auto_now=True),
-        ),
         migrations.AddIndex(
             model_name="image",
             index=models.Index(

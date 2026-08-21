@@ -14,9 +14,8 @@ class Image(models.Model):
     image = models.ImageField(upload_to="images/%Y/%m/%d", null=True, blank=True)
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
-    # Set by ImageEditForm only: `updated` also moves when a background task
-    # saves the row, which would mark fresh images as edited.
+    # Set by ImageEditForm only, so background saves of the row (the file
+    # download finishing, for one) do not mark a fresh image as edited.
     edited_at = models.DateTimeField(null=True, blank=True)
     users_like = models.ManyToManyField(
         settings.AUTH_USER_MODEL, related_name="images_liked", blank=True

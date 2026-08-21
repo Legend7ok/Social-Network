@@ -18,6 +18,5 @@ class ImageAdmin(admin.ModelAdmin):
         "total_likes",
         "total_views",
         "created",
-        "updated",
         "edited_at",
     ]

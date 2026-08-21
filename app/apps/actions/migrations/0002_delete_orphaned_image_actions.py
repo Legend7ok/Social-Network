@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("actions", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("images", "0005_image_total_views_image_updated_and_more"),
+        ("images", "0005_image_total_views_and_more"),
     ]
 
     operations = [
