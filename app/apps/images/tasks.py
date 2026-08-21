@@ -138,5 +138,18 @@ def download_image(image_id, url):
     # image.slug, not the raw title: a title without letters slugifies to an
     # empty string and would store a nameless ".jpg".
     name = f"{image.slug}.{extension}"
-    image.image.save(name, ContentFile(b"".join(chunks)), save=True)
+    image.image.save(name, ContentFile(b"".join(chunks)), save=False)
+
+    # Only the file column is written back. A full save() would push the copy
+    # loaded before the download over an edit made meanwhile, and would insert
+    # the row again if the image was deleted while we were fetching it.
+    stored = Image.objects.filter(id=image_id).update(image=image.image.name)
+    if not stored:
+        logger.warning(
+            "download_image: image %s vanished during download, dropping file",
+            image_id,
+        )
+        image.image.delete(save=False)
+        return
+
     generate_image_thumbnails(image_id)

@@ -122,6 +122,53 @@ def test_download_image_silently_ignores_missing_image():
 
 
 @pytest.mark.django_db
+def test_download_image_keeps_an_edit_made_while_downloading(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Old Title", url="https://example.com/test.png"
+    )
+
+    def rename_and_respond(*args, **kwargs):
+        # The author edits the image while the download is in flight
+        Image.objects.filter(id=image.id).update(title="New Title", slug="new-title")
+        response = MagicMock()
+        response.iter_content = MagicMock(return_value=[MINIMAL_PNG])
+        response.raise_for_status = MagicMock()
+        return response
+
+    with patch("apps.images.tasks.requests.get", side_effect=rename_and_respond):
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.title == "New Title"
+    assert image.image
+
+
+@pytest.mark.django_db
+def test_download_image_does_not_resurrect_a_deleted_image(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Doomed", url="https://example.com/test.png"
+    )
+
+    def delete_and_respond(*args, **kwargs):
+        # The author deletes the image while the download is in flight
+        Image.objects.filter(id=image.id).delete()
+        response = MagicMock()
+        response.iter_content = MagicMock(return_value=[MINIMAL_PNG])
+        response.raise_for_status = MagicMock()
+        return response
+
+    with patch("apps.images.tasks.requests.get", side_effect=delete_and_respond):
+        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+            download_image(image.id, image.url)
+
+    assert not Image.objects.filter(id=image.id).exists()
+    mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_download_image_discards_oversized_file(user):
     user_obj, _ = user
     image = Image.objects.create(
