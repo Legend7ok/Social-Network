@@ -219,7 +219,12 @@ def image_ranking(request):
         RANKING_SORTS[sort], "-id"
     )
 
-    paginator = Paginator(ranked[RANKING_TOP:], RANKING_PER_PAGE)
+    # A podium with empty slots reads as broken — half of it would link
+    # nowhere and the tiles would sit off-centre. Until three places are taken
+    # the ranking is a plain numbered list built from the same rows.
+    podium_size = RANKING_TOP if ranked.count() >= RANKING_TOP else 0
+
+    paginator = Paginator(ranked[podium_size:], RANKING_PER_PAGE)
     try:
         page = paginator.page(request.GET.get("page"))
     except PageNotAnInteger:
@@ -230,10 +235,9 @@ def image_ranking(request):
         page = paginator.page(paginator.num_pages)
 
     ranking_list = list(page.object_list)
-    first_rank = RANKING_TOP + (page.number - 1) * RANKING_PER_PAGE + 1
+    first_rank = podium_size + (page.number - 1) * RANKING_PER_PAGE + 1
     for offset, img in enumerate(ranking_list):
         img.rank = first_rank + offset
-    _show_live_views(ranking_list)
 
     context = {
         "section": "images",
@@ -244,12 +248,14 @@ def image_ranking(request):
     }
 
     if ranking_only:
+        _show_live_views(ranking_list)
         return render(request, "images/partials/ranking_rows.html", context)
 
-    top3 = list(ranked[:RANKING_TOP])
+    top3 = list(ranked[:podium_size]) if podium_size else []
     for rank, img in enumerate(top3, start=1):
         img.rank = rank
-    _show_live_views(top3)
+    # Both halves of the page in one Redis round trip
+    _show_live_views(ranking_list + top3)
 
     following_users = User.objects.filter(
         profile__in=request.user.profile.following.all()

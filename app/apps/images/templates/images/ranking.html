@@ -37,6 +37,18 @@
     </a>
   </div>
 
+  {% if not top3 and not ranking_list %}
+  <div class="text-center py-[88px] text-[#5E5C6A]">
+    <i class="ti ti-trophy-off text-[53px] block mb-[13px]"></i>
+    <p class="text-[17px]">No images to rank yet</p>
+    <a href="{% url 'images:upload' %}"
+       class="inline-block mt-[18px] px-[22px] py-[9px] bg-brand text-white text-[14px] rounded-lg hover:opacity-90 transition-opacity">
+      Upload the first one
+    </a>
+  </div>
+  {% endif %}
+
+  {% if top3 %}
   <!-- Top 3: stacked on phones, podium (1fr 1.2fr 1fr, bottom-aligned) from lg up -->
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr_1fr] gap-[18px] mb-[26px] lg:items-end">
 
@@ -166,8 +178,11 @@
     <span class="text-[13px] text-[#5E5C6A] tracking-widest uppercase">Others</span>
     <div class="flex-1 h-px bg-white/[0.08]"></div>
   </div>
+  {% endif %}
 
-  <!-- List 4+ -->
+  {% if ranking_list %}
+  <!-- Ranked rows: everything below the podium, or the whole ranking when
+       there are not enough images for one -->
   <div class="flex flex-col gap-[7px]" id="ranking-list">
     {% include 'images/partials/ranking_rows.html' %}
   </div>
@@ -179,6 +194,7 @@
       <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
     </div>
   </div>
+  {% endif %}
 
 </div>
 {% endblock %}

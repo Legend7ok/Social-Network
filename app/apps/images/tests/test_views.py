@@ -826,32 +826,36 @@ def test_image_ranking_orders_podium_by_views(client, user):
 @pytest.mark.django_db
 def test_image_ranking_orders_podium_by_likes_when_asked(client, user):
     user_obj, password = user
-    most_liked, most_viewed = make_ranked_images(user_obj, [(1, 90), (30, 0)])
+    most_liked, middle, most_viewed = make_ranked_images(
+        user_obj, [(1, 90), (10, 50), (30, 0)]
+    )
     client.login(username=user_obj.username, password=password)
 
     response = client.get(reverse("images:ranking"), {"sort": "likes"})
 
     assert response.context["sort"] == "likes"
-    assert list(response.context["top3"]) == [most_liked, most_viewed]
+    assert list(response.context["top3"]) == [most_liked, middle, most_viewed]
 
 
 @pytest.mark.django_db
 def test_image_ranking_falls_back_to_views_for_unknown_sort(client, user):
     user_obj, password = user
-    most_liked, most_viewed = make_ranked_images(user_obj, [(1, 90), (30, 0)])
+    most_liked, middle, most_viewed = make_ranked_images(
+        user_obj, [(1, 90), (10, 50), (30, 0)]
+    )
     client.login(username=user_obj.username, password=password)
 
     response = client.get(reverse("images:ranking"), {"sort": "bogus"})
 
     assert response.context["sort"] == "views"
-    assert list(response.context["top3"]) == [most_viewed, most_liked]
+    assert list(response.context["top3"]) == [most_viewed, middle, most_liked]
 
 
 @pytest.mark.django_db
 def test_image_ranking_shows_live_view_counts(client, user):
     user_obj, password = user
-    (image,) = make_ranked_images(user_obj, [(100, 0)])
-    record_image_view(image.id)
+    top, _, _ = make_ranked_images(user_obj, [(100, 0), (10, 0), (1, 0)])
+    record_image_view(top.id)
     client.login(username=user_obj.username, password=password)
 
     response = client.get(reverse("images:ranking"))
@@ -913,6 +917,83 @@ def test_image_ranking_empty_page_with_ranking_only_returns_empty_body(client, u
 
 
 @pytest.mark.django_db
+def test_image_ranking_without_images_shows_no_podium(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    assert response.status_code == 200
+    assert response.context["top3"] == []
+    assert b"No images to rank yet" in response.content
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("count", [1, 2])
+def test_image_ranking_lists_rows_until_the_podium_can_be_filled(client, user, count):
+    user_obj, password = user
+    images = make_ranked_images(user_obj, [(10 - i, 0) for i in range(count)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    # A partly filled podium would leave tiles off-centre and linking nowhere,
+    # so everything is shown as numbered rows instead. Counting the applied
+    # animation, not its name — the keyframes are always declared.
+    assert response.context["top3"] == []
+    assert list(response.context["ranking_list"]) == images
+    assert [img.rank for img in response.context["ranking_list"]] == list(
+        range(1, count + 1)
+    )
+    assert response.content.count(b"animation: glow-") == 0
+
+
+@pytest.mark.django_db
+def test_image_ranking_fills_the_podium_from_three_images(client, user):
+    user_obj, password = user
+    images = make_ranked_images(user_obj, [(30, 0), (20, 0), (10, 0)])
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"))
+
+    assert list(response.context["top3"]) == images
+    assert list(response.context["ranking_list"]) == []
+    assert response.content.count(b"animation: glow-") == 3
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("page", ["-5", "0", "abc"])
+def test_image_ranking_survives_a_bad_page_number(client, user, image, page):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:ranking"), {"page": page})
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("page", ["-5", "0", "abc"])
+def test_image_list_survives_a_bad_page_number(client, user, image, page):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"), {"page": page})
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_image_list_without_images_shows_an_invitation(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"))
+
+    assert b"No images here yet" in response.content
+
+
+@pytest.mark.django_db
 def test_image_ranking_sentinel_keeps_the_current_sort(client, user):
     user_obj, password = user
     make_ranked_images(user_obj, [(score, 0) for score in range(20, 0, -1)])
@@ -955,10 +1036,10 @@ def test_image_list_renders_when_redis_is_down(client, broken_redis, user, image
 @pytest.mark.django_db
 def test_image_ranking_renders_when_redis_is_down(client, broken_redis, user):
     user_obj, password = user
-    top, bottom = make_ranked_images(user_obj, [(30, 0), (1, 0)])
+    images = make_ranked_images(user_obj, [(30, 0), (10, 0), (1, 0)])
     client.login(username=user_obj.username, password=password)
 
     response = client.get(reverse("images:ranking"))
 
     assert response.status_code == 200
-    assert list(response.context["top3"]) == [top, bottom]
+    assert list(response.context["top3"]) == images
