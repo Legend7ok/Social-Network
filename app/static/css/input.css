@@ -58,21 +58,27 @@
   }
 }
 
+/* Wraps the card link plus the owner buttons, so both reveal and lift together */
 .img-card {
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.15s;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .img-card.visible {
   opacity: 1;
   transform: translateY(0);
 }
 .img-card:hover {
-  border-color: rgba(124, 58, 237, 0.4);
   transform: translateY(-3px);
 }
 .img-card.visible:hover {
   transform: translateY(-3px);
+}
+.img-card > a {
+  transition: border-color 0.15s;
+}
+.img-card:hover > a {
+  border-color: rgba(124, 58, 237, 0.4);
 }
 .thumb-overlay {
   position: absolute;

@@ -19,41 +19,7 @@
   </div>
 
   {% if mine %}
-  <!-- One dialog for the whole grid; cards only report which image to delete,
-       so it keeps working for cards loaded later by htmx -->
-  <div x-data="{ confirming: false, url: '', title: '' }"
-       @confirm-delete.window="confirming = true; url = $event.detail.url; title = $event.detail.title"
-       @keydown.escape.window="confirming = false">
-    <div x-show="confirming" x-cloak
-         x-transition:enter="transition-opacity ease-out duration-200"
-         x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition-opacity ease-in duration-150"
-         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         @click.self="confirming = false"
-         class="fixed inset-0 z-50 flex items-center justify-center px-[16px] bg-black/60">
-      <div class="w-full max-w-[400px] rounded-2xl border border-white/[0.08] bg-surface-card p-[22px]">
-        <h2 class="text-[17px] font-medium text-white mb-[9px]">
-          Delete “<span x-text="title"></span>”?
-        </h2>
-        <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]">
-          Its views, likes and thumbnails are removed with it. This cannot be undone.
-        </p>
-        <div class="flex items-center justify-end gap-[9px]">
-          <button type="button" @click="confirming = false"
-                  class="px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white transition-all">
-            Cancel
-          </button>
-          <form method="post" :action="url">
-            {% csrf_token %}
-            <button type="submit"
-                    class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-red-700/50 bg-red-900/30 text-[14px] font-medium text-red-300 hover:bg-red-900/50 transition-all">
-              <i class="ti ti-trash text-[15px]"></i> Delete
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
+    {% include 'images/partials/confirm_delete.html' %}
   {% endif %}
 
 </div>

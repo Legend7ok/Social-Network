@@ -39,7 +39,8 @@ class ImageEditForm(forms.ModelForm):
         fields = ["title", "description"]
 
     def save(self, commit=True):
-        self.instance.edited_at = timezone.now()
+        if self.has_changed():
+            self.instance.edited_at = timezone.now()
         return super().save(commit=commit)
 
 

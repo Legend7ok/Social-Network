@@ -1,7 +1,7 @@
 {% load thumbnail %}
 
 {% for image in images %}
-<div class="relative">
+<div class="img-card relative">
 {% if mine %}
   <!-- Kept outside the card link: a link cannot contain other controls -->
   <div class="absolute top-[9px] right-[9px] z-10 flex items-center gap-[5px]">
@@ -21,7 +21,7 @@
   </div>
 {% endif %}
 <a href="{{ image.get_absolute_url }}"
-   class="img-card bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden block">
+   class="bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden block">
 
   <div class="aspect-[4/3] bg-surface-input relative overflow-hidden">
     {% if image.image %}

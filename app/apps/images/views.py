@@ -32,6 +32,13 @@ RANKING_SORTS = {
 }
 
 
+def _show_live_views(images):
+    """Overlay the counts still buffered in Redis on top of the stored ones."""
+    views_map = get_images_views([img.id for img in images])
+    for img in images:
+        img.total_views = views_map.get(img.id, img.total_views)
+
+
 def bookmarklet_launcher(request):
     js = render(request, "bookmarklet_launcher.js", {"site_url": settings.SITE_URL})
     return HttpResponse(js, content_type="application/javascript")
@@ -124,9 +131,7 @@ def image_list(request):
 
     # Force evaluation so total_views attrs survive template iteration
     images.object_list = list(images.object_list)
-    views_map = get_images_views([img.id for img in images.object_list])
-    for img in images.object_list:
-        img.total_views = views_map.get(img.id, 0)
+    _show_live_views(images.object_list)
 
     following_users = User.objects.filter(
         profile__in=request.user.profile.following.all()
@@ -199,13 +204,6 @@ def image_delete(request, id):
 def image_status(request, id):
     image = get_object_or_404(Image, id=id)
     return render(request, "images/partials/image_status.html", {"image": image})
-
-
-def _show_live_views(images):
-    """Overlay the counts still buffered in Redis on top of the stored ones."""
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, img.total_views)
 
 
 @login_required

@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db.models import F
-from django.utils.text import slugify
 from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
@@ -136,6 +135,8 @@ def download_image(image_id, url):
         chunks.append(chunk)
 
     extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
-    name = f"{slugify(image.title)}.{extension}"
+    # image.slug, not the raw title: a title without letters slugifies to an
+    # empty string and would store a nameless ".jpg".
+    name = f"{image.slug}.{extension}"
     image.image.save(name, ContentFile(b"".join(chunks)), save=True)
     generate_image_thumbnails(image_id)
