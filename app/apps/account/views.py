@@ -273,7 +273,10 @@ def user_list(request):
             followers_count=Count("profile__followers", distinct=True),
             total_likes=Coalesce(Subquery(image_likes, output_field=IntegerField()), 0),
         )
-        .order_by("first_name", "last_name")
+        # Most accounts share the same empty name now that sign-up does not ask
+        # for one, and equal keys leave the order to the database — pages would
+        # repeat one person and skip another. The id breaks every tie.
+        .order_by("first_name", "last_name", "id")
     )
 
     paginator = Paginator(users_qs, 10)

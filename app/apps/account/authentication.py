@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
-from django.db.models.functions import Lower
+
+from .models import users_with_email
 
 User = get_user_model()
 
@@ -18,9 +19,7 @@ class EmailAuthBackend(ModelBackend):
             return None
 
         try:
-            user = User.objects.annotate(email_lower=Lower("email")).get(
-                email_lower=username.lower()
-            )
+            user = users_with_email(username.lower()).get()
         except User.DoesNotExist:
             # Keep hashing so an unknown address takes as long as a wrong password.
             User().set_password(password)
