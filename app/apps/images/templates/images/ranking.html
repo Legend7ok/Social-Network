@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load thumbnail %}
+{% load thumbnail user_display %}
 
 {% block title %}Top Ranking · socnet{% endblock %}
 
@@ -52,10 +52,10 @@
               <img src="{{ av.url }}" class="w-full h-full object-cover" />
               {% endthumbnail %}
             {% else %}
-              {{ top3.1.user.first_name|first|upper }}{{ top3.1.user.last_name|first|upper }}
+              {{ top3.1.user|initials }}
             {% endif %}
           </div>
-          <span class="text-[12px] text-[#9896A4]">{{ top3.1.user.get_full_name }}</span>
+          <span class="text-[12px] text-[#9896A4]">{{ top3.1.user|display_name }}</span>
         </div>
         <div class="flex gap-[11px]">
           <span class="text-[13px] flex items-center gap-1" style="color:#9CA3AF;"><i class="ti ti-eye text-[14px]"></i> {{ top3.1.total_views|floatformat:"-1" }}</span>
@@ -94,10 +94,10 @@
               <img src="{{ av.url }}" class="w-full h-full object-cover" />
               {% endthumbnail %}
             {% else %}
-              {{ top3.0.user.first_name|first|upper }}{{ top3.0.user.last_name|first|upper }}
+              {{ top3.0.user|initials }}
             {% endif %}
           </div>
-          <span class="text-[13px] text-[#9896A4]">{{ top3.0.user.get_full_name }}</span>
+          <span class="text-[13px] text-[#9896A4]">{{ top3.0.user|display_name }}</span>
         </div>
         <div class="flex gap-[13px]">
           <span class="text-[14px] font-medium flex items-center gap-1" style="color:#F59E0B;"><i class="ti ti-eye text-[15px]"></i> {{ top3.0.total_views|floatformat:"-1" }}</span>
@@ -132,10 +132,10 @@
               <img src="{{ av.url }}" class="w-full h-full object-cover" />
               {% endthumbnail %}
             {% else %}
-              {{ top3.2.user.first_name|first|upper }}{{ top3.2.user.last_name|first|upper }}
+              {{ top3.2.user|initials }}
             {% endif %}
           </div>
-          <span class="text-[12px] text-[#9896A4]">{{ top3.2.user.get_full_name }}</span>
+          <span class="text-[12px] text-[#9896A4]">{{ top3.2.user|display_name }}</span>
         </div>
         <div class="flex gap-[11px]">
           <span class="text-[13px] flex items-center gap-1" style="color:#B45309;"><i class="ti ti-eye text-[14px]"></i> {{ top3.2.total_views|floatformat:"-1" }}</span>
