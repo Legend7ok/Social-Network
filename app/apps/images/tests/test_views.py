@@ -523,6 +523,20 @@ def test_image_edit_stamps_the_edit_time(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_edit_without_changes_leaves_the_image_unmarked(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    client.post(
+        reverse("images:edit", args=[image.id]),
+        {"title": image.title, "description": image.description},
+    )
+
+    image.refresh_from_db()
+    assert image.edited_at is None
+
+
+@pytest.mark.django_db
 def test_image_detail_marks_an_edited_image(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
