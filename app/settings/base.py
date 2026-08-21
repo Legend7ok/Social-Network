@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "social_django",
     "apps.images",
     "apps.actions",
+    "apps.search",
     "sorl.thumbnail",
     "axes",
     "rest_framework",
