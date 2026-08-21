@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load thumbnail %}
+{% load thumbnail user_display %}
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
 {% block content %}
@@ -108,14 +108,14 @@
           <div class="w-11 h-11 rounded-full bg-brand/30 flex items-center justify-center text-[14px] font-medium text-brand-light shrink-0 overflow-hidden">
             {% if image.user.profile.photo %}
               {% thumbnail image.user.profile.photo THUMBS.avatar_md crop="center" as av %}
-              <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ image.user.get_full_name }}" />
+              <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ image.user|display_name }}" />
               {% endthumbnail %}
             {% else %}
-              {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
+              {{ image.user|initials }}
             {% endif %}
           </div>
           <div class="min-w-0">
-            <p class="text-[14px] font-medium text-white truncate">{{ image.user.get_full_name }}</p>
+            <p class="text-[14px] font-medium text-white truncate">{{ image.user|display_name }}</p>
             <p class="text-[12px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
           </div>
         </a>

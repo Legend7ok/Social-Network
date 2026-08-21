@@ -1,4 +1,4 @@
-{% load thumbnail %}
+{% load thumbnail user_display %}
 {% for profile_user in users %}
 <div class="bg-surface-card border border-white/[0.08] rounded-2xl px-[22px] py-[18px] flex flex-wrap items-center gap-[18px]
             hover:border-brand/30 transition-all hover:-translate-y-px">
@@ -12,7 +12,7 @@
         <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ profile_user.username }}" />
         {% endthumbnail %}
       {% else %}
-        {{ profile_user.first_name|first|upper }}{{ profile_user.last_name|first|upper }}
+        {{ profile_user|initials }}
       {% endif %}
     </div>
   </a>
@@ -21,7 +21,7 @@
   <div class="flex-1 min-w-0">
     <a href="{% url 'user_detail' profile_user.username %}"
        class="flex items-baseline gap-[9px] mb-[11px] min-w-0 hover:opacity-80 transition-opacity">
-      <span class="text-[17px] font-medium text-white truncate">{{ profile_user.get_full_name }}</span>
+      <span class="text-[17px] font-medium text-white truncate">{{ profile_user|display_name }}</span>
       <span class="text-[13px] text-[#5E5C6A] shrink-0">@{{ profile_user.username }}</span>
     </a>
     <div class="flex items-center gap-[18px]">
