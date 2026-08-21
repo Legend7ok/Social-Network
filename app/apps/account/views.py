@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model, login as auth_login, views as au
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -139,9 +139,17 @@ class RegisterView(RedirectURLMixin, FormView):
         return context
 
     def form_valid(self, form):
-        with transaction.atomic():
-            new_user = form.save()
-            create_action(new_user, "has created an account")
+        try:
+            with transaction.atomic():
+                new_user = form.save()
+                create_action(new_user, "has created an account")
+        except IntegrityError:
+            # The form found the name and address free, then someone else took
+            # one of them before this row reached the table.
+            form.add_error(
+                None, "That username or address was just taken. Please try again."
+            )
+            return self.form_invalid(form)
 
         transaction.on_commit(lambda: send_welcome_email.delay(new_user.id))
         # The account was just created here, so there is nothing to authenticate

@@ -152,6 +152,28 @@ def test_register_post_weak_password_shows_errors(client):
 
 
 @pytest.mark.django_db
+def test_register_survives_losing_the_race_for_an_address(client, user):
+    """Two sign-ups on one address can both pass the form check and only then
+    reach the database, where the unique index turns the loser away."""
+    user_obj, _ = user
+
+    with patch("apps.account.forms.users_with_email") as taken:
+        taken.return_value.exists.return_value = False
+        response = client.post(
+            reverse("register"),
+            {
+                "username": "bob",
+                "email": user_obj.email,
+                "password": "Str0ngPassphrase!42",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.context["register_form"].errors
+    assert not get_user_model().objects.filter(username="bob").exists()
+
+
+@pytest.mark.django_db
 def test_register_redirects_authenticated_user(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
