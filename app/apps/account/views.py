@@ -1,15 +1,22 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
+from django.contrib.auth.decorators import login_not_required, login_required
+from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect, resolve_url
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
+from django.views.generic import FormView
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
@@ -17,17 +24,19 @@ from apps.images.models import Image
 from apps.images.services import get_images_views
 
 from .forms import (
+    EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
     UserEditForm,
     ProfileEditForm,
     ProfilePhotoForm,
 )
 from .tasks import send_welcome_email
-from .models import Profile
 from apps.actions.utils import create_action
 from apps.actions.models import Action
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 def lockout_view(request, credentials, *args, **kwargs):
@@ -78,25 +87,87 @@ def home(request):
     )
 
 
-@ratelimit(key="ip", rate="10/h", method="POST", block=True)
-def register(request):
-    if request.method == "POST":
-        user_form = UserRegistrationForm(request.POST)
-        if user_form.is_valid():
+# The views in this project are functions; these two are the exception. Signing
+# in extends Django's own LoginView — writing it as a function would mean
+# copying its handling of CSRF, caching, the next parameter and the axes hooks —
+# and the sign-up view stays a class to match the page it shares.
+class LoginView(auth_views.LoginView):
+    """Signing in and signing up share one page, so each view renders the other
+    side's blank form alongside its own."""
+
+    template_name = "registration/login.html"
+    form_class = EmailOrUsernameAuthenticationForm
+    redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["login_form"] = context["form"]
+        context["register_form"] = UserRegistrationForm()
+        return context
+
+
+# The same guards Django puts on its own LoginView: keep the password out of
+# error reports, keep the filled-in form out of caches and the back button, and
+# stay reachable if the project ever puts the whole site behind a login.
+@method_decorator(
+    [login_not_required, sensitive_post_parameters(), never_cache], name="dispatch"
+)
+@method_decorator(
+    ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
+)
+class RegisterView(RedirectURLMixin, FormView):
+    template_name = "registration/login.html"
+    form_class = UserRegistrationForm
+    next_page = settings.LOGIN_REDIRECT_URL
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.get_default_redirect_url())
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        # The form lives on the login page; nothing to show on its own. Carry
+        # the page they were sent from along, or it is lost on the way there.
+        redirect_to = self.get_redirect_url()
+        if not redirect_to:
+            return redirect("login")
+        return redirect_to_login(
+            redirect_to, resolve_url("login"), self.redirect_field_name
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["register_form"] = context["form"]
+        context["login_form"] = EmailOrUsernameAuthenticationForm(self.request)
+        # Keep the page someone was sent here from across a failed attempt.
+        context[self.redirect_field_name] = self.get_redirect_url()
+        # Tells the template which of the two panels to open.
+        context["show_register"] = True
+        return context
+
+    def form_valid(self, form):
+        try:
             with transaction.atomic():
-                new_user = user_form.save(commit=False)
-                new_user.set_password(user_form.cleaned_data["password"])
-                new_user.save()
-
-                Profile.objects.create(user=new_user)
+                new_user = form.save()
                 create_action(new_user, "has created an account")
+        except IntegrityError:
+            # The form found the name and address free, then someone else took
+            # one of them before this row reached the table.
+            logger.warning("register: lost the race for %s", form.data.get("username"))
+            form.add_error(
+                None, "That username or address was just taken. Please try again."
+            )
+            return self.form_invalid(form)
 
-            send_welcome_email.delay(new_user.id)
-            return render(request, "account/register_done.html", {"new_user": new_user})
-    else:
-        user_form = UserRegistrationForm()
-
-    return render(request, "account/register.html", {"user_form": user_form})
+        transaction.on_commit(lambda: send_welcome_email.delay(new_user.id))
+        # The account was just created here, so there is nothing to authenticate
+        # against; name the backend Django would have used.
+        auth_login(
+            self.request,
+            new_user,
+            backend="django.contrib.auth.backends.ModelBackend",
+        )
+        return redirect(self.get_success_url())
 
 
 @login_required
@@ -202,7 +273,10 @@ def user_list(request):
             followers_count=Count("profile__followers", distinct=True),
             total_likes=Coalesce(Subquery(image_likes, output_field=IntegerField()), 0),
         )
-        .order_by("first_name", "last_name")
+        # Most accounts share the same empty name now that sign-up does not ask
+        # for one, and equal keys leave the order to the database — pages would
+        # repeat one person and skip another. The id breaks every tie.
+        .order_by("first_name", "last_name", "id")
     )
 
     paginator = Paginator(users_qs, 10)

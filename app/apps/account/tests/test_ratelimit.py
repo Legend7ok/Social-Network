@@ -11,22 +11,19 @@ def test_register_rate_limit_returns_429(client):
             url,
             {
                 "username": f"spammer{i}",
-                "first_name": "Spam",
                 "email": f"spam{i}@example.com",
-                "password": "pass123",
-                "password2": "pass123",
+                "password": "Str0ngPassphrase!42",
             },
         )
-        assert response.status_code == 200
+        assert response.status_code == 302
+        client.logout()
 
     response = client.post(
         url,
         {
             "username": "spammer_final",
-            "first_name": "Spam",
             "email": "final@example.com",
-            "password": "pass123",
-            "password2": "pass123",
+            "password": "Str0ngPassphrase!42",
         },
     )
     assert response.status_code == 429

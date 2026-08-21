@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Sign in · socnet{% endblock %}
+{% block title %}{% if show_register %}Create account{% else %}Sign in{% endif %} · socnet{% endblock %}
 
 {% block content %}
 <div
   x-data="{
-    isRegister: false,
+    isRegister: {{ show_register|yesno:'true,false' }},
     isMobile: window.matchMedia('(max-width: 1023px)').matches,
     init() {
       window.matchMedia('(max-width: 1023px)').addEventListener('change', e => this.isMobile = e.matches);
@@ -32,8 +32,10 @@
     <div x-show="!isMobile || !isRegister" x-cloak class="w-full flex flex-col items-center">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Sign in</h1>
 
-    {% if form.errors %}
+    {% if login_form.errors %}
       <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
+        {# One message whatever went wrong, so the page never reveals which
+           addresses have an account here. #}
         Your username and password didn&#39;t match.
       </p>
     {% endif %}
@@ -71,12 +73,22 @@
       <input type="hidden" name="next" value="{{ next }}" />
       <input
         type="text" name="username" placeholder="Email or username" autocomplete="username"
+        required maxlength="{{ login_form.fields.username.max_length }}"
+        value="{{ login_form.username.value|default:'' }}"
         class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
       />
-      <input
-        type="password" name="password" placeholder="Password" autocomplete="current-password"
-        class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
-      />
+      <div class="relative" x-data="{ reveal: false }">
+        <input
+          :type="reveal ? 'text' : 'password'" type="password" required
+          name="password" placeholder="Password" autocomplete="current-password"
+          class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] pl-[15px] pr-[42px] py-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
+        />
+        <button type="button" @click="reveal = !reveal" tabindex="-1"
+                :aria-label="reveal ? 'Hide password' : 'Show password'"
+                class="absolute right-[13px] top-1/2 -translate-y-1/2 text-[#5E5C6A] hover:text-[#9896A4] transition-colors">
+          <i class="text-[17px]" :class="reveal ? 'ti ti-eye-off' : 'ti ti-eye'"></i>
+        </button>
+      </div>
       <div class="w-full text-right mt-[7px] mb-[13px]">
         <a href="{% url 'password_reset' %}" class="text-[12px] text-brand-light hover:underline">Forgot password?</a>
       </div>
@@ -103,6 +115,12 @@
     <!-- Panel content -->
     <div x-show="!isMobile || isRegister" x-cloak class="w-full flex flex-col items-center">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Create account</h1>
+
+    {% if register_form.non_field_errors %}
+      <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
+        {{ register_form.non_field_errors|join:" " }}
+      </p>
+    {% endif %}
 
     <!-- Social auth -->
     <div class="flex gap-[11px] mb-[13px]">
@@ -132,33 +150,63 @@
       <div class="flex-1 h-px bg-white/[0.15]"></div>
     </div>
 
-    <!-- Quick register; validation errors redirect to register.html -->
     <form method="post" action="{% url 'register' %}" class="w-full">
       {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}" />
+
       <input
         type="text" name="username" placeholder="Username" autocomplete="username"
-        class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
+        required maxlength="{{ register_form.fields.username.max_length }}"
+        value="{{ register_form.username.value|default:'' }}"
+        class="w-full bg-surface-input border rounded-lg text-white text-[14px] px-[15px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
+               {% if register_form.username.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"
       />
+      {% for error in register_form.username.errors %}
+        <p class="mt-[5px] text-[12px] text-red-400">{{ error }}</p>
+      {% endfor %}
+
       <input
         type="email" name="email" placeholder="Email" autocomplete="email"
-        class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
+        required maxlength="{{ register_form.fields.email.max_length }}"
+        value="{{ register_form.email.value|default:'' }}"
+        class="w-full mt-[11px] bg-surface-input border rounded-lg text-white text-[14px] px-[15px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
+               {% if register_form.email.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"
       />
-      <input
-        type="password" name="password1" placeholder="Password" autocomplete="new-password"
-        class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[13px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
-      />
+      {% for error in register_form.email.errors %}
+        <p class="mt-[5px] text-[12px] text-red-400">{{ error }}</p>
+      {% endfor %}
+
+      <div class="relative mt-[11px]" x-data="{ reveal: false }">
+        <input
+          :type="reveal ? 'text' : 'password'" type="password" required
+          name="password" placeholder="Password" autocomplete="new-password"
+          class="w-full bg-surface-input border rounded-lg text-white text-[14px] pl-[15px] pr-[42px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
+                 {% if register_form.password.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"
+        />
+        <button type="button" @click="reveal = !reveal" tabindex="-1"
+                :aria-label="reveal ? 'Hide password' : 'Show password'"
+                class="absolute right-[13px] top-1/2 -translate-y-1/2 text-[#5E5C6A] hover:text-[#9896A4] transition-colors">
+          <i class="text-[17px]" :class="reveal ? 'ti ti-eye-off' : 'ti ti-eye'"></i>
+        </button>
+      </div>
+      {% for error in register_form.password.errors %}
+        <p class="mt-[5px] text-[12px] text-red-400">{{ error }}</p>
+      {% endfor %}
+
       <button type="submit"
-              class="w-full bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:opacity-90 transition-opacity">
+              class="w-full mt-[13px] bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:opacity-90 transition-opacity">
         Create account
       </button>
     </form>
     </div>
   </div>
 
-  <!-- Sliding overlay (desktop only) — covers register panel by default (isRegister: false) -->
+  <!-- Sliding overlay (desktop only) — covers whichever panel is not in use.
+       Its starting side is rendered server-side so it does not jump once Alpine
+       takes over, which is visible when a failed sign-up opens the right panel. -->
   <div
     class="overlay-panel absolute top-0 bottom-0 w-1/2 z-10 hidden lg:flex flex-col items-center justify-center px-[31px] py-[35px] bg-brand rounded-xl"
-    style="left: 50%"
+    style="left: {% if show_register %}0%{% else %}50%{% endif %}"
     :style="isRegister ? 'left: 0%' : 'left: 50%'"
   >
     <h2 class="text-[22px] font-medium text-white mb-[9px]"

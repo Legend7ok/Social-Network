@@ -1,18 +1,18 @@
-{% load thumbnail %}
+{% load thumbnail user_display %}
 {% if users_like %}
 <div class="mb-[18px]">
   <p class="text-[13px] text-[#5E5C6A] mb-[11px] uppercase tracking-widest">Liked by</p>
   <div class="flex flex-wrap gap-[9px]">
     {% for user in users_like %}
     <a href="{% url 'user_detail' user.username %}"
-       title="{{ user.get_full_name }}"
+       title="{{ user|display_name }}"
        class="w-[35px] h-[35px] rounded-full bg-brand/30 flex items-center justify-center text-[12px] font-medium text-brand-light overflow-hidden border border-white/[0.08] hover:border-brand/40 transition-colors shrink-0">
       {% if user.profile.photo %}
         {% thumbnail user.profile.photo THUMBS.avatar_md crop="center" as av %}
-        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ user.get_full_name }}" />
+        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ user|display_name }}" />
         {% endthumbnail %}
       {% else %}
-        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+        {{ user|initials }}
       {% endif %}
     </a>
     {% endfor %}

@@ -15,6 +15,10 @@ THUMBNAIL_STORAGE = "django.core.files.storage.FileSystemStorage"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
+# Nothing proxies runserver, so the forwarded-for header the rate limiter reads
+# in production never arrives and asking for it raises instead of limiting.
+RATELIMIT_IP_META_KEY = "REMOTE_ADDR"
+
 STORAGES = {
     **STORAGES,
     "staticfiles": {

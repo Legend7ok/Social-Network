@@ -8,7 +8,6 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
-from apps.account.models import Profile
 from apps.images.models import Image
 
 MINIMAL_PNG = (
@@ -40,7 +39,6 @@ def make_user(db):
         user_obj = User.objects.create_user(
             username=username, email=email, password=password
         )
-        Profile.objects.create(user=user_obj)
         return user_obj, password
 
     return _make

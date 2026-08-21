@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from sorl.thumbnail import get_thumbnail
 
 from .models import Profile
+from .display import display_name
 
 User = get_user_model()
 
@@ -20,10 +21,11 @@ def send_welcome_email(user_id):
     except User.DoesNotExist:
         logger.warning("send_welcome_email: user %s not found, skipping", user_id)
         return
+    greeting = display_name(user)
     try:
         send_mail(
             subject="Welcome to Social Network",
-            message=f"Hi {user.first_name}, thanks for joining!",
+            message=f"Hi {greeting}, thanks for joining!",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
