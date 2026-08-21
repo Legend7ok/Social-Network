@@ -1,7 +1,9 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
@@ -33,6 +35,8 @@ from apps.actions.utils import create_action
 from apps.actions.models import Action
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 def lockout_view(request, credentials, *args, **kwargs):
@@ -103,8 +107,11 @@ class LoginView(auth_views.LoginView):
 
 
 # The same guards Django puts on its own LoginView: keep the password out of
-# error reports, and keep the filled-in form out of caches and the back button.
-@method_decorator([sensitive_post_parameters(), never_cache], name="dispatch")
+# error reports, keep the filled-in form out of caches and the back button, and
+# stay reachable if the project ever puts the whole site behind a login.
+@method_decorator(
+    [login_not_required, sensitive_post_parameters(), never_cache], name="dispatch"
+)
 @method_decorator(
     ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
 )
@@ -146,6 +153,7 @@ class RegisterView(RedirectURLMixin, FormView):
         except IntegrityError:
             # The form found the name and address free, then someone else took
             # one of them before this row reached the table.
+            logger.warning("register: lost the race for %s", form.data.get("username"))
             form.add_error(
                 None, "That username or address was just taken. Please try again."
             )

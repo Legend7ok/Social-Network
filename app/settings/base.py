@@ -42,6 +42,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.RatelimitMiddleware",
+    # Without this every social login failure is a server error, including the
+    # ordinary one: closing the provider's window instead of allowing access.
+    "social_django.middleware.SocialAuthExceptionMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -131,6 +134,10 @@ SOCIAL_AUTH_PIPELINE = [
 
 # Store the address the same way the forms do, so one person keeps one row.
 SOCIAL_AUTH_FORCE_EMAIL_LOWERCASE = True
+
+# Where the middleware above sends someone whose social login went wrong; the
+# reason arrives as a flash message the login page already renders.
+SOCIAL_AUTH_LOGIN_ERROR_URL = "login"
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env(
     "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", default="dummy-key"

@@ -115,6 +115,12 @@
     <div x-show="!isMobile || isRegister" x-cloak class="w-full flex flex-col items-center">
     <h1 class="text-[20px] font-medium text-white mb-[18px]">Create account</h1>
 
+    {% if register_form.non_field_errors %}
+      <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
+        {{ register_form.non_field_errors|join:" " }}
+      </p>
+    {% endif %}
+
     <!-- Social auth -->
     <div class="flex gap-[11px] mb-[13px]">
       <a href="{% url 'social:begin' 'google-oauth2' %}"
@@ -142,12 +148,6 @@
       or use email
       <div class="flex-1 h-px bg-white/[0.15]"></div>
     </div>
-
-    {% if register_form.non_field_errors %}
-      <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
-        {{ register_form.non_field_errors|join:" " }}
-      </p>
-    {% endif %}
 
     <form method="post" action="{% url 'register' %}" class="w-full">
       {% csrf_token %}
