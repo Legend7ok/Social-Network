@@ -166,6 +166,11 @@ IMAGE_RANKING_CACHE_TTL = 60 * 5
 
 HOME_CACHE_TTL = 60 * 3
 
+SEARCH_MIN_QUERY_LENGTH = 2
+SEARCH_IMAGES_PER_PAGE = 6
+SEARCH_PEOPLE_PER_PAGE = 10
+SEARCH_RATE = "50/m"
+
 CELERY_BEAT_SCHEDULE = {
     "refresh-image-ranking-cache": {
         "task": "apps.images.tasks.refresh_image_ranking_cache",
