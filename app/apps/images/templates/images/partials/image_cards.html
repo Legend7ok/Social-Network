@@ -48,7 +48,7 @@
 {% endfor %}
 {% if images.has_next %}
 <div class="col-span-full h-px"
-     hx-get="?images_only=1&amp;page={{ images.next_page_number }}{% if mine %}&amp;mine=1{% endif %}"
+     hx-get="{% querystring images_only=1 page=images.next_page_number %}"
      hx-trigger="intersect once"
      hx-swap="outerHTML"
      hx-indicator="#loading">

@@ -19,7 +19,13 @@ def search(request):
     tab = request.GET.get("tab", "images")
     if tab not in TABS:
         tab = "images"
-    results_only = request.GET.get("results_only")
+    # The card partials are shared with the images and people lists, so the
+    # flag they put on the scroll request differs per tab.
+    results_only = (
+        request.GET.get("users_only")
+        if tab == "people"
+        else request.GET.get("images_only")
+    )
 
     context = {
         "section": "search",
@@ -59,7 +65,7 @@ def search(request):
         context["following_ids"] = set(
             request.user.profile.following.values_list("user_id", flat=True)
         )
-        partial = "search/partials/people_results.html"
+        partial = "account/partials/user_cards.html"
     else:
         # Force evaluation so total_views attrs survive template iteration
         results.object_list = list(results.object_list)
@@ -67,7 +73,7 @@ def search(request):
         for image in results.object_list:
             image.total_views = views_map.get(image.id, 0)
         context["images"] = results
-        partial = "search/partials/image_results.html"
+        partial = "images/partials/image_cards.html"
 
     if results_only:
         return render(request, partial, context)

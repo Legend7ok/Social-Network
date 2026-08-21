@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Search · socnet{% endblock %}
+
+{% block content %}
+<div class="px-[16px] lg:px-[26px] py-[22px]">
+
+  {% if not q %}
+
+    <div class="text-center py-[70px] text-[#5E5C6A]">
+      <i class="ti ti-search text-[53px] block mb-[13px]"></i>
+      <p class="text-[15px]">Search for images or people</p>
+    </div>
+
+  {% elif query_too_short %}
+
+    <div class="text-center py-[70px] text-[#5E5C6A]">
+      <i class="ti ti-keyboard text-[53px] block mb-[13px]"></i>
+      <p class="text-[15px]">Type at least {{ min_query_length }} characters</p>
+    </div>
+
+  {% else %}
+
+    <p class="text-[14px] text-[#9896A4] mb-[18px]">
+      Results for <span class="text-white">&ldquo;{{ q }}&rdquo;</span>
+    </p>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-white/[0.08] mb-[22px]">
+      <a href="{% querystring tab='images' page=None %}"
+         class="flex items-center gap-[7px] px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
+                {% if tab != 'people' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
+        Images
+        <span class="text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">{{ images_count }}</span>
+      </a>
+      <a href="{% querystring tab='people' page=None %}"
+         class="flex items-center gap-[7px] px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
+                {% if tab == 'people' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
+        People
+        <span class="text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">{{ people_count }}</span>
+      </a>
+    </div>
+
+    {% if tab == 'people' %}
+
+      {% if people_count %}
+        <div class="flex flex-col gap-[11px]">
+          {% include 'account/partials/user_cards.html' %}
+        </div>
+      {% else %}
+        <div class="text-center py-[70px] text-[#5E5C6A]">
+          <i class="ti ti-users-off text-[53px] block mb-[13px]"></i>
+          <p class="text-[15px]">No people match &ldquo;{{ q }}&rdquo;</p>
+        </div>
+      {% endif %}
+
+    {% else %}
+
+      {% if images_count %}
+        <!-- Grid: 1 column on phones, 2 on tablets, 3 from xl up -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-[12px] sm:gap-[18px]">
+          {% include 'images/partials/image_cards.html' %}
+        </div>
+      {% else %}
+        <div class="text-center py-[70px] text-[#5E5C6A]">
+          <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
+          <p class="text-[15px]">No images match &ldquo;{{ q }}&rdquo;</p>
+        </div>
+      {% endif %}
+
+    {% endif %}
+
+    <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+      <div class="flex items-center gap-[9px]">
+        <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+        <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+        <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+      </div>
+    </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+  {% include 'partials/card_reveal.html' %}
+{% endblock %}
