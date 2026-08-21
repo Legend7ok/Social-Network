@@ -1,5 +1,13 @@
+from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.functions import Lower
 from django.conf import settings
+
+
+def users_with_email(email):
+    """Matches on Lower("email") so the lookup hits the auth_user_email_ci_uniq
+    index; iexact would compile to UPPER() and force a full scan instead."""
+    return User.objects.annotate(email_lower=Lower("email")).filter(email_lower=email)
 
 
 class Profile(models.Model):

@@ -73,12 +73,13 @@
       <input type="hidden" name="next" value="{{ next }}" />
       <input
         type="text" name="username" placeholder="Email or username" autocomplete="username"
+        required maxlength="{{ login_form.fields.username.max_length }}"
         value="{{ login_form.username.value|default:'' }}"
         class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
       />
       <div class="relative" x-data="{ reveal: false }">
         <input
-          :type="reveal ? 'text' : 'password'" type="password"
+          :type="reveal ? 'text' : 'password'" type="password" required
           name="password" placeholder="Password" autocomplete="current-password"
           class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] pl-[15px] pr-[42px] py-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
         />
@@ -155,6 +156,7 @@
 
       <input
         type="text" name="username" placeholder="Username" autocomplete="username"
+        required maxlength="{{ register_form.fields.username.max_length }}"
         value="{{ register_form.username.value|default:'' }}"
         class="w-full bg-surface-input border rounded-lg text-white text-[14px] px-[15px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                {% if register_form.username.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"
@@ -165,6 +167,7 @@
 
       <input
         type="email" name="email" placeholder="Email" autocomplete="email"
+        required maxlength="{{ register_form.fields.email.max_length }}"
         value="{{ register_form.email.value|default:'' }}"
         class="w-full mt-[11px] bg-surface-input border rounded-lg text-white text-[14px] px-[15px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                {% if register_form.email.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"
@@ -175,7 +178,7 @@
 
       <div class="relative mt-[11px]" x-data="{ reveal: false }">
         <input
-          :type="reveal ? 'text' : 'password'" type="password"
+          :type="reveal ? 'text' : 'password'" type="password" required
           name="password" placeholder="Password" autocomplete="new-password"
           class="w-full bg-surface-input border rounded-lg text-white text-[14px] pl-[15px] pr-[42px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
                  {% if register_form.password.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"

@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.account.models import Profile
+from apps.actions.models import Action
 from conftest import MINIMAL_PNG
 
 
@@ -59,6 +60,7 @@ def test_register_creates_profile(client):
     user_obj = user_model.objects.get(username="bob")
     assert Profile.objects.filter(user=user_obj).exists()
     assert client.session["_auth_user_id"] == str(user_obj.pk)
+    assert Action.objects.filter(user=user_obj, verb="has created an account").exists()
 
 
 @pytest.mark.django_db
@@ -103,6 +105,20 @@ def test_login_post_valid_credentials_redirects_to_home(client, user):
     )
     assert response.status_code == 302
     assert response["Location"] == reverse("home")
+
+
+@pytest.mark.django_db
+def test_login_by_email_through_the_page(client, user):
+    """The field takes an address as well, and that path runs through a backend
+    of our own — worth checking end to end, not only in isolation."""
+    user_obj, password = user
+
+    response = client.post(
+        reverse("login"), {"username": user_obj.email.upper(), "password": password}
+    )
+
+    assert response.status_code == 302
+    assert client.session["_auth_user_id"] == str(user_obj.pk)
 
 
 # ─── home ────────────────────────────────────────────────────────────────

@@ -126,6 +126,10 @@ SOCIAL_AUTH_PIPELINE = [
     # person has proven they control: Google verifies it, GitHub only lets a
     # verified address be the primary one.
     "social_core.pipeline.social_auth.associate_by_email",
+    # The step above joins active accounts only; this one turns the leftovers —
+    # an address held by a disabled account — into a readable refusal instead of
+    # a unique-index error nobody catches.
+    "apps.account.pipeline.refuse_a_taken_address",
     "social_core.pipeline.user.create_user",
     "social_core.pipeline.social_auth.associate_user",
     "social_core.pipeline.social_auth.load_extra_data",
