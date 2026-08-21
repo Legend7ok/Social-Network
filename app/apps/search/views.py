@@ -16,21 +16,17 @@ TABS = ("images", "people")
 @ratelimit(key="user", rate=settings.SEARCH_RATE, method="GET", block=True)
 def search(request):
     query = request.GET.get("q", "").strip()
-    tab = request.GET.get("tab", "images")
-    if tab not in TABS:
-        tab = "images"
+    chosen_tab = request.GET.get("tab")
+    if chosen_tab not in TABS:
+        chosen_tab = None
     # The card partials are shared with the images and people lists, so the
     # flag they put on the scroll request differs per tab.
-    results_only = (
-        request.GET.get("users_only")
-        if tab == "people"
-        else request.GET.get("images_only")
-    )
+    results_only = request.GET.get("images_only") or request.GET.get("users_only")
 
     context = {
         "section": "search",
         "q": query,
-        "tab": tab,
+        "tab": chosen_tab or TABS[0],
         "min_query_length": settings.SEARCH_MIN_QUERY_LENGTH,
     }
 
@@ -42,8 +38,14 @@ def search(request):
 
     images = search_images(query)
     people = search_users(query)
-    context["images_count"] = images.count()
-    context["people_count"] = people.count()
+    images_count = images.count()
+    people_count = people.count()
+    context["images_count"] = images_count
+    context["people_count"] = people_count
+
+    # Without an explicit choice, open the tab that actually has results.
+    tab = chosen_tab or ("people" if people_count > images_count else "images")
+    context["tab"] = tab
 
     if tab == "people":
         queryset, per_page = people, settings.SEARCH_PEOPLE_PER_PAGE
