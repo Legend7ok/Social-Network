@@ -134,6 +134,16 @@ def test_social_login_lets_a_free_address_through(db):
 
 
 @pytest.mark.django_db
+def test_social_login_lets_a_missing_address_through(make_user):
+    """GitHub hands over nothing when the address is private, and blanks are
+    allowed to repeat — screening them would lock everyone out of that path."""
+    make_user("nomail", "", "testpass789")
+
+    assert refuse_a_taken_address(backend=Mock(), details={}) is None
+    assert refuse_a_taken_address(backend=Mock(), details={"email": ""}) is None
+
+
+@pytest.mark.django_db
 def test_social_login_leaves_an_already_joined_person_alone(user):
     """Once an earlier step found the owner there is nothing left to screen."""
     user_obj, _ = user

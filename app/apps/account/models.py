@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models.functions import Lower
 from django.conf import settings
@@ -7,7 +7,13 @@ from django.conf import settings
 def users_with_email(email):
     """Matches on Lower("email") so the lookup hits the auth_user_email_ci_uniq
     index; iexact would compile to UPPER() and force a full scan instead."""
-    return User.objects.annotate(email_lower=Lower("email")).filter(email_lower=email)
+    # Resolved per call: models.py is imported while the app registry is still
+    # loading, and asking for the user model at that point raises.
+    return (
+        get_user_model()
+        .objects.annotate(email_lower=Lower("email"))
+        .filter(email_lower=email)
+    )
 
 
 class Profile(models.Model):

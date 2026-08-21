@@ -17,6 +17,7 @@
         <div>
           <label class="block text-[13px] text-[#9896A4] mb-[7px]">First name</label>
           <input type="text" name="first_name"
+                 maxlength="{{ user_form.fields.first_name.max_length }}"
                  value="{{ user_form.first_name.value|default:'' }}"
                  placeholder="John"
                  class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
@@ -28,6 +29,7 @@
         <div>
           <label class="block text-[13px] text-[#9896A4] mb-[7px]">Last name</label>
           <input type="text" name="last_name"
+                 maxlength="{{ user_form.fields.last_name.max_length }}"
                  value="{{ user_form.last_name.value|default:'' }}"
                  placeholder="Doe"
                  class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
@@ -44,6 +46,7 @@
           Email <span class="text-red-400">*</span>
         </label>
         <input type="email" name="email" required
+               maxlength="{{ user_form.fields.email.max_length }}"
                value="{{ user_form.email.value|default:'' }}"
                placeholder="john@example.com"
                class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
