@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from urllib.parse import urlparse
 import os
 
@@ -28,6 +29,19 @@ class ImageBookmarkForm(forms.ModelForm):
             )
 
         return url
+
+
+class ImageEditForm(forms.ModelForm):
+    # The file itself stays put: views, likes, thumbnails and the ranking are
+    # all tied to it, so swapping it would silently rewrite an image's history.
+    class Meta:
+        model = Image
+        fields = ["title", "description"]
+
+    def save(self, commit=True):
+        if self.has_changed():
+            self.instance.edited_at = timezone.now()
+        return super().save(commit=commit)
 
 
 class ImageUploadForm(forms.ModelForm):

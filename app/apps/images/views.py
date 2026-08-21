@@ -6,14 +6,14 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
-from .forms import ImageBookmarkForm, ImageUploadForm
+from .forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from .models import Image
 from .services import (
     record_image_view,
-    get_image_ranking,
-    get_image_ranking_count,
     get_image_views,
     get_images_views,
     is_first_view,
@@ -22,6 +22,21 @@ from .tasks import download_image, generate_image_thumbnails
 from apps.actions.utils import create_action
 
 User = get_user_model()
+
+# The podium is rendered separately from the list below it.
+RANKING_TOP = 3
+RANKING_PER_PAGE = 10
+RANKING_SORTS = {
+    "views": "-total_views",
+    "likes": "-total_likes",
+}
+
+
+def _show_live_views(images):
+    """Overlay the counts still buffered in Redis on top of the stored ones."""
+    views_map = get_images_views([img.id for img in images])
+    for img in images:
+        img.total_views = views_map.get(img.id, img.total_views)
 
 
 def bookmarklet_launcher(request):
@@ -50,8 +65,13 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(
-        Image.objects.select_related("user", "user__profile"), id=id, slug=slug
+        Image.objects.select_related("user", "user__profile"), id=id
     )
+    # Stale links redirect instead of 404. Temporary: a cached permanent one
+    # would loop if a title is ever renamed back.
+    if slug != image.slug:
+        return redirect(image.get_absolute_url())
+
     if image.image:
         if request.user.is_authenticated:
             viewer_key = f"user:{request.user.id}"
@@ -60,9 +80,8 @@ def image_detail(request, id, slug):
                 request.session.create()
             viewer_key = f"session:{request.session.session_key}"
         if is_first_view(image.id, viewer_key):
-            total_views = record_image_view(image.id)
-        else:
-            total_views = get_image_views(image.id)
+            record_image_view(image.id)
+        total_views = get_image_views(image.id)
     else:
         total_views = 0
 
@@ -112,9 +131,7 @@ def image_list(request):
 
     # Force evaluation so total_views attrs survive template iteration
     images.object_list = list(images.object_list)
-    views_map = get_images_views([img.id for img in images.object_list])
-    for img in images.object_list:
-        img.total_views = views_map.get(img.id, 0)
+    _show_live_views(images.object_list)
 
     following_users = User.objects.filter(
         profile__in=request.user.profile.following.all()
@@ -151,6 +168,39 @@ def image_upload(request):
     return render(request, "images/upload.html", {"section": "images", "form": form})
 
 
+@login_required
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_edit(request, id):
+    image = get_object_or_404(Image, id=id, user=request.user)
+
+    if request.method == "POST":
+        form = ImageEditForm(request.POST, instance=image)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Image updated")
+            return redirect(image.get_absolute_url())
+    else:
+        form = ImageEditForm(instance=image)
+
+    return render(
+        request,
+        "images/edit.html",
+        {"section": "images", "form": form, "image": image},
+    )
+
+
+@login_required
+@require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_delete(request, id):
+    # Filtering by author means someone else's image is a 404 rather than a
+    # 403: there is nothing to say about images that are not yours.
+    image = get_object_or_404(Image, id=id, user=request.user)
+    image.delete()
+    messages.success(request, "Image deleted")
+    return redirect(f"{reverse('images:list')}?mine=1")
+
+
 def image_status(request, id):
     image = get_object_or_404(Image, id=id)
     return render(request, "images/partials/image_status.html", {"image": image})
@@ -158,80 +208,58 @@ def image_status(request, id):
 
 @login_required
 def image_ranking(request):
-    per_page = 10
+    sort = request.GET.get("sort", "views")
+    if sort not in RANKING_SORTS:
+        sort = "views"
     ranking_only = request.GET.get("ranking_only")
 
+    # Ties are broken by id so an image cannot drift across page boundaries
+    # while the reader pages through equal scores.
+    ranked = Image.objects.select_related("user", "user__profile").order_by(
+        RANKING_SORTS[sort], "-id"
+    )
+
+    # A podium with empty slots reads as broken — half of it would link
+    # nowhere and the tiles would sit off-centre. Until three places are taken
+    # the ranking is a plain numbered list built from the same rows.
+    podium_size = RANKING_TOP if ranked.count() >= RANKING_TOP else 0
+
+    paginator = Paginator(ranked[podium_size:], RANKING_PER_PAGE)
     try:
-        page = int(request.GET.get("page", 1))
-    except ValueError:
-        page = 1
+        page = paginator.page(request.GET.get("page"))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        if ranking_only:
+            return HttpResponse("")
+        page = paginator.page(paginator.num_pages)
 
-    list_start = 3 + (page - 1) * per_page
+    ranking_list = list(page.object_list)
+    first_rank = podium_size + (page.number - 1) * RANKING_PER_PAGE + 1
+    for offset, img in enumerate(ranking_list):
+        img.rank = first_rank + offset
 
-    # Fetch current list page from Redis + DB
-    list_ids = get_image_ranking(start=list_start, count=per_page)
-    list_images_by_id = {
-        img.id: img
-        for img in Image.objects.filter(id__in=list_ids).select_related(
-            "user", "user__profile"
-        )
+    context = {
+        "section": "images",
+        "sort": sort,
+        "ranking_list": ranking_list,
+        "has_next": page.has_next(),
+        "next_page": page.number + 1,
     }
-    ranking_list = []
-    for i, img_id in enumerate(list_ids, start=list_start + 1):
-        if img_id in list_images_by_id:
-            img = list_images_by_id[img_id]
-            img.rank = i
-            ranking_list.append(img)
-
-    views_map = get_images_views([img.id for img in ranking_list])
-    for img in ranking_list:
-        img.total_views = views_map.get(img.id, 0)
-
-    total = get_image_ranking_count()
-    has_next = (list_start + per_page) < total
-    next_page = page + 1
 
     if ranking_only:
-        return render(
-            request,
-            "images/partials/ranking_rows.html",
-            {
-                "ranking_list": ranking_list,
-                "has_next": has_next,
-                "next_page": next_page,
-            },
-        )
+        _show_live_views(ranking_list)
+        return render(request, "images/partials/ranking_rows.html", context)
 
-    # Top 3 only needed for full page load
-    top3_ids = get_image_ranking(start=0, count=3)
-    top3_by_id = {
-        img.id: img
-        for img in Image.objects.filter(id__in=top3_ids).select_related(
-            "user", "user__profile"
-        )
-    }
-    top3_views = get_images_views(top3_ids)
-    top3 = []
-    for i, img_id in enumerate(top3_ids, start=1):
-        if img_id in top3_by_id:
-            img = top3_by_id[img_id]
-            img.rank = i
-            img.total_views = top3_views.get(img_id, 0)
-            top3.append(img)
+    top3 = list(ranked[:podium_size]) if podium_size else []
+    for rank, img in enumerate(top3, start=1):
+        img.rank = rank
+    # Both halves of the page in one Redis round trip
+    _show_live_views(ranking_list + top3)
 
     following_users = User.objects.filter(
         profile__in=request.user.profile.following.all()
     ).select_related("profile")[:8]
 
-    return render(
-        request,
-        "images/ranking.html",
-        {
-            "section": "images",
-            "top3": top3,
-            "ranking_list": ranking_list,
-            "has_next": has_next,
-            "next_page": next_page,
-            "following_users": following_users,
-        },
-    )
+    context |= {"top3": top3, "following_users": following_users}
+    return render(request, "images/ranking.html", context)

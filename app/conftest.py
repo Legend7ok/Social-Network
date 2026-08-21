@@ -1,5 +1,8 @@
+from unittest.mock import MagicMock
+
 import fakeredis
 import pytest
+import redis
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -75,3 +78,16 @@ def auth_client(user):
     client = APIClient()
     client.force_authenticate(user=user_obj)
     return client
+
+
+@pytest.fixture
+def broken_redis(monkeypatch):
+    """Every Redis call used by the view counters refuses to connect."""
+    mock = MagicMock()
+    mock.pipeline.side_effect = redis.ConnectionError("down")
+    mock.get.side_effect = redis.ConnectionError("down")
+    mock.mget.side_effect = redis.ConnectionError("down")
+    mock.set.side_effect = redis.ConnectionError("down")
+    mock.smembers.side_effect = redis.ConnectionError("down")
+    monkeypatch.setattr("apps.images.services.r", mock)
+    return mock

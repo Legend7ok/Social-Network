@@ -14,13 +14,20 @@
          class="inline-flex items-center gap-[7px] text-[14px] text-[#5E5C6A] hover:text-white transition-colors mb-[13px]">
         <i class="ti ti-arrow-left text-[15px]"></i> Back
       </a>
-      <h1 class="text-[24px] font-semibold text-white mb-[13px]">{{ image.title }}</h1>
+      <h1 class="text-[24px] font-semibold text-white mb-[7px]">{{ image.title }}</h1>
+      <p class="text-[13px] text-[#5E5C6A] mb-[13px]">
+        Posted {{ image.created|timesince }} ago
+        {% if image.edited_at %}
+          <span class="mx-1">·</span>
+          <span title="{{ image.edited_at }}">edited {{ image.edited_at|timesince }} ago</span>
+        {% endif %}
+      </p>
       <div class="rounded-2xl overflow-hidden border border-white/[0.08] bg-surface-card">
         {% include 'images/partials/image_status.html' %}
       </div>
 
       <!-- Actions row -->
-      <div class="flex items-center gap-[9px] mt-[13px]"
+      <div class="flex flex-wrap items-center gap-[9px] mt-[13px]"
            x-data="{
              liked: {% if request.user in users_like %}true{% else %}false{% endif %},
              count: {{ image.total_likes }},
@@ -61,6 +68,19 @@
                 class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
           <i class="ti ti-share text-[17px]"></i> Share
         </button>
+
+        {% if request.user == image.user %}
+        <a href="{% url 'images:edit' image.id %}"
+           class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+          <i class="ti ti-pencil text-[17px]"></i> Edit
+        </a>
+
+        <button type="button"
+                @click="$dispatch('confirm-delete', { url: '{% url 'images:delete' image.id %}', title: '{{ image.title|escapejs }}' })"
+                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-red-400 hover:border-red-700/50 transition-all">
+          <i class="ti ti-trash text-[17px]"></i> Delete
+        </button>
+        {% endif %}
       </div>
     </div>
 
@@ -165,6 +185,10 @@
 
   <!-- Liked by -->
   {% include 'images/partials/liked_by.html' %}
+
+  {% if request.user == image.user %}
+    {% include 'images/partials/confirm_delete.html' %}
+  {% endif %}
 
 </div>
 {% endblock %}

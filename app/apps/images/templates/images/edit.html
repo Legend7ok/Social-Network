@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block title %}Edit {{ image.title }} · socnet{% endblock %}
+
+{% block content %}
+<div class="px-[16px] lg:px-[31px] py-[31px] flex justify-start">
+  <div class="w-full max-w-[528px] flex flex-col gap-[22px]">
+
+    <h1 class="text-[20px] font-medium text-white">Edit Image</h1>
+
+    <form method="post" x-data="{ submitting: false }" @submit="submitting = true">
+      {% csrf_token %}
+
+      <div class="flex flex-col gap-[18px]">
+
+        <!-- The file cannot be replaced here, so it is shown read-only -->
+        <div class="rounded-2xl overflow-hidden h-[229px] bg-surface-input flex items-center justify-center">
+          {% if image.image %}
+            {% thumbnail image.image THUMBS.content_card crop="center" as im %}
+            <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" />
+            {% endthumbnail %}
+          {% else %}
+            <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
+          {% endif %}
+        </div>
+        <p class="text-[13px] text-[#5E5C6A] -mt-[9px]">
+          The image file cannot be changed. Upload a new image instead.
+        </p>
+
+        <!-- Title -->
+        <div>
+          <label class="block text-[13px] text-[#9896A4] mb-[7px]">
+            Title <span class="text-red-400">*</span>
+          </label>
+          <input type="text" name="title" required
+                 value="{{ form.title.value|default:'' }}"
+                 placeholder="Write a title"
+                 class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors
+                        {% if form.title.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
+          {% for error in form.title.errors %}
+            <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-[13px] text-[#9896A4] mb-[7px]">Description</label>
+          <textarea name="description" rows="3"
+                    placeholder="Tell about the photo"
+                    class="w-full bg-surface-input border border-white/[0.15] rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors resize-none leading-relaxed">{{ form.description.value|default:'' }}</textarea>
+          {% for error in form.description.errors %}
+            <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-[9px]">
+          <button type="submit"
+                  :disabled="submitting"
+                  :class="submitting
+                    ? 'bg-surface-input text-[#5E5C6A] cursor-not-allowed border border-white/[0.08]'
+                    : 'bg-brand text-white hover:opacity-90 cursor-pointer'"
+                  class="flex items-center justify-center gap-[9px] px-[35px] py-[13px] rounded-xl text-[15px] font-medium transition-all">
+            <i class="ti ti-loader-2 animate-spin text-[18px]" x-show="submitting" x-cloak></i>
+            <i class="ti ti-check text-[18px]" x-show="!submitting"></i>
+            <span x-text="submitting ? 'Saving...' : 'Save changes'"></span>
+          </button>
+          <a href="{{ image.get_absolute_url }}"
+             class="px-[22px] py-[13px] rounded-xl border border-white/[0.15] text-[15px] text-[#9896A4] hover:text-white transition-all">
+            Cancel
+          </a>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

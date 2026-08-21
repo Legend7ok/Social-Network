@@ -36,7 +36,7 @@
 {% endfor %}
 {% if has_next %}
 <div class="h-px"
-     hx-get="{% url 'images:ranking' %}?ranking_only=1&page={{ next_page }}"
+     hx-get="{% url 'images:ranking' %}?ranking_only=1&amp;page={{ next_page }}&amp;sort={{ sort }}"
      hx-trigger="intersect once"
      hx-swap="outerHTML"
      hx-indicator="#loading">

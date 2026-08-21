@@ -14,15 +14,22 @@ class Image(models.Model):
     image = models.ImageField(upload_to="images/%Y/%m/%d", null=True, blank=True)
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
+    # Set by ImageEditForm only, so background saves of the row (the file
+    # download finishing, for one) do not mark a fresh image as edited.
+    edited_at = models.DateTimeField(null=True, blank=True)
     users_like = models.ManyToManyField(
         settings.AUTH_USER_MODEL, related_name="images_liked", blank=True
     )
     total_likes = models.PositiveIntegerField(default=0)
+    # Views are counted in Redis and flushed here periodically; this column is
+    # the durable source of truth and what the ranking page sorts by.
+    total_views = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes = [
             models.Index(fields=["-created"]),
             models.Index(fields=["-total_likes"]),
+            models.Index(fields=["-total_views"]),
         ]
         ordering = ["-created"]
 
@@ -30,8 +37,7 @@ class Image(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.title, allow_unicode=True)
+        self.slug = slugify(self.title, allow_unicode=True) or "image"
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
