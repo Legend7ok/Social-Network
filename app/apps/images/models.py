@@ -1,7 +1,9 @@
-from django.db import models
 from django.conf import settings
-from django.utils.text import slugify
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector, SearchVectorField
+from django.db import models
 from django.urls import reverse
+from django.utils.text import slugify
 
 
 class Image(models.Model):
@@ -18,11 +20,20 @@ class Image(models.Model):
         settings.AUTH_USER_MODEL, related_name="images_liked", blank=True
     )
     total_likes = models.PositiveIntegerField(default=0)
+    # A generated column keeps the vector in sync even when rows are written
+    # outside the model (bulk updates, data migrations, admin actions).
+    search_vector = models.GeneratedField(
+        expression=SearchVector("title", weight="A", config="english")
+        + SearchVector("description", weight="B", config="english"),
+        output_field=SearchVectorField(),
+        db_persist=True,
+    )
 
     class Meta:
         indexes = [
             models.Index(fields=["-created"]),
             models.Index(fields=["-total_likes"]),
+            GinIndex(fields=["search_vector"], name="image_search_vector_gin"),
         ]
         ordering = ["-created"]
 
