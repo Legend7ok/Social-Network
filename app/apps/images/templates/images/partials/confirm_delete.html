@@ -1,5 +1,7 @@
-{# Opened by a `confirm-delete` event carrying the delete url and image title,
-   so one dialog serves every card on the page, including htmx-loaded ones #}
+{% comment %}
+  Opened by a `confirm-delete` event carrying the delete url and image title,
+  so one dialog serves every card on the page, including htmx-loaded ones.
+{% endcomment %}
 <div x-data="{ confirming: false, url: '', title: '' }"
      @confirm-delete.window="confirming = true; url = $event.detail.url; title = $event.detail.title"
      @keydown.escape.window="confirming = false">

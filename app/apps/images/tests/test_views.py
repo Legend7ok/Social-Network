@@ -730,6 +730,28 @@ def test_image_list_second_page_contains_remaining_images(client, user):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("query", [{}, {"mine": "1"}])
+def test_image_list_never_prints_a_template_comment(client, user, image, query):
+    # Django only strips single-line {# #}; a multi-line one reaches the reader
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:list"), query)
+
+    assert b"{#" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_never_prints_a_template_comment(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"{#" not in response.content
+
+
+@pytest.mark.django_db
 def test_image_list_shows_owner_controls_on_my_images(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
