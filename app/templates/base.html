@@ -114,7 +114,10 @@
           <form action="{% url 'search:search' %}" method="get"
                 class="hidden lg:flex items-center gap-[7px] w-[211px] px-[11px] py-[7px] rounded-lg
                        bg-surface-input border border-white/[0.08] focus-within:border-brand/40 transition-colors">
-            <i class="ti ti-search text-[17px] text-[#5E5C6A]"></i>
+            <button type="submit" aria-label="Search"
+                    class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
+              <i class="ti ti-search text-[17px]"></i>
+            </button>
             <input type="search" name="q" value="{{ q }}" placeholder="Search"
                    class="w-full bg-transparent text-[14px] text-white placeholder-[#5E5C6A] outline-none" />
           </form>
@@ -127,7 +130,10 @@
           <form x-show="searchOpen" x-cloak x-transition action="{% url 'search:search' %}" method="get"
                 class="lg:hidden absolute right-0 top-[44px] z-30 flex items-center gap-[7px] w-[75vw] max-w-[320px]
                        px-[13px] py-[9px] rounded-xl bg-surface-card border border-white/[0.15]">
-            <i class="ti ti-search text-[17px] text-[#5E5C6A]"></i>
+            <button type="submit" aria-label="Search"
+                    class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
+              <i class="ti ti-search text-[17px]"></i>
+            </button>
             <input type="search" name="q" value="{{ q }}" placeholder="Search" x-ref="searchInput"
                    class="w-full bg-transparent text-[15px] text-white placeholder-[#5E5C6A] outline-none" />
           </form>
