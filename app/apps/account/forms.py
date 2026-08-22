@@ -1,45 +1,89 @@
 from django import forms
+from django.contrib.auth import password_validation
+from django.contrib.auth.forms import AuthenticationForm, UsernameField
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 from core.validators import validate_image_upload
-from .models import Profile
+from .models import Profile, users_with_email
+
+EMAIL_MAX_LENGTH = User._meta.get_field("email").max_length
+
+
+class EmailOrUsernameAuthenticationForm(AuthenticationForm):
+    """Sign-in takes an email address as well as a username."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The parent sizes this field after the username column, which stops at
+        # 150 characters and would turn away a longer address.
+        field = self.fields["username"]
+        field.max_length = EMAIL_MAX_LENGTH
+        field.widget.attrs["maxlength"] = EMAIL_MAX_LENGTH
+        field.label = "Email or username"
 
 
 class UserRegistrationForm(forms.ModelForm):
+    """One password field, revealed by the eye toggle in the template; the form
+    owns hashing so no caller can store a raw password by mistake."""
+
     password = forms.CharField(
-        max_length=100, label="Password", widget=forms.PasswordInput
+        label="Password",
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+        strip=False,
     )
-    password2 = forms.CharField(
-        max_length=100, label="Repeat password", widget=forms.PasswordInput
-    )
+    # Declared here because the model leaves email optional, while an account
+    # without one has no way back in: no email sign-in, no password reset.
+    email = forms.EmailField(label="Email", required=True, max_length=EMAIL_MAX_LENGTH)
 
     class Meta:
         model = User
-        fields = ("username", "first_name", "email")
+        fields = ("username", "email")
+        field_classes = {"username": UsernameField}
 
-    def clean_password2(self):
-        cd = self.cleaned_data
-        if cd["password"] != cd["password2"]:
-            raise forms.ValidationError("Passwords don't match")
-        return cd["password2"]
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("This username is already taken")
+        return username
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        if User.objects.filter(email=email).exists():
+        email = self.cleaned_data["email"].lower()
+        if users_with_email(email).exists():
             raise forms.ValidationError("Email already in use")
         return email
 
+    def _post_clean(self):
+        # Runs after the instance is populated, so validators that compare the
+        # password against the username and email have something to compare to.
+        super()._post_clean()
+        password = self.cleaned_data.get("password")
+        if password:
+            try:
+                password_validation.validate_password(password, self.instance)
+            except ValidationError as error:
+                self.add_error("password", error)
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user
+
 
 class UserEditForm(forms.ModelForm):
+    # Same reason as on registration: clearing the address would lock the owner
+    # out of their own account. Changing it stays allowed.
+    email = forms.EmailField(label="Email", required=True, max_length=EMAIL_MAX_LENGTH)
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email"]
 
     def clean_email(self):
-        email = self.cleaned_data["email"]
-        qs = User.objects.exclude(id=self.instance.id).filter(email=email)
-
-        if qs.exists():
+        email = self.cleaned_data["email"].lower()
+        if users_with_email(email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("Email already in use")
         return email
 

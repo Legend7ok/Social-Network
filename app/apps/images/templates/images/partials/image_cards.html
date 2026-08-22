@@ -1,4 +1,4 @@
-{% load thumbnail %}
+{% load thumbnail user_display %}
 
 {% for image in images %}
 <a href="{{ image.get_absolute_url }}"
@@ -36,10 +36,10 @@
           <img src="{{ avatar.url }}" class="w-full h-full object-cover" alt="{{ image.user.username }}" />
           {% endthumbnail %}
         {% else %}
-          {{ image.user.first_name|first|upper }}{{ image.user.last_name|first|upper }}
+          {{ image.user|initials }}
         {% endif %}
       </div>
-      <span class="text-[13px] text-[#9896A4] truncate">{{ image.user.get_full_name }}</span>
+      <span class="text-[13px] text-[#9896A4] truncate">{{ image.user|display_name }}</span>
       <span class="ml-auto text-[12px] text-[#5E5C6A] shrink-0">{{ image.created|timesince }}</span>
     </div>
   </div>

@@ -1,4 +1,4 @@
-{% load thumbnail %}
+{% load thumbnail user_display %}
 <aside class="hidden 2xl:flex w-[264px] shrink-0 border-l border-white/[0.08] px-[18px] py-[22px] overflow-y-auto flex-col">
 
   <p class="text-[13px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Following</p>
@@ -12,11 +12,11 @@
           <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
           {% endthumbnail %}
         {% else %}
-          {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+          {{ u|initials }}
         {% endif %}
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-[15px] text-white truncate">{{ u.get_full_name }}</p>
+        <p class="text-[15px] text-white truncate">{{ u|display_name }}</p>
         <p class="text-[13px] text-[#5E5C6A]">{{ u.images.count }} images</p>
       </div>
     </a>

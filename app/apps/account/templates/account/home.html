@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load thumbnail %}
+{% load thumbnail user_display %}
 
 {% block title %}Home · socnet{% endblock %}
 
@@ -18,13 +18,13 @@
           <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ action.user.username }}">
           {% endthumbnail %}
         {% else %}
-          {{ action.user.first_name|first|upper }}{{ action.user.last_name|first|upper }}
+          {{ action.user|initials }}
         {% endif %}
       </a>
       <div class="min-w-0 flex-1">
         <a href="{% url 'user_detail' action.user.username %}"
            class="text-[14px] font-medium text-white hover:text-brand-light transition-colors">
-          {{ action.user.get_full_name }}
+          {{ action.user|display_name }}
         </a>
         <span class="text-[13px] text-[#9896A4]"> {{ action.verb }}</span>
         {% if action.target %}
@@ -114,11 +114,11 @@
                 <img src="{{ im.url }}" class="w-full h-full object-cover">
                 {% endthumbnail %}
               {% else %}
-                {{ target.first_name|first|upper }}{{ target.last_name|first|upper }}
+                {{ target|initials }}
               {% endif %}
             </a>
             <div class="bg-surface-input rounded-xl px-[15px] py-[11px] flex-1">
-              <p class="text-[14px] font-medium text-white">{{ target.get_full_name }}</p>
+              <p class="text-[14px] font-medium text-white">{{ target|display_name }}</p>
               <p class="text-[13px] text-[#9896A4] mt-0.5">
                 {{ target.images.count }} images · {{ target.profile.followers.count }} followers
               </p>
