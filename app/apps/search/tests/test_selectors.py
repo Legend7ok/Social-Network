@@ -2,7 +2,7 @@ import pytest
 
 from apps.account.models import Contact
 from apps.images.models import Image
-from apps.search.selectors import search_images, search_users
+from apps.search.selectors import search_images, search_users, with_card_counters
 
 
 @pytest.mark.django_db
@@ -62,7 +62,7 @@ def test_people_search_annotates_card_counters(people):
     )
     Contact.objects.create(user_from=maria.profile, user_to=dmytro.profile)
 
-    found = search_users("tkachenkodm").get()
+    found = with_card_counters(search_users("tkachenkodm")).get()
 
     assert found.images_count == 1
     assert found.followers_count == 1

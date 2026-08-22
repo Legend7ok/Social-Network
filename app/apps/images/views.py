@@ -124,7 +124,6 @@ def image_list(request):
         "section": "images",
         "images": images,
         "following_users": following_users,
-        "mine": mine,
     }
 
     if images_only:

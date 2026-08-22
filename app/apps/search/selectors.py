@@ -19,12 +19,6 @@ def search_images(query):
 
 
 def search_users(query):
-    likes_per_user = (
-        Image.objects.filter(user=OuterRef("pk"))
-        .values("user")
-        .annotate(total=Sum("total_likes"))
-        .values("total")
-    )
     # Rows are picked by the trigram lookups, which the GIN index serves; the
     # similarity is then computed only for those rows, to rank them.
     return (
@@ -34,18 +28,27 @@ def search_users(query):
             | Q(first_name__trigram_similar=query)
             | Q(last_name__trigram_similar=query)
         )
-        .select_related("profile")
         .annotate(
             similarity=Greatest(
                 TrigramSimilarity("username", query),
                 TrigramSimilarity("first_name", query),
                 TrigramSimilarity("last_name", query),
-            ),
-            images_count=Count("images", distinct=True),
-            followers_count=Count("profile__followers", distinct=True),
-            total_likes=Coalesce(
-                Subquery(likes_per_user, output_field=IntegerField()), 0
-            ),
+            )
         )
         .order_by("-similarity", "first_name", "last_name")
+    )
+
+
+def with_card_counters(people):
+    """Counters the people card shows. Kept apart so counting stays cheap."""
+    likes_per_user = (
+        Image.objects.filter(user=OuterRef("pk"))
+        .values("user")
+        .annotate(total=Sum("total_likes"))
+        .values("total")
+    )
+    return people.select_related("profile").annotate(
+        images_count=Count("images", distinct=True),
+        followers_count=Count("profile__followers", distinct=True),
+        total_likes=Coalesce(Subquery(likes_per_user, output_field=IntegerField()), 0),
     )

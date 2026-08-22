@@ -40,7 +40,23 @@ def test_both_tabs_are_counted(logged_client, images, people):
 
 
 @pytest.mark.django_db
-def test_unknown_tab_falls_back_to_images(logged_client, images):
+def test_nul_byte_in_query_is_dropped(logged_client, images):
+    response = logged_client.get(reverse("search:search"), {"q": "sun\x00set"})
+
+    assert response.status_code == 200
+    assert response.context["images_count"] == 2
+
+
+@pytest.mark.django_db
+def test_overlong_query_is_cut(logged_client, images, settings):
+    response = logged_client.get(reverse("search:search"), {"q": "sunset" + "o" * 5000})
+
+    assert response.status_code == 200
+    assert len(response.context["q"]) == settings.SEARCH_MAX_QUERY_LENGTH
+
+
+@pytest.mark.django_db
+def test_unknown_tab_is_ignored(logged_client, images):
     response = logged_client.get(
         reverse("search:search"), {"q": "sunset", "tab": "moon"}
     )

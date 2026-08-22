@@ -7,26 +7,31 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import get_images_views
 
-from .selectors import search_images, search_users
+from .selectors import search_images, search_users, with_card_counters
 
 TABS = ("images", "people")
+
+
+def normalize_query(raw):
+    # Postgres rejects NUL bytes outright, and a huge string would be pushed
+    # into a tsquery and into three similarity() calls per row.
+    return raw.replace("\x00", "").strip()[: settings.SEARCH_MAX_QUERY_LENGTH]
 
 
 @login_required
 @ratelimit(key="user", rate=settings.SEARCH_RATE, method="GET", block=True)
 def search(request):
-    query = request.GET.get("q", "").strip()
+    query = normalize_query(request.GET.get("q", ""))
     chosen_tab = request.GET.get("tab")
     if chosen_tab not in TABS:
         chosen_tab = None
-    # The card partials are shared with the images and people lists, so the
-    # flag they put on the scroll request differs per tab.
+    # Scroll requests come from the card partials shared with the images and
+    # people lists, so each tab arrives with its own flag.
     results_only = request.GET.get("images_only") or request.GET.get("users_only")
 
     context = {
         "section": "search",
         "q": query,
-        "tab": chosen_tab or TABS[0],
         "min_query_length": settings.SEARCH_MIN_QUERY_LENGTH,
     }
 
@@ -48,7 +53,7 @@ def search(request):
     context["tab"] = tab
 
     if tab == "people":
-        queryset, per_page = people, settings.SEARCH_PEOPLE_PER_PAGE
+        queryset, per_page = with_card_counters(people), settings.SEARCH_PEOPLE_PER_PAGE
     else:
         queryset, per_page = images, settings.SEARCH_IMAGES_PER_PAGE
 
