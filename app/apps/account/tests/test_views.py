@@ -137,7 +137,6 @@ def test_home_returns_200(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("home"))
     assert response.status_code == 200
-    assert response.context["section"] == "home"
 
 
 # ─── register ─────────────────────────────────────────────────────────────────
@@ -327,7 +326,6 @@ def test_user_list_returns_200(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_list"))
     assert response.status_code == 200
-    assert response.context["section"] == "people"
 
 
 # ─── user_detail ──────────────────────────────────────────────────────────────

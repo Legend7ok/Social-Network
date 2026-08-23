@@ -1,8 +1,9 @@
 import pytest
 
 from apps.account.models import Contact
+from apps.account.selectors import with_card_counters
 from apps.images.models import Image
-from apps.search.selectors import search_images, search_users, with_card_counters
+from apps.search.selectors import search_images, search_users
 
 
 @pytest.mark.django_db

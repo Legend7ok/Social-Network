@@ -1,6 +1,6 @@
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
-from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Sum
-from django.db.models.functions import Coalesce, Greatest
+from django.db.models import F, Q
+from django.db.models.functions import Greatest
 
 from apps.account.selectors import public_users
 from apps.images.models import Image
@@ -14,7 +14,9 @@ def search_images(query):
         Image.objects.filter(search_vector=search_query)
         .annotate(rank=SearchRank(F("search_vector"), search_query))
         .select_related("user", "user__profile")
-        .order_by("-rank", "-created")
+        # The id breaks ties: without it equal ranks may come back in a
+        # different order per page and rows would repeat or go missing.
+        .order_by("-rank", "-created", "-pk")
     )
 
 
@@ -35,20 +37,5 @@ def search_users(query):
                 TrigramSimilarity("last_name", query),
             )
         )
-        .order_by("-similarity", "first_name", "last_name")
-    )
-
-
-def with_card_counters(people):
-    """Counters the people card shows. Kept apart so counting stays cheap."""
-    likes_per_user = (
-        Image.objects.filter(user=OuterRef("pk"))
-        .values("user")
-        .annotate(total=Sum("total_likes"))
-        .values("total")
-    )
-    return people.select_related("profile").annotate(
-        images_count=Count("images", distinct=True),
-        followers_count=Count("profile__followers", distinct=True),
-        total_likes=Coalesce(Subquery(likes_per_user, output_field=IntegerField()), 0),
+        .order_by("-similarity", "first_name", "last_name", "pk")
     )

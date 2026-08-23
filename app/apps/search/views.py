@@ -5,9 +5,10 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django_ratelimit.decorators import ratelimit
 
+from apps.account.selectors import with_card_counters
 from apps.images.services import get_images_views
 
-from .selectors import search_images, search_users, with_card_counters
+from .selectors import search_images, search_users
 
 TABS = ("images", "people")
 
@@ -30,7 +31,6 @@ def search(request):
     results_only = request.GET.get("images_only") or request.GET.get("users_only")
 
     context = {
-        "section": "search",
         "q": query,
         "min_query_length": settings.SEARCH_MIN_QUERY_LENGTH,
     }

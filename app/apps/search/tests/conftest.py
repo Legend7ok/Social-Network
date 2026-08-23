@@ -1,14 +1,14 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.account.models import Profile
 from apps.images.models import Image
 
 
 @pytest.fixture
 def make_person(db):
+    # The profile comes from the post_save signal on User.
     def _make(username, first_name, last_name, **fields):
-        person = get_user_model().objects.create_user(
+        return get_user_model().objects.create_user(
             username=username,
             email=f"{username}@example.com",
             password="testpass123",
@@ -16,8 +16,6 @@ def make_person(db):
             last_name=last_name,
             **fields,
         )
-        Profile.objects.create(user=person)
-        return person
 
     return _make
 
