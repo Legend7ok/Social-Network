@@ -16,6 +16,7 @@ from apps.images.services import (
 )
 from apps.images.tasks import (
     MAX_REDIRECTS,
+    TOO_LARGE,
     delete_image_artifacts,
     download_image,
     flush_image_views,
@@ -197,7 +198,7 @@ def test_download_image_does_not_resurrect_a_deleted_image(user):
 
 
 @pytest.mark.django_db
-def test_download_image_discards_oversized_file(user):
+def test_download_image_marks_an_oversized_file_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -213,12 +214,14 @@ def test_download_image_discards_oversized_file(user):
         with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
             download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error == TOO_LARGE
+    assert not image.image
     mock_thumb.assert_not_called()
 
 
 @pytest.mark.django_db
-def test_download_image_discards_a_file_declared_oversized(user):
+def test_download_image_marks_a_file_declared_oversized_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -232,12 +235,13 @@ def test_download_image_discards_a_file_declared_oversized(user):
     with patch("apps.images.tasks.requests.get", return_value=response):
         download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error == TOO_LARGE
     response.iter_content.assert_not_called()
 
 
 @pytest.mark.django_db
-def test_download_image_discards_a_response_that_is_not_an_image(user):
+def test_download_image_marks_a_response_that_is_not_an_image_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -249,12 +253,13 @@ def test_download_image_discards_a_response_that_is_not_an_image(user):
     with patch("apps.images.tasks.requests.get", return_value=response):
         download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error
     response.iter_content.assert_not_called()
 
 
 @pytest.mark.django_db
-def test_download_image_discards_bytes_that_only_claim_to_be_an_image(user):
+def test_download_image_marks_bytes_that_only_claim_to_be_an_image_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -266,7 +271,9 @@ def test_download_image_discards_bytes_that_only_claim_to_be_an_image(user):
     with patch("apps.images.tasks.requests.get", return_value=response):
         download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error
+    assert not image.image
 
 
 @pytest.mark.django_db
@@ -289,7 +296,7 @@ def test_download_image_follows_a_redirect(user):
 
 
 @pytest.mark.django_db
-def test_download_image_discards_an_endless_redirect_chain(user):
+def test_download_image_marks_an_endless_redirect_chain_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -303,8 +310,28 @@ def test_download_image_discards_an_endless_redirect_chain(user):
     ) as mock_get:
         download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error
     assert mock_get.call_count == MAX_REDIRECTS
+
+
+@pytest.mark.django_db
+def test_download_image_clears_an_earlier_failure(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Second Attempt",
+        url="https://example.com/test.png",
+        download_error="The link did not answer with an image.",
+    )
+
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image
+    assert image.download_error == ""
 
 
 @pytest.mark.django_db
@@ -362,7 +389,8 @@ def test_download_image_refuses_a_link_that_points_inside_the_network(
     with patch("apps.images.tasks.requests.get") as mock_get:
         download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error
     mock_get.assert_not_called()
 
 

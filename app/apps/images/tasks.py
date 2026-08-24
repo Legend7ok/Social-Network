@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 FLUSH_BATCH_SIZE = 500
 DOWNLOAD_TIMEOUT = 10
 MAX_REDIRECTS = 5
+TOO_LARGE = "The file behind the link is larger than we accept."
 
 
 @shared_task
@@ -113,9 +114,15 @@ def generate_image_thumbnails(image_id):
     get_thumbnail(image.image, thumbs["detail_main"])
 
 
-def _discard(image, reason):
-    logger.warning("download_image: discarding image %s, %s", image.id, reason)
-    image.delete()
+def _fail(image, reason):
+    """Record why the file never arrived, in words the author will read.
+
+    Written column by column for the same reason the file is: the row may have
+    been edited or deleted while we were fetching, and a full save would undo
+    the edit or bring the row back.
+    """
+    logger.warning("download_image: image %s failed: %s", image.id, reason)
+    Image.objects.filter(id=image.id).update(download_error=reason)
 
 
 def _fetch(url):
@@ -169,10 +176,10 @@ def download_image(image_id, url):
         response = _fetch(url)
     except requests.TooManyRedirects:
         # Retrying would only walk the same chain again.
-        _discard(image, "the link redirects in circles")
+        _fail(image, "The link keeps redirecting and never arrives.")
         return
     except ValidationError as error:
-        _discard(image, error.messages[0])
+        _fail(image, error.messages[0])
         return
 
     with response:
@@ -180,25 +187,28 @@ def download_image(image_id, url):
 
         content_type = response.headers.get("Content-Type", "").split(";")[0].strip()
         if content_type.lower() not in VALID_IMAGE_CONTENT_TYPES:
-            _discard(image, f"the server answered with {content_type or 'no type'}")
+            logger.warning(
+                "download_image: %s answered with %s", url, content_type or "no type"
+            )
+            _fail(image, "The link did not answer with an image.")
             return
 
         declared_size = response.headers.get("Content-Length", "")
         if declared_size.isdigit() and int(declared_size) > settings.MAX_UPLOAD_SIZE:
-            _discard(image, "the file is larger than the limit")
+            _fail(image, TOO_LARGE)
             return
 
         body = _read_body(response)
 
     if body is None:
-        _discard(image, "the file is larger than the limit")
+        _fail(image, TOO_LARGE)
         return
 
     try:
         image_format = validate_image_content(io.BytesIO(body))
     except ValidationError:
         # The headers can say anything; this is the first look at the bytes.
-        _discard(image, "the file is not an image we accept")
+        _fail(image, "The file behind the link is not an image we can show.")
         return
 
     # image.slug, not the raw title: a title without letters slugifies to an
@@ -215,7 +225,7 @@ def download_image(image_id, url):
     stored = (
         Image.objects.filter(id=image_id)
         .filter(Q(image="") | Q(image__isnull=True))
-        .update(image=image.image.name)
+        .update(image=image.image.name, download_error="")
     )
     if not stored:
         logger.warning(
