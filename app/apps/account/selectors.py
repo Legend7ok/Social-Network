@@ -6,10 +6,22 @@ from apps.images.models import Image
 
 User = get_user_model()
 
+SIDEBAR_FOLLOWING_LIMIT = 8
+
 
 def public_users():
     """People that may show up anywhere on the public side of the site."""
     return User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
+
+
+def sidebar_following(user):
+    """The handful of people the right-hand sidebar lists. Every page carrying
+    that sidebar asks for the same thing, so the query lives in one place."""
+    return (
+        public_users()
+        .filter(profile__in=user.profile.following.all())
+        .select_related("profile")[:SIDEBAR_FOLLOWING_LIMIT]
+    )
 
 
 def with_card_counters(people):

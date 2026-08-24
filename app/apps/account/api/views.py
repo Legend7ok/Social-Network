@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -6,11 +5,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.account.models import Contact
+from apps.account.selectors import public_users
 from apps.actions.utils import create_action
 from core.throttles import FollowRateThrottle
 from .serializers import FollowSerializer
-
-User = get_user_model()
 
 
 class UserFollowView(APIView):
@@ -18,7 +16,9 @@ class UserFollowView(APIView):
 
     @extend_schema(request=FollowSerializer, responses={200: None})
     def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk, is_active=True)
+        # Service accounts are hidden everywhere else, so there is nothing to
+        # follow here either.
+        user = get_object_or_404(public_users(), pk=pk)
         if user == request.user:
             return Response(
                 {"error": "You cannot follow yourself."},

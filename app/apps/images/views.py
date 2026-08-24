@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -19,9 +18,8 @@ from .services import (
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
+from apps.account.selectors import public_users, sidebar_following
 from apps.actions.utils import create_action
-
-User = get_user_model()
 
 # The podium is rendered separately from the list below it.
 RANKING_TOP = 3
@@ -85,14 +83,10 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    users_like = image.users_like.select_related("profile").all()
+    users_like = public_users().filter(images_liked=image).select_related("profile")
 
     following_users = (
-        User.objects.filter(
-            profile__in=request.user.profile.following.all()
-        ).select_related("profile")[:8]
-        if request.user.is_authenticated
-        else []
+        sidebar_following(request.user) if request.user.is_authenticated else []
     )
 
     return render(
@@ -132,9 +126,7 @@ def image_list(request):
     images.object_list = list(images.object_list)
     _show_live_views(images.object_list)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     context = {
         "images": images,
@@ -254,9 +246,7 @@ def image_ranking(request):
     # Both halves of the page in one Redis round trip
     _show_live_views(ranking_list + top3)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     context |= {"top3": top3, "following_users": following_users}
     return render(request, "images/ranking.html", context)

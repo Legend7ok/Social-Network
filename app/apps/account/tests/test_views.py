@@ -139,6 +139,24 @@ def test_home_returns_200(client, user):
     assert response.status_code == 200
 
 
+@pytest.mark.django_db
+def test_home_hides_staff_activity(client, user, second_user, staff_user):
+    """With no subscriptions the feed falls back to everyone's activity, which
+    is where a staff account used to surface."""
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    Action.objects.create(user=other, verb="liked an image")
+    Action.objects.create(user=staff, verb="liked an image")
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    actors = {action.user for action in response.context["actions"]}
+    assert other in actors
+    assert staff not in actors
+
+
 # ─── register ─────────────────────────────────────────────────────────────────
 
 
@@ -328,6 +346,20 @@ def test_user_list_returns_200(client, user):
     assert response.status_code == 200
 
 
+@pytest.mark.django_db
+def test_user_list_hides_staff_accounts(client, user, second_user, staff_user):
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_list"))
+
+    listed = list(response.context["users"])
+    assert other in listed
+    assert staff not in listed
+
+
 # ─── user_detail ──────────────────────────────────────────────────────────────
 
 
@@ -345,6 +377,17 @@ def test_user_detail_returns_404_for_unknown_user(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=["nobody"]))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_user_detail_returns_404_for_staff_account(client, user, staff_user):
+    user_obj, password = user
+    staff, _ = staff_user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[staff.username]))
+
     assert response.status_code == 404
 
 

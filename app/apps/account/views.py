@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
+from django.contrib.auth import login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
@@ -20,7 +20,8 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import get_images_views
 
-from .selectors import with_card_counters
+from .cache import feed_cache_key
+from .selectors import public_users, sidebar_following, with_card_counters
 from .forms import (
     EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
@@ -31,8 +32,6 @@ from .forms import (
 from .tasks import send_welcome_email
 from apps.actions.utils import create_action
 from apps.actions.models import Action
-
-User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +55,14 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 @login_required
 def home(request):
-    cache_key = f"home_{request.user.id}"
+    cache_key = feed_cache_key(request.user.id)
     actions = cache.get(cache_key)
     if actions is None:
-        actions_qs = Action.objects.exclude(user=request.user)
+        # Without any subscriptions the feed falls back to everyone's activity,
+        # which is exactly where a staff account would show up.
+        actions_qs = Action.objects.filter(user__in=public_users()).exclude(
+            user=request.user
+        )
         following_ids = request.user.profile.following.values_list("user_id", flat=True)
         if following_ids:
             actions_qs = actions_qs.filter(user_id__in=following_ids)
@@ -70,9 +73,7 @@ def home(request):
         )
         cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     return render(
         request,
@@ -206,12 +207,16 @@ def my_profile(request):
     follower_profiles = profile.followers.all()
     following_profiles = profile.following.all()
 
-    followers = User.objects.filter(profile__in=follower_profiles).select_related(
-        "profile"
-    )[:4]
-    following = User.objects.filter(profile__in=following_profiles).select_related(
-        "profile"
-    )[:4]
+    followers = (
+        public_users()
+        .filter(profile__in=follower_profiles)
+        .select_related("profile")[:4]
+    )
+    following = (
+        public_users()
+        .filter(profile__in=following_profiles)
+        .select_related("profile")[:4]
+    )
 
     return render(
         request,
@@ -248,12 +253,13 @@ def user_list(request):
     users_only = request.GET.get("users_only")
     viewer_profile = request.user.profile
 
+    people = public_users()
     if filter_type == "following":
-        base_qs = User.objects.filter(profile__in=viewer_profile.following.all())
+        base_qs = people.filter(profile__in=viewer_profile.following.all())
     elif filter_type == "followers":
-        base_qs = User.objects.filter(profile__in=viewer_profile.followers.all())
+        base_qs = people.filter(profile__in=viewer_profile.followers.all())
     else:
-        base_qs = User.objects.filter(is_active=True).exclude(id=request.user.id)
+        base_qs = people.exclude(id=request.user.id)
 
     users_qs = (
         with_card_counters(base_qs)
@@ -291,9 +297,8 @@ def user_list(request):
 @login_required
 def user_detail(request, username):
     profile_user = get_object_or_404(
-        User.objects.select_related("profile"),
+        public_users().select_related("profile"),
         username=username,
-        is_active=True,
     )
 
     images = list(profile_user.images.order_by("-created"))
@@ -308,12 +313,16 @@ def user_detail(request, username):
 
     is_following = follower_profiles.filter(user=request.user).exists()
 
-    followers = User.objects.filter(profile__in=follower_profiles).select_related(
-        "profile"
-    )[:4]
-    following = User.objects.filter(profile__in=following_profiles).select_related(
-        "profile"
-    )[:4]
+    followers = (
+        public_users()
+        .filter(profile__in=follower_profiles)
+        .select_related("profile")[:4]
+    )
+    following = (
+        public_users()
+        .filter(profile__in=following_profiles)
+        .select_related("profile")[:4]
+    )
 
     return render(
         request,

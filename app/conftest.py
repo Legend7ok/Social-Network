@@ -81,6 +81,15 @@ def auth_client(user):
 
 
 @pytest.fixture
+def staff_user(db):
+    """A service account: it must stay out of every public listing."""
+    user_obj = get_user_model().objects.create_user(
+        username="root", email="root@example.com", password="testpass789", is_staff=True
+    )
+    return user_obj, "testpass789"
+
+
+@pytest.fixture
 def broken_redis(monkeypatch):
     """Every Redis call used by the view counters refuses to connect."""
     mock = MagicMock()

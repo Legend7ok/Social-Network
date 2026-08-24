@@ -220,6 +220,19 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staff_user):
+    liker, _ = second_user
+    staff, _ = staff_user
+    image.users_like.add(liker, staff)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    likers = list(response.context["users_like"])
+    assert liker in likers
+    assert staff not in likers
+
+
+@pytest.mark.django_db
 def test_image_detail_returns_404_for_unknown_id(client):
     response = client.get(reverse("images:detail", args=[9999, "no-such-slug"]))
     assert response.status_code == 404
