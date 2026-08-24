@@ -5,8 +5,11 @@ from django.core.exceptions import ValidationError
 from PIL import Image
 
 VALID_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
-# What Pillow reports for the extensions above; jpg and jpeg are one format.
-VALID_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+# The extension to store a file under once Pillow says what it really is.
+IMAGE_FORMAT_EXTENSIONS = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}
+VALID_IMAGE_FORMATS = set(IMAGE_FORMAT_EXTENSIONS)
+# image/jpg is not a registered type, but enough servers send it anyway.
+VALID_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
 
 
 def validate_image_content(file):

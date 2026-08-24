@@ -1,17 +1,23 @@
+import io
 import logging
-import os
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 import requests
 from celery import shared_task
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import F
 from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
 from apps.actions.models import Action
+from core.validators import (
+    IMAGE_FORMAT_EXTENSIONS,
+    VALID_IMAGE_CONTENT_TYPES,
+    validate_image_content,
+)
 
 from .models import Image
 from .services import (
@@ -24,6 +30,8 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 FLUSH_BATCH_SIZE = 500
+DOWNLOAD_TIMEOUT = 10
+MAX_REDIRECTS = 5
 
 
 @shared_task
@@ -104,6 +112,36 @@ def generate_image_thumbnails(image_id):
     get_thumbnail(image.image, thumbs["detail_main"])
 
 
+def _discard(image, reason):
+    logger.warning("download_image: discarding image %s, %s", image.id, reason)
+    image.delete()
+
+
+def _fetch(url):
+    """Walk the redirect chain by hand so its length is ours to bound."""
+    for _ in range(MAX_REDIRECTS):
+        response = requests.get(
+            url, timeout=DOWNLOAD_TIMEOUT, stream=True, allow_redirects=False
+        )
+        if not response.is_redirect:
+            return response
+        with response:
+            url = urljoin(url, response.headers["Location"])
+    raise requests.TooManyRedirects(url)
+
+
+def _read_body(response):
+    """Read the response in chunks, giving up as soon as it outgrows the limit."""
+    chunks = []
+    size = 0
+    for chunk in response.iter_content(chunk_size=8192):
+        size += len(chunk)
+        if size > settings.MAX_UPLOAD_SIZE:
+            return None
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @shared_task(
     autoretry_for=(requests.RequestException,),
     max_retries=3,
@@ -116,29 +154,44 @@ def download_image(image_id, url):
     except Image.DoesNotExist:
         logger.warning("download_image: image %s not found, skipping", image_id)
         return
-    response = requests.get(url, timeout=10, stream=True)
-    response.raise_for_status()
 
-    chunks = []
-    size = 0
-    for chunk in response.iter_content(chunk_size=8192):
-        size += len(chunk)
-        if size > settings.MAX_UPLOAD_SIZE:
-            response.close()
-            logger.warning(
-                "download_image: %s exceeds MAX_UPLOAD_SIZE, discarding image %s",
-                url,
-                image_id,
-            )
-            image.delete()
+    try:
+        response = _fetch(url)
+    except requests.TooManyRedirects:
+        # Retrying would only walk the same chain again.
+        _discard(image, "the link redirects in circles")
+        return
+
+    with response:
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "").split(";")[0].strip()
+        if content_type.lower() not in VALID_IMAGE_CONTENT_TYPES:
+            _discard(image, f"the server answered with {content_type or 'no type'}")
             return
-        chunks.append(chunk)
 
-    extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
+        declared_size = response.headers.get("Content-Length", "")
+        if declared_size.isdigit() and int(declared_size) > settings.MAX_UPLOAD_SIZE:
+            _discard(image, "the file is larger than the limit")
+            return
+
+        body = _read_body(response)
+
+    if body is None:
+        _discard(image, "the file is larger than the limit")
+        return
+
+    try:
+        image_format = validate_image_content(io.BytesIO(body))
+    except ValidationError:
+        # The headers can say anything; this is the first look at the bytes.
+        _discard(image, "the file is not an image we accept")
+        return
+
     # image.slug, not the raw title: a title without letters slugifies to an
     # empty string and would store a nameless ".jpg".
-    name = f"{image.slug}.{extension}"
-    image.image.save(name, ContentFile(b"".join(chunks)), save=False)
+    name = f"{image.slug}.{IMAGE_FORMAT_EXTENSIONS[image_format]}"
+    image.image.save(name, ContentFile(body), save=False)
 
     # Only the file column is written back. A full save() would push the copy
     # loaded before the download over an edit made meanwhile, and would insert
