@@ -5,6 +5,19 @@
 {% block content %}
 <div class="px-[16px] lg:px-[26px] py-[22px]">
 
+  {% if not images %}
+  <div class="text-center py-[88px] text-[#5E5C6A]">
+    <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
+    <p class="text-[17px]">
+      {% if mine %}You have not added any images yet{% else %}No images here yet{% endif %}
+    </p>
+    <a href="{% url 'images:upload' %}"
+       class="inline-block mt-[18px] px-[22px] py-[9px] bg-brand text-white text-[14px] rounded-lg hover:opacity-90 transition-opacity">
+      Upload an image
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Grid: 1 column on phones, 2 on tablets, 3 from xl up -->
   <div id="images-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-[12px] sm:gap-[18px]">
     {% include 'images/partials/image_cards.html' %}
@@ -17,6 +30,10 @@
       <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
     </div>
   </div>
+
+  {% if mine %}
+    {% include 'images/partials/confirm_delete.html' %}
+  {% endif %}
 
 </div>
 {% endblock %}

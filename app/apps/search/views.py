@@ -78,7 +78,7 @@ def search(request):
         results.object_list = list(results.object_list)
         views_map = get_images_views([image.id for image in results.object_list])
         for image in results.object_list:
-            image.total_views = views_map.get(image.id, 0)
+            image.total_views = views_map.get(image.id, image.total_views)
         context["images"] = results
         partial = "images/partials/image_cards.html"
 
