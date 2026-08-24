@@ -115,6 +115,17 @@ def generate_image_thumbnails(image_id):
     get_thumbnail(image.image, thumbs["detail_main"])
 
 
+def _still_waiting(image_id):
+    """The row while it has no file yet — the only state a download may write.
+
+    Every write below goes through this: a run that lost the race, or failed
+    after the file was already stored, must not touch a finished image. The
+    page reads the two columns as one state, and they only agree while nothing
+    reports a failure over a picture that is already there.
+    """
+    return Image.objects.filter(id=image_id).filter(Q(image="") | Q(image__isnull=True))
+
+
 def _fail(image, reason):
     """Record why the file never arrived, in words the author will read.
 
@@ -123,7 +134,7 @@ def _fail(image, reason):
     the edit or bring the row back.
     """
     logger.warning("download_image: image %s failed: %s", image.id, reason)
-    Image.objects.filter(id=image.id).update(download_error=reason)
+    _still_waiting(image.id).update(download_error=reason)
 
 
 def _fetch(url):
@@ -164,7 +175,7 @@ class DownloadTask(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         image_id = args[0] if args else kwargs.get("image_id")
         logger.error("download_image: giving up on image %s: %s", image_id, exc)
-        Image.objects.filter(id=image_id).update(download_error=GAVE_UP)
+        _still_waiting(image_id).update(download_error=GAVE_UP)
 
 
 @shared_task(
@@ -236,14 +247,7 @@ def download_image(image_id, url):
     # Only the file column is written back. A full save() would push the copy
     # loaded before the download over an edit made meanwhile, and would insert
     # the row again if the image was deleted while we were fetching it.
-    # Writing only while the column is still empty settles the race with a
-    # second run of the same task: the loser drops its file instead of
-    # replacing the winner's and leaving it behind in the bucket.
-    stored = (
-        Image.objects.filter(id=image_id)
-        .filter(Q(image="") | Q(image__isnull=True))
-        .update(image=image.image.name, download_error="")
-    )
+    stored = _still_waiting(image_id).update(image=image.image.name, download_error="")
     if not stored:
         logger.warning(
             "download_image: image %s is no longer waiting for this file, dropping it",

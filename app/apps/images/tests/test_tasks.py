@@ -317,6 +317,53 @@ def test_download_image_marks_an_endless_redirect_chain_as_failed(user):
 
 
 @pytest.mark.django_db
+def test_download_image_reports_no_failure_over_a_file_stored_meanwhile(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Overtaken", url="https://example.com/test.png"
+    )
+
+    def store_a_file_and_answer_with_a_page(*args, **kwargs):
+        # A retry finished while this run was still waiting on the wire
+        Image.objects.filter(id=image.id).update(image="images/winner.png")
+        return make_response(b"<html></html>", content_type="text/html")
+
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=store_a_file_and_answer_with_a_page,
+    ):
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image.name == "images/winner.png"
+    assert image.download_error == ""
+
+
+@pytest.mark.django_db
+def test_download_image_giving_up_leaves_a_stored_file_alone(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Late Failure", url="https://example.com/test.png"
+    )
+
+    # The file is already stored by the time the task falls over, which is what
+    # an unreachable broker does to the thumbnail dispatch on the last line.
+    with (
+        patch("apps.images.tasks.requests.get", return_value=make_response()),
+        patch(
+            "apps.images.tasks.generate_image_thumbnails.delay",
+            side_effect=RuntimeError("broker is down"),
+        ),
+    ):
+        result = download_image.apply(args=[image.id, image.url])
+
+    image.refresh_from_db()
+    assert result.failed()
+    assert image.image
+    assert image.download_error == ""
+
+
+@pytest.mark.django_db
 def test_download_image_clears_an_earlier_failure(user):
     user_obj, _ = user
     image = Image.objects.create(
