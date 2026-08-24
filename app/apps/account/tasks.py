@@ -4,6 +4,7 @@ from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
+from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
 from .models import Profile
@@ -34,6 +35,18 @@ def send_welcome_email(user_id):
             "send_welcome_email: failed to send email to user %s: %s", user_id, exc
         )
         raise
+
+
+@shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
+def delete_avatar_file(file_name):
+    """Drop an avatar that was replaced or removed, thumbnails included.
+
+    Stored names are never reused, so without this every change leaves the
+    previous picture in the bucket for good. Repeating the task is harmless,
+    which is what makes retrying it safe.
+    """
+    delete_thumbnails(file_name)
+    logger.info("delete_avatar_file: removed %s", file_name)
 
 
 @shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
