@@ -190,8 +190,11 @@ def edit(request):
             user_form.save()
             profile_form.save()
             messages.success(request, "Profile updated successfully")
-        else:
-            messages.error(request, "Error updating your profile")
+            # Answering a successful POST with a page means refreshing it asks
+            # the browser to send the form again; a redirect ends the request.
+            return redirect("my_profile")
+
+        messages.error(request, "Error updating your profile")
 
     else:
         user_form = UserEditForm(instance=request.user)

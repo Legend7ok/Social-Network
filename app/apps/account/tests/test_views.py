@@ -83,7 +83,8 @@ def test_edit_updates_profile(client, user):
 
     response = client.post(reverse("edit"), data=payload)
 
-    assert response.status_code == 200
+    assert response.status_code == 302
+    assert response["Location"] == reverse("my_profile")
 
     user_obj.refresh_from_db()
     user_obj.profile.refresh_from_db()
@@ -326,6 +327,25 @@ def test_edit_post_invalid_form_shows_error_message(client, user):
     assert response.status_code == 200
     msgs = [m.message for m in get_messages(response.wsgi_request)]
     assert any("Error" in m for m in msgs)
+
+
+@pytest.mark.django_db
+def test_edit_does_not_save_twice_on_a_refresh(client, user):
+    """A refresh after saving must not repeat the POST, so the save answers
+    with a redirect and the browser has nothing to send again."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("edit"),
+        {"first_name": "Alice", "last_name": "Smith", "email": user_obj.email},
+        follow=True,
+    )
+
+    assert response.redirect_chain == [(reverse("my_profile"), 302)]
+    assert [str(m) for m in response.context["messages"]] == [
+        "Profile updated successfully"
+    ]
 
 
 # ─── user_list ────────────────────────────────────────────────────────────────
