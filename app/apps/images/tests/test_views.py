@@ -119,6 +119,19 @@ def test_clean_url_rejects_invalid_extension():
     assert "url" in form.errors
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://example.com/photo.jpg",
+        "ftps://example.com/photo.jpg",
+    ],
+)
+def test_clean_url_rejects_schemes_the_worker_cannot_fetch(url):
+    form = ImageBookmarkForm(data={"title": "Test", "url": url, "description": ""})
+    form.is_valid()
+    assert "url" in form.errors
+
+
 # ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
 
 

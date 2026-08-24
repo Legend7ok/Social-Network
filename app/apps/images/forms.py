@@ -1,4 +1,5 @@
 from django import forms
+from django.core.validators import URLValidator
 from django.utils import timezone
 from urllib.parse import urlparse
 import os
@@ -8,12 +9,17 @@ from .models import Image
 
 
 class ImageBookmarkForm(forms.ModelForm):
+    # Django accepts ftp and ftps addresses as well, and the worker that picks
+    # the bookmark up speaks neither.
+    url = forms.URLField(
+        max_length=2000,
+        widget=forms.HiddenInput,
+        validators=[URLValidator(schemes=["http", "https"])],
+    )
+
     class Meta:
         model = Image
         fields = ["title", "url", "description"]
-        widgets = {
-            "url": forms.HiddenInput,
-        }
 
     def clean_url(self):
         url = self.cleaned_data["url"]
