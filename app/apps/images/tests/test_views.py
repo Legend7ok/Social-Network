@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
@@ -8,7 +7,7 @@ from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
 from apps.images.views import STATUS_POLL_LIMIT, STATUS_POLL_SLOWDOWN
 from apps.images.services import record_image_view
-from conftest import MINIMAL_PNG
+from conftest import MINIMAL_PNG, png_bytes
 
 
 # ─── Model Tests ─────────────────────────────────────────────────────────────
@@ -403,17 +402,23 @@ def test_image_upload_post_invalid_extension_shows_errors(client, user):
 
 
 @pytest.mark.django_db
-def test_image_upload_post_oversized_shows_errors(client, user):
+def test_image_upload_post_oversized_shows_errors(client, user, settings):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    big = b"\x89PNG" + b"x" * (settings.MAX_UPLOAD_SIZE + 1)
-    big_file = SimpleUploadedFile("big.png", big, content_type="image/png")
+    settings.MAX_UPLOAD_SIZE = 1024 * 1024
+    # A real image, so the size is what turns it away and not the content check
+    big_file = SimpleUploadedFile(
+        "big.png", png_bytes((600, 600), noise=True), content_type="image/png"
+    )
+    assert big_file.size > settings.MAX_UPLOAD_SIZE
+
     response = client.post(
         reverse("images:upload"),
         {"title": "Too Big", "description": "", "image": big_file},
     )
+
     assert response.status_code == 200
-    assert response.context["form"].errors
+    assert "too large" in str(response.context["form"].errors["image"]).lower()
     assert not Image.objects.filter(title="Too Big").exists()
 
 

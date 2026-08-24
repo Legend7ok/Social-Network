@@ -1,4 +1,5 @@
 import io
+import os
 from unittest.mock import MagicMock
 
 import fakeredis
@@ -19,16 +20,24 @@ from apps.images.models import Image
 from config import celery_app  # noqa: E402,F401
 
 
-def _png_bytes(size=(1, 1)):
+def png_bytes(size=(1, 1), noise=False):
     """Built by Pillow rather than pasted: a hand-written PNG with a broken
     checksum passes for a file everywhere except where it matters — the
-    validation that reads it."""
+    validation that reads it.
+
+    Noise makes the result incompressible, which is the only way to get a real
+    image whose weight is worth testing against a limit.
+    """
+    if noise:
+        image = PILImage.frombytes("RGB", size, os.urandom(size[0] * size[1] * 3))
+    else:
+        image = PILImage.new("RGB", size)
     buffer = io.BytesIO()
-    PILImage.new("RGB", size).save(buffer, format="PNG")
+    image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 
-MINIMAL_PNG = _png_bytes()
+MINIMAL_PNG = png_bytes()
 
 
 @pytest.fixture(autouse=True)

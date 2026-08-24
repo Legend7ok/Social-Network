@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
-from conftest import MINIMAL_PNG
+from conftest import MINIMAL_PNG, png_bytes
 from core.validators import validate_image_content, validate_image_upload
 
 
@@ -44,6 +44,17 @@ def test_validate_image_content_leaves_the_file_at_the_start():
 def test_validate_image_upload_accepts_a_real_image():
     file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
     validate_image_upload(file)
+
+
+def test_validate_image_upload_rejects_a_file_over_the_size_limit(settings):
+    settings.MAX_UPLOAD_SIZE = 1024 * 1024
+    file = SimpleUploadedFile(
+        "photo.png", png_bytes((600, 600), noise=True), content_type="image/png"
+    )
+    assert file.size > settings.MAX_UPLOAD_SIZE
+
+    with pytest.raises(ValidationError, match="too large"):
+        validate_image_upload(file)
 
 
 def test_validate_image_upload_rejects_a_renamed_file():

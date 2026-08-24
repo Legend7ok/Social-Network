@@ -27,11 +27,12 @@ class ImageBookmarkForm(forms.ModelForm):
         extension = os.path.splitext(path)[1].lstrip(".").lower()
 
         if not extension:
-            raise forms.ValidationError("URL must have a file extension")
+            raise forms.ValidationError("The link must end with a file extension.")
 
         if extension not in VALID_IMAGE_EXTENSIONS:
             raise forms.ValidationError(
-                "URL must end with one of {}".format(VALID_IMAGE_EXTENSIONS)
+                "The link must end with one of: %(exts)s.",
+                params={"exts": ", ".join(VALID_IMAGE_EXTENSIONS)},
             )
 
         return url

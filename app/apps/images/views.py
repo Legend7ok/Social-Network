@@ -169,7 +169,11 @@ def image_upload(request):
             return redirect(new_image.get_absolute_url())
     else:
         form = ImageUploadForm()
-    return render(request, "images/upload.html", {"form": form})
+    return render(
+        request,
+        "images/upload.html",
+        {"form": form, "max_upload_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024)},
+    )
 
 
 @login_required
