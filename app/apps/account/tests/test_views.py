@@ -399,6 +399,58 @@ def test_own_profile_by_username_shows_the_owner_view(client, user):
 
 
 @pytest.mark.django_db
+def test_profile_shows_one_page_of_images(client, user):
+    from apps.images.models import Image
+
+    user_obj, password = user
+    for number in range(13):
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {number}",
+            url=f"https://example.com/{number}.png",
+            total_likes=1,
+        )
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert len(response.context["images"]) == 12
+    # Both counters describe the whole profile, not the page on screen.
+    assert response.context["images_count"] == 13
+    assert response.context["total_likes"] == 13
+
+
+@pytest.mark.django_db
+def test_profile_next_page_returns_the_grid_partial(client, user):
+    from apps.images.models import Image
+
+    user_obj, password = user
+    for number in range(13):
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {number}",
+            url=f"https://example.com/{number}.png",
+        )
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"), {"images_only": 1, "page": 2})
+
+    assert len(response.context["images"]) == 1
+    assert b"<html" not in response.content
+
+
+@pytest.mark.django_db
+def test_profile_scroll_past_the_last_page_returns_nothing(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"), {"images_only": 1, "page": 5})
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+@pytest.mark.django_db
 def test_someone_elses_profile_shows_the_visitor_view(client, user, second_user):
     user_obj, password = user
     target, _ = second_user

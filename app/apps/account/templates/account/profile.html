@@ -61,7 +61,7 @@
            @click.outside="followersOpen = false; followingOpen = false">
 
         <div class="text-center">
-          <div class="text-[19px] font-medium text-white">{{ images|length }}</div>
+          <div class="text-[19px] font-medium text-white">{{ images_count }}</div>
           <div class="text-[12px] text-[#5E5C6A]">images</div>
         </div>
         <div class="w-px h-[31px] bg-white/[0.15]"></div>
@@ -191,31 +191,15 @@
 
   <!-- Image grid: 3 columns up to tablets, 4 from xl up -->
   <div class="grid grid-cols-3 xl:grid-cols-4 gap-[9px]">
-    {% for image in images %}
-    <a href="{{ image.get_absolute_url }}"
-       class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative group border border-white/[0.06] hover:border-brand/30 transition-colors">
-      {% if image.image %}
-        {% thumbnail image.image THUMBS.content_card crop="center" as th %}
-        <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" loading="lazy" />
-        {% endthumbnail %}
-      {% else %}
-        <i class="ti ti-photo text-[33px] text-[#5E5C6A]"></i>
-      {% endif %}
-      <div class="absolute inset-0 bg-surface-page/65 flex items-center justify-center gap-[13px] opacity-0 group-hover:opacity-100 transition-opacity">
-        <span class="text-white text-[13px] flex items-center gap-[7px]">
-          <i class="ti ti-heart"></i> {{ image.total_likes }}
-        </span>
-        <span class="text-white text-[13px] flex items-center gap-[7px]">
-          <i class="ti ti-eye"></i> {{ image.total_views }}
-        </span>
-      </div>
-    </a>
-    {% empty %}
-      <div class="col-span-full text-center py-[70px] text-[#5E5C6A]">
-        <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
-        <p class="text-[15px]">No images yet</p>
-      </div>
-    {% endfor %}
+    {% include 'account/partials/profile_images.html' %}
+  </div>
+
+  <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
   </div>
 
 </div>

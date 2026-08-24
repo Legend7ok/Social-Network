@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
@@ -34,6 +35,9 @@ from apps.actions.utils import create_action
 from apps.actions.models import Action
 
 logger = logging.getLogger(__name__)
+
+# Fits the profile grid exactly: three columns up to tablets, four from xl up.
+PROFILE_IMAGES_PER_PAGE = 12
 
 
 def lockout_view(request, credentials, *args, **kwargs):
@@ -272,13 +276,33 @@ def profile(request, username=None):
             public_users().select_related("profile"), username=username
         )
     is_owner = profile_user == request.user
+    images_only = request.GET.get("images_only")
 
-    images = list(profile_user.images.order_by("-created"))
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, 0)
+    paginator = Paginator(
+        profile_user.images.order_by("-created"), PROFILE_IMAGES_PER_PAGE
+    )
+    try:
+        images = paginator.page(request.GET.get("page"))
+    except PageNotAnInteger:
+        images = paginator.page(1)
+    except EmptyPage:
+        if images_only:
+            return HttpResponse("")
+        images = paginator.page(paginator.num_pages)
 
-    total_likes = sum(img.total_likes for img in images)
+    # Force evaluation so total_views attrs survive template iteration
+    images.object_list = list(images.object_list)
+    views_map = get_images_views([img.id for img in images.object_list])
+    for img in images.object_list:
+        img.total_views = views_map.get(img.id, img.total_views)
+
+    if images_only:
+        return render(
+            request, "account/partials/profile_images.html", {"images": images}
+        )
+
+    # Counted over everything the person has, not over the page being shown.
+    total_likes = profile_user.images.aggregate(likes=Sum("total_likes"))["likes"] or 0
 
     follower_profiles = profile_user.profile.followers.all()
     following_profiles = profile_user.profile.following.all()
@@ -303,6 +327,7 @@ def profile(request, username=None):
             "profile_user": profile_user,
             "is_owner": is_owner,
             "images": images,
+            "images_count": paginator.count,
             "total_likes": total_likes,
             "is_following": is_following,
             "followers": followers,
