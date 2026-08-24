@@ -16,5 +16,6 @@ urlpatterns = [
     path("", views.image_list, name="list"),
     path("ranking/", views.image_ranking, name="ranking"),
     path("status/<int:id>/", views.image_status, name="status"),
+    path("retry/<int:id>/", views.image_retry_download, name="retry"),
     path("upload/", views.image_upload, name="upload"),
 ]

@@ -205,6 +205,22 @@ def image_delete(request, id):
     return redirect(f"{reverse('images:list')}?mine=1")
 
 
+@login_required
+@require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_retry_download(request, id):
+    image = get_object_or_404(Image, id=id, user=request.user)
+
+    if not image.image:
+        # Clearing the reason is what puts the page back into waiting; the
+        # column is written on its own so a stale copy cannot undo an edit.
+        Image.objects.filter(id=image.id).update(download_error="")
+        transaction.on_commit(lambda: download_image.delay(image.id, image.url))
+        messages.success(request, "Fetching the image again")
+
+    return redirect(image.get_absolute_url())
+
+
 def image_status(request, id):
     image = get_object_or_404(Image, id=id)
     attempt = request.GET.get("attempt", "")

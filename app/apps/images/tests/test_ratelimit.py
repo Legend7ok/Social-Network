@@ -19,6 +19,21 @@ def test_image_create_rate_limit_returns_429(client, user):
 
 
 @pytest.mark.django_db
+def test_image_retry_rate_limit_returns_429(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    url = reverse("images:retry", args=[9999])
+
+    for _ in range(30):
+        response = client.post(url)
+        assert response.status_code == 404
+
+    response = client.post(url)
+    assert response.status_code == 429
+
+
+@pytest.mark.django_db
 def test_image_delete_rate_limit_returns_429(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)

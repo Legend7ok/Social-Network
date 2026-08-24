@@ -741,6 +741,99 @@ def test_image_status_slows_down_and_then_gives_up_on_asking(client, user):
     assert b"Reload the page" in last.content
 
 
+# ─── View Tests: image_retry_download ────────────────────────────────────────
+
+
+@pytest.fixture
+def failed_image(user):
+    user_obj, _ = user
+    return Image.objects.create(
+        user=user_obj,
+        title="Failed Image",
+        url="https://example.com/failed.png",
+        download_error="The link did not answer with an image.",
+    )
+
+
+@pytest.mark.django_db
+def test_image_retry_redirects_anonymous_user(client, failed_image):
+    response = client.post(reverse("images:retry", args=[failed_image.id]))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_retry_rejects_a_get(client, user, failed_image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:retry", args=[failed_image.id]))
+
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_image_retry_is_404_for_someone_else(client, second_user, failed_image):
+    other, password = second_user
+    client.login(username=other.username, password=password)
+
+    response = client.post(reverse("images:retry", args=[failed_image.id]))
+
+    assert response.status_code == 404
+    failed_image.refresh_from_db()
+    assert failed_image.download_error
+
+
+@pytest.mark.django_db
+def test_image_retry_clears_the_reason_and_asks_again(
+    client, user, failed_image, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(reverse("images:retry", args=[failed_image.id]))
+
+    failed_image.refresh_from_db()
+    assert response.status_code == 302
+    assert failed_image.download_error == ""
+    mock_delay.assert_called_once_with(failed_image.id, failed_image.url)
+
+
+@pytest.mark.django_db
+def test_image_status_offers_the_retry_to_the_author_only(
+    client, user, second_user, failed_image
+):
+    status_url = reverse("images:status", args=[failed_image.id])
+    retry_url = reverse("images:retry", args=[failed_image.id]).encode()
+
+    assert retry_url not in client.get(status_url).content
+
+    other, password = second_user
+    client.login(username=other.username, password=password)
+    assert retry_url not in client.get(status_url).content
+    client.logout()
+
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    assert retry_url in client.get(status_url).content
+
+
+@pytest.mark.django_db
+def test_image_retry_leaves_a_downloaded_image_alone(
+    client, user, image, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            client.post(reverse("images:retry", args=[image.id]))
+
+    mock_delay.assert_not_called()
+
+
 # ─── View Tests: image_list ──────────────────────────────────────────────────
 
 

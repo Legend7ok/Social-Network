@@ -10,6 +10,16 @@
   <div class="flex flex-col items-center gap-[13px] px-[26px] text-center">
     <i class="ti ti-photo-off text-[31px] text-[#5E5C6A]"></i>
     <span class="text-[14px] text-[#9896A4]">{{ image.download_error }}</span>
+    {% if request.user == image.user %}
+    <form method="post" action="{% url 'images:retry' image.id %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl bg-brand text-white text-[14px] font-medium hover:opacity-90 transition-opacity cursor-pointer">
+        <i class="ti ti-refresh text-[16px]"></i>
+        Try again
+      </button>
+    </form>
+    {% endif %}
   </div>
 </div>
 {% else %}
