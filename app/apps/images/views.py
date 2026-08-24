@@ -13,9 +13,9 @@ from django_ratelimit.decorators import ratelimit
 from .forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from .models import Image
 from .services import (
+    apply_live_views,
     record_image_view,
     get_image_views,
-    get_images_views,
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
@@ -29,13 +29,6 @@ RANKING_SORTS = {
     "views": "-total_views",
     "likes": "-total_likes",
 }
-
-
-def _show_live_views(images):
-    """Overlay the counts still buffered in Redis on top of the stored ones."""
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, img.total_views)
 
 
 def bookmarklet_launcher(request):
@@ -125,7 +118,7 @@ def image_list(request):
 
     # Force evaluation so total_views attrs survive template iteration
     images.object_list = list(images.object_list)
-    _show_live_views(images.object_list)
+    apply_live_views(images.object_list)
 
     following_users = sidebar_following(request.user)
 
@@ -246,14 +239,14 @@ def image_ranking(request):
     }
 
     if ranking_only:
-        _show_live_views(ranking_list)
+        apply_live_views(ranking_list)
         return render(request, "images/partials/ranking_rows.html", context)
 
     top3 = list(ranked[:podium_size]) if podium_size else []
     for rank, img in enumerate(top3, start=1):
         img.rank = rank
     # Both halves of the page in one Redis round trip
-    _show_live_views(ranking_list + top3)
+    apply_live_views(ranking_list + top3)
 
     following_users = sidebar_following(request.user)
 

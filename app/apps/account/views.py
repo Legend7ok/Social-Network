@@ -18,7 +18,7 @@ from django.views.generic import FormView
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
-from apps.images.services import get_images_views
+from apps.images.services import apply_live_views
 
 from .cache import feed_cache_key
 from .selectors import (
@@ -299,9 +299,7 @@ def profile(request, username=None):
 
     # Force evaluation so total_views attrs survive template iteration
     images.object_list = list(images.object_list)
-    views_map = get_images_views([img.id for img in images.object_list])
-    for img in images.object_list:
-        img.total_views = views_map.get(img.id, img.total_views)
+    apply_live_views(images.object_list)
 
     if images_only:
         return render(
