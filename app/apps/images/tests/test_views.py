@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
+from apps.images.views import STATUS_POLL_LIMIT, STATUS_POLL_SLOWDOWN
 from apps.images.services import record_image_view
 from conftest import MINIMAL_PNG
 
@@ -692,6 +693,52 @@ def test_image_status_pending_renders_skeleton_with_polling(client, user):
     response = client.get(reverse("images:status", args=[pending.id]))
     assert b"hx-trigger" in response.content
     assert b"<img" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_status_failed_shows_the_reason_and_stops_polling(client, user):
+    user_obj, _ = user
+    failed = Image.objects.create(
+        user=user_obj,
+        title="Failed Image",
+        url="https://example.com/failed.jpg",
+        download_error="The link did not answer with an image.",
+    )
+
+    response = client.get(reverse("images:status", args=[failed.id]))
+
+    assert b"The link did not answer with an image." in response.content
+    assert b"hx-trigger" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_status_counts_the_attempts_it_asks_for(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj, title="Pending Image", url="https://example.com/pending.jpg"
+    )
+    url = reverse("images:status", args=[pending.id])
+
+    assert b"attempt=1" in client.get(url).content
+    assert b"attempt=8" in client.get(url, {"attempt": "7"}).content
+    # A hand-written value cannot break the count
+    assert b"attempt=1" in client.get(url, {"attempt": "soon"}).content
+
+
+@pytest.mark.django_db
+def test_image_status_slows_down_and_then_gives_up_on_asking(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj, title="Pending Image", url="https://example.com/pending.jpg"
+    )
+    url = reverse("images:status", args=[pending.id])
+
+    assert b"every 2s" in client.get(url, {"attempt": STATUS_POLL_SLOWDOWN - 1}).content
+    assert b"every 5s" in client.get(url, {"attempt": STATUS_POLL_SLOWDOWN}).content
+
+    last = client.get(url, {"attempt": STATUS_POLL_LIMIT})
+    assert b"hx-trigger" not in last.content
+    assert b"Reload the page" in last.content
 
 
 # ─── View Tests: image_list ──────────────────────────────────────────────────

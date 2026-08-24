@@ -12,6 +12,12 @@ from rest_framework.test import APIClient
 
 from apps.images.models import Image
 
+# Binds the shared tasks to the project's Celery app, which otherwise happens
+# only once something imports the URLs. Without it a .delay() inside a task
+# reaches for a broker instead of running inline, and whether that bites
+# depends on the order tests happen to run in.
+from config import celery_app  # noqa: E402,F401
+
 
 def _png_bytes(size=(1, 1)):
     """Built by Pillow rather than pasted: a hand-written PNG with a broken

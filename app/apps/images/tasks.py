@@ -3,7 +3,7 @@ import logging
 from urllib.parse import urljoin
 
 import requests
-from celery import shared_task
+from celery import Task, shared_task
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -34,6 +34,7 @@ FLUSH_BATCH_SIZE = 500
 DOWNLOAD_TIMEOUT = 10
 MAX_REDIRECTS = 5
 TOO_LARGE = "The file behind the link is larger than we accept."
+GAVE_UP = "The image could not be downloaded."
 
 
 @shared_task
@@ -152,10 +153,26 @@ def _read_body(response):
     return b"".join(chunks)
 
 
+class DownloadTask(Task):
+    """Records a failure when the task gives up for good.
+
+    Everything the task itself can recognise is written by _fail; this covers
+    the rest — the site that never answers, a bug, a task killed on time — so
+    that a page waiting for the file always has something to show.
+    """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        image_id = args[0] if args else kwargs.get("image_id")
+        logger.error("download_image: giving up on image %s: %s", image_id, exc)
+        Image.objects.filter(id=image_id).update(download_error=GAVE_UP)
+
+
 @shared_task(
+    base=DownloadTask,
     autoretry_for=(requests.RequestException,),
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=120,
     time_limit=300,
 )
 def download_image(image_id, url):

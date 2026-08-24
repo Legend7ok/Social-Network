@@ -15,6 +15,7 @@ from apps.images.services import (
     record_image_view,
 )
 from apps.images.tasks import (
+    GAVE_UP,
     MAX_REDIRECTS,
     TOO_LARGE,
     delete_image_artifacts,
@@ -392,6 +393,26 @@ def test_download_image_refuses_a_link_that_points_inside_the_network(
     image.refresh_from_db()
     assert image.download_error
     mock_get.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_records_a_failure_when_it_gives_up(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Unreachable",
+        url="https://example.com/gone.png",
+    )
+
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=requests.RequestException("connection refused"),
+    ):
+        result = download_image.apply(args=[image.id, image.url])
+
+    image.refresh_from_db()
+    assert result.failed()
+    assert image.download_error == GAVE_UP
 
 
 @pytest.mark.django_db
