@@ -421,6 +421,74 @@ def test_profile_shows_one_page_of_images(client, user):
 
 
 @pytest.mark.django_db
+def test_profile_grid_offers_owner_controls_on_your_own_page(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert reverse("images:edit", args=[image.id]).encode() in response.content
+    assert reverse("images:delete", args=[image.id]).encode() in response.content
+
+
+@pytest.mark.django_db
+def test_profile_grid_hides_owner_controls_from_visitors(
+    client, second_user, user, image
+):
+    visitor, password = second_user
+    owner, _ = user
+    client.login(username=visitor.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[owner.username]))
+
+    assert reverse("images:edit", args=[image.id]).encode() not in response.content
+    assert reverse("images:delete", args=[image.id]).encode() not in response.content
+
+
+@pytest.mark.django_db
+def test_profile_next_page_keeps_owner_controls(client, user):
+    """The scrolled-in tiles are rendered by a second request, so ownership has
+    to travel with it."""
+    from apps.images.models import Image
+
+    user_obj, password = user
+    for number in range(13):
+        Image.objects.create(
+            user=user_obj,
+            title=f"Image {number}",
+            url=f"https://example.com/{number}.png",
+        )
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"), {"images_only": 1, "page": 2})
+
+    last = Image.objects.order_by("created").first()
+    assert reverse("images:delete", args=[last.id]).encode() in response.content
+
+
+@pytest.mark.django_db
+def test_profile_never_prints_a_template_comment(client, user, image):
+    # Django only strips single-line {# #}; a multi-line one reaches the reader
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert b"{#" not in response.content
+
+
+@pytest.mark.django_db
+def test_failed_login_never_prints_a_template_comment(client, user):
+    user_obj, _ = user
+
+    response = client.post(
+        reverse("login"), {"username": user_obj.username, "password": "wrong"}
+    )
+
+    assert b"{#" not in response.content
+
+
+@pytest.mark.django_db
 def test_profile_next_page_returns_the_grid_partial(client, user):
     from apps.images.models import Image
 

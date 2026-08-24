@@ -298,7 +298,9 @@ def profile(request, username=None):
 
     if images_only:
         return render(
-            request, "account/partials/profile_images.html", {"images": images}
+            request,
+            "account/partials/profile_images.html",
+            {"images": images, "is_owner": is_owner},
         )
 
     # Counted over everything the person has, not over the page being shown.
