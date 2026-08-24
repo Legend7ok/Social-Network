@@ -1,6 +1,8 @@
+import socket
+from unittest.mock import MagicMock, patch
+
 import pytest
 import requests
-from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 
@@ -303,6 +305,30 @@ def test_download_image_discards_an_endless_redirect_chain(user):
 
     assert not Image.objects.filter(id=image.id).exists()
     assert mock_get.call_count == MAX_REDIRECTS
+
+
+@pytest.mark.django_db
+def test_download_image_refuses_a_link_that_points_inside_the_network(
+    user, settings, monkeypatch
+):
+    settings.BLOCK_PRIVATE_DOWNLOAD_TARGETS = True
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [(socket.AF_INET, None, None, "", ("10.0.0.7", 0))],
+    )
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Internal Image",
+        url="https://internal.example.com/secret.png",
+    )
+
+    with patch("apps.images.tasks.requests.get") as mock_get:
+        download_image(image.id, image.url)
+
+    assert not Image.objects.filter(id=image.id).exists()
+    mock_get.assert_not_called()
 
 
 @pytest.mark.django_db

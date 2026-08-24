@@ -13,6 +13,7 @@ from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
 from apps.actions.models import Action
+from core.url_safety import validate_public_url
 from core.validators import (
     IMAGE_FORMAT_EXTENSIONS,
     VALID_IMAGE_CONTENT_TYPES,
@@ -118,8 +119,10 @@ def _discard(image, reason):
 
 
 def _fetch(url):
-    """Walk the redirect chain by hand so its length is ours to bound."""
+    """Walk the redirect chain by hand so its length is ours to bound and every
+    hop is checked before we connect: a public link may point anywhere next."""
     for _ in range(MAX_REDIRECTS):
+        validate_public_url(url)
         response = requests.get(
             url, timeout=DOWNLOAD_TIMEOUT, stream=True, allow_redirects=False
         )
@@ -160,6 +163,9 @@ def download_image(image_id, url):
     except requests.TooManyRedirects:
         # Retrying would only walk the same chain again.
         _discard(image, "the link redirects in circles")
+        return
+    except ValidationError as error:
+        _discard(image, error.messages[0])
         return
 
     with response:
