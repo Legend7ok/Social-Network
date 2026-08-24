@@ -673,12 +673,11 @@ def test_image_list_redirects_anonymous_user(client):
 
 
 @pytest.mark.django_db
-def test_image_list_returns_200_with_section_context(client, user):
+def test_image_list_returns_200(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"))
     assert response.status_code == 200
-    assert response.context["section"] == "images"
 
 
 @pytest.mark.django_db
@@ -840,12 +839,11 @@ def test_image_ranking_redirects_anonymous_user(client):
 
 
 @pytest.mark.django_db
-def test_image_ranking_returns_200_with_section_context(client, user):
+def test_image_ranking_returns_200(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:ranking"))
     assert response.status_code == 200
-    assert response.context["section"] == "images"
 
 
 @pytest.mark.django_db

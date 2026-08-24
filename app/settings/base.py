@@ -22,9 +22,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "social_django",
     "apps.images",
     "apps.actions",
+    "apps.search",
     "sorl.thumbnail",
     "axes",
     "rest_framework",
@@ -188,6 +190,12 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 HOME_CACHE_TTL = 60 * 3
+
+SEARCH_MIN_QUERY_LENGTH = 2
+SEARCH_MAX_QUERY_LENGTH = 100
+SEARCH_IMAGES_PER_PAGE = 6
+SEARCH_PEOPLE_PER_PAGE = 10
+SEARCH_RATE = "50/m"
 
 THUMBNAIL_KVSTORE = "sorl.thumbnail.kvstores.cached_db_kvstore.KVStore"
 THUMBNAIL_CACHE = "default"

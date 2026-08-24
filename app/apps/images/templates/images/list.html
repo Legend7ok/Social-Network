@@ -45,24 +45,5 @@
 
 
 {% block scripts %}
-<script>
-  const _cardObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        _cardObserver.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  function _observeCards() {
-    document.querySelectorAll('.img-card:not(.visible)').forEach((card, i) => {
-      card.style.transitionDelay = `${i * 60}ms`;
-      _cardObserver.observe(card);
-    });
-  }
-
-  _observeCards();
-  document.addEventListener('htmx:afterSwap', _observeCards);
-</script>
+  {% include 'partials/card_reveal.html' %}
 {% endblock %}

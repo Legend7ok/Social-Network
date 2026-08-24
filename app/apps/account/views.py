@@ -7,8 +7,6 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Count, IntegerField, Subquery, OuterRef, Sum
-from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
@@ -20,9 +18,9 @@ from django.views.generic import FormView
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
-from apps.images.models import Image
 from apps.images.services import get_images_views
 
+from .selectors import with_card_counters
 from .forms import (
     EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
@@ -80,7 +78,6 @@ def home(request):
         request,
         "account/home.html",
         {
-            "section": "home",
             "actions": actions,
             "following_users": following_users,
         },
@@ -220,7 +217,6 @@ def my_profile(request):
         request,
         "account/my_profile.html",
         {
-            "section": "people",
             "profile": profile,
             "images": images,
             "total_likes": total_likes,
@@ -259,20 +255,8 @@ def user_list(request):
     else:
         base_qs = User.objects.filter(is_active=True).exclude(id=request.user.id)
 
-    image_likes = (
-        Image.objects.filter(user=OuterRef("pk"))
-        .values("user")
-        .annotate(s=Sum("total_likes"))
-        .values("s")
-    )
-
     users_qs = (
-        base_qs.select_related("profile")
-        .annotate(
-            images_count=Count("images", distinct=True),
-            followers_count=Count("profile__followers", distinct=True),
-            total_likes=Coalesce(Subquery(image_likes, output_field=IntegerField()), 0),
-        )
+        with_card_counters(base_qs)
         # Most accounts share the same empty name now that sign-up does not ask
         # for one, and equal keys leave the order to the database — pages would
         # repeat one person and skip another. The id breaks every tie.
@@ -293,7 +277,6 @@ def user_list(request):
     following_ids = set(viewer_profile.following.values_list("user_id", flat=True))
 
     context = {
-        "section": "people",
         "users": users,
         "filter": filter_type,
         "following_ids": following_ids,
@@ -336,7 +319,6 @@ def user_detail(request, username):
         request,
         "account/users/detail.html",
         {
-            "section": "people",
             "user": profile_user,
             "images": images,
             "total_likes": total_likes,

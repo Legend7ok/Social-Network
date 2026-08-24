@@ -1,7 +1,9 @@
-from django.db import models
 from django.conf import settings
-from django.utils.text import slugify
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector, SearchVectorField
+from django.db import models
 from django.urls import reverse
+from django.utils.text import slugify
 
 
 class Image(models.Model):
@@ -24,12 +26,21 @@ class Image(models.Model):
     # Views are counted in Redis and flushed here periodically; this column is
     # the durable source of truth and what the ranking page sorts by.
     total_views = models.PositiveIntegerField(default=0)
+    # A generated column keeps the vector in sync even when rows are written
+    # outside the model (bulk updates, data migrations, admin actions).
+    search_vector = models.GeneratedField(
+        expression=SearchVector("title", weight="A", config="english")
+        + SearchVector("description", weight="B", config="english"),
+        output_field=SearchVectorField(),
+        db_persist=True,
+    )
 
     class Meta:
         indexes = [
             models.Index(fields=["-created"]),
             models.Index(fields=["-total_likes"]),
             models.Index(fields=["-total_views"]),
+            GinIndex(fields=["search_vector"], name="image_search_vector_gin"),
         ]
         ordering = ["-created"]
 

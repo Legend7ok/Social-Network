@@ -60,7 +60,7 @@ def image_create(request):
     else:
         form = ImageBookmarkForm(data=request.GET)
 
-    return render(request, "images/create.html", {"section": "images", "form": form})
+    return render(request, "images/create.html", {"form": form})
 
 
 def image_detail(request, id, slug):
@@ -99,7 +99,6 @@ def image_detail(request, id, slug):
         request,
         "images/detail.html",
         {
-            "section": "images",
             "image": image,
             "total_views": total_views,
             "users_like": users_like,
@@ -138,7 +137,6 @@ def image_list(request):
     ).select_related("profile")[:8]
 
     context = {
-        "section": "images",
         "images": images,
         "following_users": following_users,
         "mine": mine,
@@ -165,7 +163,7 @@ def image_upload(request):
             return redirect(new_image.get_absolute_url())
     else:
         form = ImageUploadForm()
-    return render(request, "images/upload.html", {"section": "images", "form": form})
+    return render(request, "images/upload.html", {"form": form})
 
 
 @login_required
@@ -185,7 +183,7 @@ def image_edit(request, id):
     return render(
         request,
         "images/edit.html",
-        {"section": "images", "form": form, "image": image},
+        {"form": form, "image": image},
     )
 
 
@@ -240,7 +238,6 @@ def image_ranking(request):
         img.rank = first_rank + offset
 
     context = {
-        "section": "images",
         "sort": sort,
         "ranking_list": ranking_list,
         "has_next": page.has_next(),
