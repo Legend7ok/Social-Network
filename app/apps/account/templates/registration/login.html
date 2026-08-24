@@ -34,8 +34,8 @@
 
     {% if login_form.errors %}
       <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
-        {# One message whatever went wrong, so the page never reveals which
-           addresses have an account here. #}
+        {% comment %}One message whatever went wrong, so the page never reveals
+        which addresses have an account here.{% endcomment %}
         Your username and password didn&#39;t match.
       </p>
     {% endif %}
