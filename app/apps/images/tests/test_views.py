@@ -175,6 +175,31 @@ def test_image_create_post_valid_creates_image_and_redirects(client, user):
 
 
 @pytest.mark.django_db
+def test_image_create_dispatches_the_download_after_commit(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=False) as callbacks:
+            client.post(
+                reverse("images:create"),
+                {
+                    "title": "Deferred",
+                    "url": "https://example.com/photo.jpg",
+                    "description": "",
+                },
+            )
+        mock_delay.assert_not_called()
+        assert len(callbacks) == 1
+        callbacks[0]()
+
+    new_image = Image.objects.get(title="Deferred", user=user_obj)
+    mock_delay.assert_called_once_with(new_image.id, new_image.url)
+
+
+@pytest.mark.django_db
 def test_image_create_post_invalid_shows_form_errors(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
