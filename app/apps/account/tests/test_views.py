@@ -467,6 +467,41 @@ def test_profile_next_page_keeps_owner_controls(client, user):
 
 
 @pytest.mark.django_db
+def test_profile_counters_cover_the_whole_profile(client, user, second_user, image):
+    from apps.account.models import Contact
+    from apps.images.models import Image
+
+    owner, password = user
+    other, _ = second_user
+    Image.objects.create(
+        user=owner, title="Second", url="https://example.com/2.png", total_likes=4
+    )
+    Contact.objects.create(user_from=other.profile, user_to=owner.profile)
+    Contact.objects.create(user_from=owner.profile, user_to=other.profile)
+    client.login(username=owner.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert response.context["images_count"] == 2
+    assert response.context["total_likes"] == 4
+    assert response.context["follower_count"] == 1
+    assert response.context["following_count"] == 1
+
+
+@pytest.mark.django_db
+def test_profile_counters_are_zero_for_an_empty_profile(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert response.context["images_count"] == 0
+    assert response.context["total_likes"] == 0
+    assert response.context["follower_count"] == 0
+    assert response.context["following_count"] == 0
+
+
+@pytest.mark.django_db
 def test_profile_never_prints_a_template_comment(client, user, image):
     # Django only strips single-line {# #}; a multi-line one reaches the reader
     user_obj, password = user

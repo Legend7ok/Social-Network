@@ -2,12 +2,11 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login as auth_login, views as auth_views
+from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
@@ -22,7 +21,12 @@ from django_ratelimit.decorators import ratelimit
 from apps.images.services import get_images_views
 
 from .cache import feed_cache_key
-from .selectors import public_users, sidebar_following, with_card_counters
+from .selectors import (
+    public_users,
+    sidebar_following,
+    with_card_counters,
+    with_profile_counters,
+)
 from .forms import (
     EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
@@ -33,6 +37,8 @@ from .forms import (
 from .tasks import send_welcome_email
 from apps.actions.utils import create_action
 from apps.actions.models import Action
+
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -270,11 +276,12 @@ def profile(request, username=None):
     signed-in person and shadowing it would hand templates the wrong human.
     """
     if username is None:
-        profile_user = request.user
+        people = User.objects.filter(pk=request.user.pk)
     else:
-        profile_user = get_object_or_404(
-            public_users().select_related("profile"), username=username
-        )
+        people = public_users().filter(username=username)
+    profile_user = get_object_or_404(
+        with_profile_counters(people, request.user).select_related("profile")
+    )
     is_owner = profile_user == request.user
     images_only = request.GET.get("images_only")
 
@@ -303,22 +310,14 @@ def profile(request, username=None):
             {"images": images, "is_owner": is_owner},
         )
 
-    # Counted over everything the person has, not over the page being shown.
-    total_likes = profile_user.images.aggregate(likes=Sum("total_likes"))["likes"] or 0
-
-    follower_profiles = profile_user.profile.followers.all()
-    following_profiles = profile_user.profile.following.all()
-
-    is_following = not is_owner and follower_profiles.filter(user=request.user).exists()
-
     followers = (
         public_users()
-        .filter(profile__in=follower_profiles)
+        .filter(profile__in=profile_user.profile.followers.all())
         .select_related("profile")[:4]
     )
     following = (
         public_users()
-        .filter(profile__in=following_profiles)
+        .filter(profile__in=profile_user.profile.following.all())
         .select_related("profile")[:4]
     )
 
@@ -329,12 +328,14 @@ def profile(request, username=None):
             "profile_user": profile_user,
             "is_owner": is_owner,
             "images": images,
-            "images_count": paginator.count,
-            "total_likes": total_likes,
-            "is_following": is_following,
+            # All four came with the person, counted over everything they have
+            # rather than over the page on screen.
+            "images_count": profile_user.images_count,
+            "total_likes": profile_user.total_likes,
+            "is_following": profile_user.followed_by_viewer,
             "followers": followers,
             "following": following,
-            "follower_count": follower_profiles.count(),
-            "following_count": following_profiles.count(),
+            "follower_count": profile_user.followers_count,
+            "following_count": profile_user.following_count,
         },
     )
