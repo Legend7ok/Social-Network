@@ -308,6 +308,41 @@ def test_download_image_discards_an_endless_redirect_chain(user):
 
 
 @pytest.mark.django_db
+def test_download_image_skips_an_image_that_already_has_a_file(image):
+    stored_name = image.image.name
+
+    with patch("apps.images.tasks.requests.get") as mock_get:
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    mock_get.assert_not_called()
+    assert image.image.name == stored_name
+
+
+@pytest.mark.django_db
+def test_download_image_drops_its_file_when_another_run_got_there_first(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Contested", url="https://example.com/test.png"
+    )
+
+    def store_another_file_and_respond(*args, **kwargs):
+        # A second delivery of the same task finishes while this one downloads
+        Image.objects.filter(id=image.id).update(image="images/winner.png")
+        return make_response()
+
+    with patch(
+        "apps.images.tasks.requests.get", side_effect=store_another_file_and_respond
+    ):
+        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image.name == "images/winner.png"
+    mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_download_image_refuses_a_link_that_points_inside_the_network(
     user, settings, monkeypatch
 ):

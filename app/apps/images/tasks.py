@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db.models import F
+from django.db.models import F, Q
 from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
@@ -158,6 +158,13 @@ def download_image(image_id, url):
         logger.warning("download_image: image %s not found, skipping", image_id)
         return
 
+    # The queue promises delivery at least once, so the same bookmark can be
+    # handed out twice; downloading again would leave the first file orphaned
+    # in the bucket, because stored names are never reused.
+    if image.image:
+        logger.info("download_image: image %s already has a file, skipping", image_id)
+        return
+
     try:
         response = _fetch(url)
     except requests.TooManyRedirects:
@@ -202,10 +209,17 @@ def download_image(image_id, url):
     # Only the file column is written back. A full save() would push the copy
     # loaded before the download over an edit made meanwhile, and would insert
     # the row again if the image was deleted while we were fetching it.
-    stored = Image.objects.filter(id=image_id).update(image=image.image.name)
+    # Writing only while the column is still empty settles the race with a
+    # second run of the same task: the loser drops its file instead of
+    # replacing the winner's and leaving it behind in the bucket.
+    stored = (
+        Image.objects.filter(id=image_id)
+        .filter(Q(image="") | Q(image__isnull=True))
+        .update(image=image.image.name)
+    )
     if not stored:
         logger.warning(
-            "download_image: image %s vanished during download, dropping file",
+            "download_image: image %s is no longer waiting for this file, dropping it",
             image_id,
         )
         image.image.delete(save=False)
