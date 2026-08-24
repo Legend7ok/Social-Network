@@ -195,45 +195,6 @@ def edit(request):
 
 
 @login_required
-def my_profile(request):
-    profile = request.user.profile
-    images = list(request.user.images.order_by("-created"))
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, 0)
-
-    total_likes = sum(img.total_likes for img in images)
-
-    follower_profiles = profile.followers.all()
-    following_profiles = profile.following.all()
-
-    followers = (
-        public_users()
-        .filter(profile__in=follower_profiles)
-        .select_related("profile")[:4]
-    )
-    following = (
-        public_users()
-        .filter(profile__in=following_profiles)
-        .select_related("profile")[:4]
-    )
-
-    return render(
-        request,
-        "account/my_profile.html",
-        {
-            "profile": profile,
-            "images": images,
-            "total_likes": total_likes,
-            "followers": followers,
-            "following": following,
-            "follower_count": follower_profiles.count(),
-            "following_count": following_profiles.count(),
-        },
-    )
-
-
-@login_required
 @require_POST
 def profile_photo_update(request):
     form = ProfilePhotoForm(
@@ -295,11 +256,22 @@ def user_list(request):
 
 
 @login_required
-def user_detail(request, username):
-    profile_user = get_object_or_404(
-        public_users().select_related("profile"),
-        username=username,
-    )
+def profile(request, username=None):
+    """Both /me/ and /users/<username>/. The two pages differed only in the
+    photo upload and the buttons, so ownership is a flag rather than a view of
+    its own. No username means the viewer is looking at themselves — service
+    accounts are hidden from everyone else, but not from their own owner.
+
+    The context name is profile_user, not user: that one already belongs to the
+    signed-in person and shadowing it would hand templates the wrong human.
+    """
+    if username is None:
+        profile_user = request.user
+    else:
+        profile_user = get_object_or_404(
+            public_users().select_related("profile"), username=username
+        )
+    is_owner = profile_user == request.user
 
     images = list(profile_user.images.order_by("-created"))
     views_map = get_images_views([img.id for img in images])
@@ -311,7 +283,7 @@ def user_detail(request, username):
     follower_profiles = profile_user.profile.followers.all()
     following_profiles = profile_user.profile.following.all()
 
-    is_following = follower_profiles.filter(user=request.user).exists()
+    is_following = not is_owner and follower_profiles.filter(user=request.user).exists()
 
     followers = (
         public_users()
@@ -326,9 +298,10 @@ def user_detail(request, username):
 
     return render(
         request,
-        "account/users/detail.html",
+        "account/profile.html",
         {
-            "user": profile_user,
+            "profile_user": profile_user,
+            "is_owner": is_owner,
             "images": images,
             "total_likes": total_likes,
             "is_following": is_following,

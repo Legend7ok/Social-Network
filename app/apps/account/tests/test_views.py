@@ -360,7 +360,7 @@ def test_user_list_hides_staff_accounts(client, user, second_user, staff_user):
     assert staff not in listed
 
 
-# ─── user_detail ──────────────────────────────────────────────────────────────
+# ─── profile ──────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
@@ -369,7 +369,46 @@ def test_user_detail_returns_200(client, user):
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[user_obj.username]))
     assert response.status_code == 200
-    assert response.context["user"] == user_obj
+    assert response.context["profile_user"] == user_obj
+
+
+@pytest.mark.django_db
+def test_my_profile_shows_the_owner_view(client, user):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("my_profile"))
+
+    assert response.status_code == 200
+    assert response.context["profile_user"] == user_obj
+    assert response.context["is_owner"] is True
+    assert b"Upload photo" in response.content
+
+
+@pytest.mark.django_db
+def test_own_profile_by_username_shows_the_owner_view(client, user):
+    """Both addresses lead to the same view, so reaching your own page the long
+    way must not turn you into a visitor of yourself."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[user_obj.username]))
+
+    assert response.context["is_owner"] is True
+    assert b"Upload photo" in response.content
+
+
+@pytest.mark.django_db
+def test_someone_elses_profile_shows_the_visitor_view(client, user, second_user):
+    user_obj, password = user
+    target, _ = second_user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[target.username]))
+
+    assert response.context["is_owner"] is False
+    # "Change Password" is no proof here: the navbar carries it on every page.
+    assert b"Upload photo" not in response.content
 
 
 @pytest.mark.django_db
