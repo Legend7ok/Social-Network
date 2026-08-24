@@ -36,7 +36,7 @@ def send_welcome_email(user_id):
         raise
 
 
-@shared_task
+@shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def generate_avatar_thumbnails(profile_id):
     try:
         profile = Profile.objects.get(id=profile_id)

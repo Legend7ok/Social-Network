@@ -93,7 +93,7 @@ def delete_image_artifacts(image_id, file_name):
     logger.info("delete_image_artifacts: cleaned up after image %s", image_id)
 
 
-@shared_task
+@shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def generate_image_thumbnails(image_id):
     try:
         image = Image.objects.get(id=image_id)
@@ -225,4 +225,6 @@ def download_image(image_id, url):
         image.image.delete(save=False)
         return
 
-    generate_image_thumbnails(image_id)
+    # Its own task: a storage hiccup while cutting thumbnails then retries on
+    # its own instead of taking the finished download down with it.
+    generate_image_thumbnails.delay(image_id)

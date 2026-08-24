@@ -100,7 +100,7 @@ def test_download_image_filename_uses_slugified_title(user):
 
 
 @pytest.mark.django_db
-def test_download_image_pregenerates_thumbnails(user):
+def test_download_image_hands_thumbnails_to_their_own_task(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -109,10 +109,10 @@ def test_download_image_pregenerates_thumbnails(user):
     )
 
     with patch("apps.images.tasks.requests.get", return_value=make_response()):
-        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+        with patch("apps.images.tasks.generate_image_thumbnails.delay") as mock_delay:
             download_image(image.id, image.url)
 
-    assert mock_thumb.call_count == 3
+    mock_delay.assert_called_once_with(image.id)
 
 
 @pytest.mark.django_db
