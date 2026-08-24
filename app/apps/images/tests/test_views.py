@@ -362,10 +362,7 @@ def test_image_upload_post_valid_creates_image_and_redirects(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        patch("apps.images.views.generate_image_thumbnails.delay"),
-    ):
+    with patch("apps.images.views.generate_image_thumbnails.delay"):
         response = client.post(
             reverse("images:upload"),
             {"title": "Uploaded Image", "description": "test", "image": img_file},
@@ -381,10 +378,7 @@ def test_image_upload_dispatches_thumbnail_generation(
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        patch("apps.images.views.generate_image_thumbnails.delay") as mock_delay,
-    ):
+    with patch("apps.images.views.generate_image_thumbnails.delay") as mock_delay:
         with django_capture_on_commit_callbacks(execute=True):
             client.post(
                 reverse("images:upload"),

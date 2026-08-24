@@ -378,10 +378,7 @@ def test_profile_photo_update_saves_valid_photo(
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        django_capture_on_commit_callbacks(execute=False),
-    ):
+    with django_capture_on_commit_callbacks(execute=False):
         response = client.post(reverse("profile_photo"), {"photo": photo})
     assert response.status_code == 302
     user_obj.profile.refresh_from_db()

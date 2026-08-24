@@ -1,3 +1,4 @@
+import io
 from unittest.mock import MagicMock
 
 import fakeredis
@@ -6,16 +7,22 @@ import redis
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image as PILImage
 from rest_framework.test import APIClient
 
 from apps.images.models import Image
 
-MINIMAL_PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
-    b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
-    b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+
+def _png_bytes(size=(1, 1)):
+    """Built by Pillow rather than pasted: a hand-written PNG with a broken
+    checksum passes for a file everywhere except where it matters — the
+    validation that reads it."""
+    buffer = io.BytesIO()
+    PILImage.new("RGB", size).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+MINIMAL_PNG = _png_bytes()
 
 
 @pytest.fixture(autouse=True)

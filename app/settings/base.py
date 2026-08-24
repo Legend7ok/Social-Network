@@ -103,6 +103,10 @@ MEDIA_ROOT = BASE_DIR / "media/"
 # the friendly form error fires before nginx returns a raw 413).
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 
+# Weight alone does not bound the work: a few compressed megabytes can hold a
+# hundred megapixels, and decoding one costs about three bytes per pixel.
+MAX_IMAGE_PIXELS = 30_000_000  # 30 MP
+
 LOGIN_URL = "login"
 LOGOUT_URL = "logout"
 LOGIN_REDIRECT_URL = "home"
