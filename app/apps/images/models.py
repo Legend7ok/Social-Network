@@ -14,6 +14,10 @@ class Image(models.Model):
     slug = models.SlugField(max_length=200, blank=True, allow_unicode=True)
     url = models.URLField(max_length=2000)
     image = models.ImageField(upload_to="images/%Y/%m/%d", null=True, blank=True)
+    # Why the file never arrived, in words meant for the person who bookmarked
+    # it. Empty while a download is still on its way and once it succeeds, so
+    # the three states read off the two columns: file, error, neither.
+    download_error = models.CharField(max_length=200, blank=True)
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
     # Set by ImageEditForm only, so background saves of the row (the file

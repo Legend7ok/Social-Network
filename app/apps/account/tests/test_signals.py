@@ -48,3 +48,83 @@ def test_avatar_thumbnails_not_dispatched_without_photo_change(user):
     with patch("apps.account.signals.generate_avatar_thumbnails.delay") as mock_delay:
         profile.save()
     mock_delay.assert_not_called()
+
+
+def attach_photo(profile, name, callbacks):
+    with callbacks(execute=False):
+        profile.photo = SimpleUploadedFile(name, MINIMAL_PNG, content_type="image/png")
+        profile.save()
+    return profile.photo.name
+
+
+@pytest.mark.django_db
+def test_replaced_avatar_is_dropped(user, django_capture_on_commit_callbacks):
+    user_obj, _ = user
+    profile = user_obj.profile
+    first = attach_photo(profile, "first.png", django_capture_on_commit_callbacks)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            profile.photo = SimpleUploadedFile(
+                "second.png", MINIMAL_PNG, content_type="image/png"
+            )
+            profile.save()
+
+    mock_delay.assert_called_once_with(first)
+
+
+@pytest.mark.django_db
+def test_cleared_avatar_is_dropped(user, django_capture_on_commit_callbacks):
+    user_obj, _ = user
+    profile = user_obj.profile
+    stored = attach_photo(profile, "ava.png", django_capture_on_commit_callbacks)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            profile.photo = ""
+            profile.save()
+
+    mock_delay.assert_called_once_with(stored)
+
+
+@pytest.mark.django_db
+def test_a_save_that_keeps_the_avatar_drops_nothing(
+    user, django_capture_on_commit_callbacks
+):
+    user_obj, _ = user
+    profile = user_obj.profile
+    attach_photo(profile, "ava.png", django_capture_on_commit_callbacks)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            profile.save()
+
+    mock_delay.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_avatar_is_dropped_together_with_its_profile(
+    user, django_capture_on_commit_callbacks
+):
+    user_obj, _ = user
+    profile = user_obj.profile
+    stored = attach_photo(profile, "ava.png", django_capture_on_commit_callbacks)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            user_obj.delete()
+
+    mock_delay.assert_called_once_with(stored)
+
+
+@pytest.mark.django_db
+def test_a_profile_without_an_avatar_drops_nothing(
+    user, django_capture_on_commit_callbacks
+):
+    user_obj, _ = user
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            user_obj.delete()
+
+    mock_delay.assert_not_called()

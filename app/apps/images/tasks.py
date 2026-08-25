@@ -1,17 +1,24 @@
+import io
 import logging
-import os
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 import requests
-from celery import shared_task
+from celery import Task, shared_task
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db.models import F
+from django.db.models import F, Q
 from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
 from apps.actions.models import Action
+from core.url_safety import validate_public_url
+from core.validators import (
+    IMAGE_FORMAT_EXTENSIONS,
+    VALID_IMAGE_CONTENT_TYPES,
+    validate_image_content,
+)
 
 from .models import Image
 from .services import (
@@ -24,6 +31,14 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 FLUSH_BATCH_SIZE = 500
+DOWNLOAD_TIMEOUT = 10
+MAX_REDIRECTS = 5
+TOO_LARGE = "The file behind the link is larger than we accept."
+GAVE_UP = "The image could not be downloaded."
+# Plenty of sites turn away the default python-requests signature. Naming
+# ourselves is the polite way past that, and the name alone tells them nothing
+# beyond what the request already does.
+USER_AGENT = "socnet/1.0"
 
 
 @shared_task
@@ -84,7 +99,7 @@ def delete_image_artifacts(image_id, file_name):
     logger.info("delete_image_artifacts: cleaned up after image %s", image_id)
 
 
-@shared_task
+@shared_task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def generate_image_thumbnails(image_id):
     try:
         image = Image.objects.get(id=image_id)
@@ -104,10 +119,79 @@ def generate_image_thumbnails(image_id):
     get_thumbnail(image.image, thumbs["detail_main"])
 
 
+def _still_waiting(image_id):
+    """The row while it has no file yet — the only state a download may write.
+
+    Every write below goes through this: a run that lost the race, or failed
+    after the file was already stored, must not touch a finished image. The
+    page reads the two columns as one state, and they only agree while nothing
+    reports a failure over a picture that is already there.
+    """
+    return Image.objects.filter(id=image_id).filter(Q(image="") | Q(image__isnull=True))
+
+
+def _fail(image, reason):
+    """Record why the file never arrived, in words the author will read.
+
+    Written column by column for the same reason the file is: the row may have
+    been edited or deleted while we were fetching, and a full save would undo
+    the edit or bring the row back.
+    """
+    logger.warning("download_image: image %s failed: %s", image.id, reason)
+    _still_waiting(image.id).update(download_error=reason)
+
+
+def _fetch(url):
+    """Walk the redirect chain by hand so its length is ours to bound and every
+    hop is checked before we connect: a public link may point anywhere next."""
+    for _ in range(MAX_REDIRECTS):
+        validate_public_url(url)
+        response = requests.get(
+            url,
+            timeout=DOWNLOAD_TIMEOUT,
+            stream=True,
+            allow_redirects=False,
+            headers={"User-Agent": USER_AGENT},
+        )
+        if not response.is_redirect:
+            return response
+        with response:
+            url = urljoin(url, response.headers["Location"])
+    raise requests.TooManyRedirects(url)
+
+
+def _read_body(response):
+    """Read the response in chunks, giving up as soon as it outgrows the limit."""
+    chunks = []
+    size = 0
+    for chunk in response.iter_content(chunk_size=8192):
+        size += len(chunk)
+        if size > settings.MAX_UPLOAD_SIZE:
+            return None
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+class DownloadTask(Task):
+    """Records a failure when the task gives up for good.
+
+    Everything the task itself can recognise is written by _fail; this covers
+    the rest — the site that never answers, a bug, a task killed on time — so
+    that a page waiting for the file always has something to show.
+    """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        image_id = args[0] if args else kwargs.get("image_id")
+        logger.error("download_image: giving up on image %s: %s", image_id, exc)
+        _still_waiting(image_id).update(download_error=GAVE_UP)
+
+
 @shared_task(
+    base=DownloadTask,
     autoretry_for=(requests.RequestException,),
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=120,
     time_limit=300,
 )
 def download_image(image_id, url):
@@ -116,40 +200,70 @@ def download_image(image_id, url):
     except Image.DoesNotExist:
         logger.warning("download_image: image %s not found, skipping", image_id)
         return
-    response = requests.get(url, timeout=10, stream=True)
-    response.raise_for_status()
 
-    chunks = []
-    size = 0
-    for chunk in response.iter_content(chunk_size=8192):
-        size += len(chunk)
-        if size > settings.MAX_UPLOAD_SIZE:
-            response.close()
+    # The queue promises delivery at least once, so the same bookmark can be
+    # handed out twice; downloading again would leave the first file orphaned
+    # in the bucket, because stored names are never reused.
+    if image.image:
+        logger.info("download_image: image %s already has a file, skipping", image_id)
+        return
+
+    try:
+        response = _fetch(url)
+    except requests.TooManyRedirects:
+        # Retrying would only walk the same chain again.
+        _fail(image, "The link keeps redirecting and never arrives.")
+        return
+    except ValidationError as error:
+        _fail(image, error.messages[0])
+        return
+
+    with response:
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "").split(";")[0].strip()
+        if content_type.lower() not in VALID_IMAGE_CONTENT_TYPES:
             logger.warning(
-                "download_image: %s exceeds MAX_UPLOAD_SIZE, discarding image %s",
-                url,
-                image_id,
+                "download_image: %s answered with %s", url, content_type or "no type"
             )
-            image.delete()
+            _fail(image, "The link did not answer with an image.")
             return
-        chunks.append(chunk)
 
-    extension = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
+        declared_size = response.headers.get("Content-Length", "")
+        if declared_size.isdigit() and int(declared_size) > settings.MAX_UPLOAD_SIZE:
+            _fail(image, TOO_LARGE)
+            return
+
+        body = _read_body(response)
+
+    if body is None:
+        _fail(image, TOO_LARGE)
+        return
+
+    try:
+        image_format = validate_image_content(io.BytesIO(body))
+    except ValidationError:
+        # The headers can say anything; this is the first look at the bytes.
+        _fail(image, "The file behind the link is not an image we can show.")
+        return
+
     # image.slug, not the raw title: a title without letters slugifies to an
     # empty string and would store a nameless ".jpg".
-    name = f"{image.slug}.{extension}"
-    image.image.save(name, ContentFile(b"".join(chunks)), save=False)
+    name = f"{image.slug}.{IMAGE_FORMAT_EXTENSIONS[image_format]}"
+    image.image.save(name, ContentFile(body), save=False)
 
     # Only the file column is written back. A full save() would push the copy
     # loaded before the download over an edit made meanwhile, and would insert
     # the row again if the image was deleted while we were fetching it.
-    stored = Image.objects.filter(id=image_id).update(image=image.image.name)
+    stored = _still_waiting(image_id).update(image=image.image.name, download_error="")
     if not stored:
         logger.warning(
-            "download_image: image %s vanished during download, dropping file",
+            "download_image: image %s is no longer waiting for this file, dropping it",
             image_id,
         )
         image.image.delete(save=False)
         return
 
-    generate_image_thumbnails(image_id)
+    # Its own task: a storage hiccup while cutting thumbnails then retries on
+    # its own instead of taking the finished download down with it.
+    generate_image_thumbnails.delay(image_id)

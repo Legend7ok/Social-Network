@@ -19,6 +19,10 @@ USE_X_FORWARDED_HOST = True
 # in production never arrives and asking for it raises instead of limiting.
 RATELIMIT_IP_META_KEY = "REMOTE_ADDR"
 
+# Bookmarking an image served from the machine you develop on is the normal
+# case here, and every one of those addresses is private.
+BLOCK_PRIVATE_DOWNLOAD_TARGETS = False
+
 STORAGES = {
     **STORAGES,
     "staticfiles": {

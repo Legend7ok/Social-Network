@@ -11,6 +11,9 @@ CACHES = {
 
 RATELIMIT_IP_META_KEY = "REMOTE_ADDR"
 AXES_ENABLED = False
+# Off by default so no test reaches for a real resolver; the tests that cover
+# the guard turn it back on and answer the lookup themselves.
+BLOCK_PRIVATE_DOWNLOAD_TARGETS = False
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 CELERY_TASK_ALWAYS_EAGER = True
 

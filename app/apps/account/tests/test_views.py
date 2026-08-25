@@ -2,7 +2,6 @@ from datetime import date
 from unittest.mock import patch
 
 import pytest
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -10,7 +9,7 @@ from django.urls import reverse
 
 from apps.account.models import Profile
 from apps.actions.models import Action
-from conftest import MINIMAL_PNG
+from conftest import MINIMAL_PNG, png_bytes
 
 
 @pytest.mark.django_db
@@ -378,10 +377,7 @@ def test_profile_photo_update_saves_valid_photo(
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        django_capture_on_commit_callbacks(execute=False),
-    ):
+    with django_capture_on_commit_callbacks(execute=False):
         response = client.post(reverse("profile_photo"), {"photo": photo})
     assert response.status_code == 302
     user_obj.profile.refresh_from_db()
@@ -389,14 +385,22 @@ def test_profile_photo_update_saves_valid_photo(
 
 
 @pytest.mark.django_db
-def test_profile_photo_update_rejects_oversized(client, user):
+def test_profile_photo_update_rejects_oversized(client, user, settings):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    big = b"\x89PNG" + b"x" * (settings.MAX_UPLOAD_SIZE + 1)
-    big_file = SimpleUploadedFile("big.png", big, content_type="image/png")
-    client.post(reverse("profile_photo"), {"photo": big_file})
+    settings.MAX_UPLOAD_SIZE = 1024 * 1024
+    # A real image, so the size is what turns it away and not the content check
+    big_file = SimpleUploadedFile(
+        "big.png", png_bytes((600, 600), noise=True), content_type="image/png"
+    )
+    assert big_file.size > settings.MAX_UPLOAD_SIZE
+
+    response = client.post(reverse("profile_photo"), {"photo": big_file})
+
     user_obj.profile.refresh_from_db()
     assert not user_obj.profile.photo
+    msgs = [m.message for m in get_messages(response.wsgi_request)]
+    assert any("too large" in m.lower() for m in msgs)
 
 
 @pytest.mark.django_db

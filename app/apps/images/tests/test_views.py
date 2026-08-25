@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
+from apps.images.views import STATUS_POLL_LIMIT, STATUS_POLL_SLOWDOWN
 from apps.images.services import record_image_view
-from conftest import MINIMAL_PNG
+from conftest import MINIMAL_PNG, png_bytes
 
 
 # ─── Model Tests ─────────────────────────────────────────────────────────────
@@ -119,6 +119,19 @@ def test_clean_url_rejects_invalid_extension():
     assert "url" in form.errors
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://example.com/photo.jpg",
+        "ftps://example.com/photo.jpg",
+    ],
+)
+def test_clean_url_rejects_schemes_the_worker_cannot_fetch(url):
+    form = ImageBookmarkForm(data={"title": "Test", "url": url, "description": ""})
+    form.is_valid()
+    assert "url" in form.errors
+
+
 # ─── View Tests: bookmarklet_launcher ────────────────────────────────────────
 
 
@@ -172,6 +185,31 @@ def test_image_create_post_valid_creates_image_and_redirects(client, user):
 
     assert response.status_code == 302
     assert Image.objects.filter(title="My Image", user=user_obj).exists()
+
+
+@pytest.mark.django_db
+def test_image_create_dispatches_the_download_after_commit(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=False) as callbacks:
+            client.post(
+                reverse("images:create"),
+                {
+                    "title": "Deferred",
+                    "url": "https://example.com/photo.jpg",
+                    "description": "",
+                },
+            )
+        mock_delay.assert_not_called()
+        assert len(callbacks) == 1
+        callbacks[0]()
+
+    new_image = Image.objects.get(title="Deferred", user=user_obj)
+    mock_delay.assert_called_once_with(new_image.id, new_image.url)
 
 
 @pytest.mark.django_db
@@ -324,10 +362,7 @@ def test_image_upload_post_valid_creates_image_and_redirects(client, user):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        patch("apps.images.views.generate_image_thumbnails.delay"),
-    ):
+    with patch("apps.images.views.generate_image_thumbnails.delay"):
         response = client.post(
             reverse("images:upload"),
             {"title": "Uploaded Image", "description": "test", "image": img_file},
@@ -343,10 +378,7 @@ def test_image_upload_dispatches_thumbnail_generation(
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     img_file = SimpleUploadedFile("photo.png", MINIMAL_PNG, content_type="image/png")
-    with (
-        patch("PIL.Image.open"),
-        patch("apps.images.views.generate_image_thumbnails.delay") as mock_delay,
-    ):
+    with patch("apps.images.views.generate_image_thumbnails.delay") as mock_delay:
         with django_capture_on_commit_callbacks(execute=True):
             client.post(
                 reverse("images:upload"),
@@ -370,17 +402,23 @@ def test_image_upload_post_invalid_extension_shows_errors(client, user):
 
 
 @pytest.mark.django_db
-def test_image_upload_post_oversized_shows_errors(client, user):
+def test_image_upload_post_oversized_shows_errors(client, user, settings):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
-    big = b"\x89PNG" + b"x" * (settings.MAX_UPLOAD_SIZE + 1)
-    big_file = SimpleUploadedFile("big.png", big, content_type="image/png")
+    settings.MAX_UPLOAD_SIZE = 1024 * 1024
+    # A real image, so the size is what turns it away and not the content check
+    big_file = SimpleUploadedFile(
+        "big.png", png_bytes((600, 600), noise=True), content_type="image/png"
+    )
+    assert big_file.size > settings.MAX_UPLOAD_SIZE
+
     response = client.post(
         reverse("images:upload"),
         {"title": "Too Big", "description": "", "image": big_file},
     )
+
     assert response.status_code == 200
-    assert response.context["form"].errors
+    assert "too large" in str(response.context["form"].errors["image"]).lower()
     assert not Image.objects.filter(title="Too Big").exists()
 
 
@@ -460,6 +498,29 @@ def test_image_edit_saves_title_and_description(client, user, image):
     assert response.status_code == 302
     assert image.title == "Renamed Image"
     assert image.description == "New words"
+
+
+@pytest.mark.django_db
+def test_image_edit_keeps_a_file_that_arrived_while_editing(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Old Title", url="https://example.com/late.png"
+    )
+
+    form = ImageEditForm(
+        {"title": "New Title", "description": "New words"},
+        instance=Image.objects.get(id=image.id),
+    )
+    assert form.is_valid()
+    # The download finishes between reading the row and saving the form
+    Image.objects.filter(id=image.id).update(image="images/arrived.png")
+    form.save()
+
+    image.refresh_from_db()
+    assert image.image.name == "images/arrived.png"
+    assert image.title == "New Title"
+    assert image.slug == "new-title"
+    assert image.edited_at
 
 
 @pytest.mark.django_db
@@ -660,6 +721,145 @@ def test_image_status_pending_renders_skeleton_with_polling(client, user):
     response = client.get(reverse("images:status", args=[pending.id]))
     assert b"hx-trigger" in response.content
     assert b"<img" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_status_failed_shows_the_reason_and_stops_polling(client, user):
+    user_obj, _ = user
+    failed = Image.objects.create(
+        user=user_obj,
+        title="Failed Image",
+        url="https://example.com/failed.jpg",
+        download_error="The link did not answer with an image.",
+    )
+
+    response = client.get(reverse("images:status", args=[failed.id]))
+
+    assert b"The link did not answer with an image." in response.content
+    assert b"hx-trigger" not in response.content
+
+
+@pytest.mark.django_db
+def test_image_status_counts_the_attempts_it_asks_for(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj, title="Pending Image", url="https://example.com/pending.jpg"
+    )
+    url = reverse("images:status", args=[pending.id])
+
+    assert b"attempt=1" in client.get(url).content
+    assert b"attempt=8" in client.get(url, {"attempt": "7"}).content
+    # A hand-written value cannot break the count
+    assert b"attempt=1" in client.get(url, {"attempt": "soon"}).content
+
+
+@pytest.mark.django_db
+def test_image_status_slows_down_and_then_gives_up_on_asking(client, user):
+    user_obj, _ = user
+    pending = Image.objects.create(
+        user=user_obj, title="Pending Image", url="https://example.com/pending.jpg"
+    )
+    url = reverse("images:status", args=[pending.id])
+
+    assert b"every 2s" in client.get(url, {"attempt": STATUS_POLL_SLOWDOWN - 1}).content
+    assert b"every 5s" in client.get(url, {"attempt": STATUS_POLL_SLOWDOWN}).content
+
+    last = client.get(url, {"attempt": STATUS_POLL_LIMIT})
+    assert b"hx-trigger" not in last.content
+    assert b"Reload the page" in last.content
+
+
+# ─── View Tests: image_retry_download ────────────────────────────────────────
+
+
+@pytest.fixture
+def failed_image(user):
+    user_obj, _ = user
+    return Image.objects.create(
+        user=user_obj,
+        title="Failed Image",
+        url="https://example.com/failed.png",
+        download_error="The link did not answer with an image.",
+    )
+
+
+@pytest.mark.django_db
+def test_image_retry_redirects_anonymous_user(client, failed_image):
+    response = client.post(reverse("images:retry", args=[failed_image.id]))
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_image_retry_rejects_a_get(client, user, failed_image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:retry", args=[failed_image.id]))
+
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_image_retry_is_404_for_someone_else(client, second_user, failed_image):
+    other, password = second_user
+    client.login(username=other.username, password=password)
+
+    response = client.post(reverse("images:retry", args=[failed_image.id]))
+
+    assert response.status_code == 404
+    failed_image.refresh_from_db()
+    assert failed_image.download_error
+
+
+@pytest.mark.django_db
+def test_image_retry_clears_the_reason_and_asks_again(
+    client, user, failed_image, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(reverse("images:retry", args=[failed_image.id]))
+
+    failed_image.refresh_from_db()
+    assert response.status_code == 302
+    assert failed_image.download_error == ""
+    mock_delay.assert_called_once_with(failed_image.id, failed_image.url)
+
+
+@pytest.mark.django_db
+def test_image_status_offers_the_retry_to_the_author_only(
+    client, user, second_user, failed_image
+):
+    status_url = reverse("images:status", args=[failed_image.id])
+    retry_url = reverse("images:retry", args=[failed_image.id]).encode()
+
+    assert retry_url not in client.get(status_url).content
+
+    other, password = second_user
+    client.login(username=other.username, password=password)
+    assert retry_url not in client.get(status_url).content
+    client.logout()
+
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    assert retry_url in client.get(status_url).content
+
+
+@pytest.mark.django_db
+def test_image_retry_leaves_a_downloaded_image_alone(
+    client, user, image, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.images.views.download_image.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            client.post(reverse("images:retry", args=[image.id]))
+
+    mock_delay.assert_not_called()
 
 
 # ─── View Tests: image_list ──────────────────────────────────────────────────

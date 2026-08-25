@@ -1,3 +1,5 @@
+import io
+import os
 from unittest.mock import MagicMock
 
 import fakeredis
@@ -6,16 +8,36 @@ import redis
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image as PILImage
 from rest_framework.test import APIClient
 
 from apps.images.models import Image
 
-MINIMAL_PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
-    b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
-    b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+# Binds the shared tasks to the project's Celery app, which otherwise happens
+# only once something imports the URLs. Without it a .delay() inside a task
+# reaches for a broker instead of running inline, and whether that bites
+# depends on the order tests happen to run in.
+from config import celery_app  # noqa: E402,F401
+
+
+def png_bytes(size=(1, 1), noise=False):
+    """Built by Pillow rather than pasted: a hand-written PNG with a broken
+    checksum passes for a file everywhere except where it matters — the
+    validation that reads it.
+
+    Noise makes the result incompressible, which is the only way to get a real
+    image whose weight is worth testing against a limit.
+    """
+    if noise:
+        image = PILImage.frombytes("RGB", size, os.urandom(size[0] * size[1] * 3))
+    else:
+        image = PILImage.new("RGB", size)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+MINIMAL_PNG = png_bytes()
 
 
 @pytest.fixture(autouse=True)
