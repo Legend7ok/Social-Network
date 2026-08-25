@@ -4,7 +4,11 @@ from django.conf import settings
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from apps.account.tasks import generate_avatar_thumbnails, send_welcome_email
+from apps.account.tasks import (
+    delete_avatar_file,
+    generate_avatar_thumbnails,
+    send_welcome_email,
+)
 from conftest import MINIMAL_PNG
 
 
@@ -88,3 +92,22 @@ def test_generate_avatar_thumbnails_no_photo_skips(user):
     with patch("apps.account.tasks.get_thumbnail") as mock_thumb:
         generate_avatar_thumbnails(user_obj.profile.id)
     mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_delete_avatar_file_removes_the_file_and_its_thumbnails(user):
+    user_obj, _ = user
+    profile = user_obj.profile
+    profile.photo = SimpleUploadedFile("ava.png", MINIMAL_PNG, content_type="image/png")
+    profile.save()
+    stored = profile.photo.storage
+
+    delete_avatar_file(profile.photo.name)
+
+    assert not stored.exists(profile.photo.name)
+
+
+@pytest.mark.django_db
+def test_delete_avatar_file_can_be_repeated(user):
+    delete_avatar_file("users/2026/08/24/gone.png")
+    delete_avatar_file("users/2026/08/24/gone.png")

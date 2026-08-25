@@ -1,6 +1,8 @@
+import socket
+from unittest.mock import MagicMock, patch
+
 import pytest
 import requests
-from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 
@@ -13,6 +15,10 @@ from apps.images.services import (
     record_image_view,
 )
 from apps.images.tasks import (
+    GAVE_UP,
+    MAX_REDIRECTS,
+    TOO_LARGE,
+    USER_AGENT,
     delete_image_artifacts,
     download_image,
     flush_image_views,
@@ -21,25 +27,78 @@ from apps.images.tasks import (
 from conftest import MINIMAL_PNG
 
 
+def make_response(body=MINIMAL_PNG, content_type="image/png", headers=None):
+    """Stand-in for a streamed requests response the task can walk through."""
+    response = MagicMock()
+    response.is_redirect = False
+    response.headers = {
+        "Content-Type": content_type,
+        "Content-Length": str(len(body)),
+    }
+    response.headers.update(headers or {})
+    response.iter_content = MagicMock(return_value=[body])
+    response.raise_for_status = MagicMock()
+    response.__enter__.return_value = response
+    return response
+
+
+def make_redirect(location):
+    response = MagicMock()
+    response.is_redirect = True
+    response.headers = {"Location": location}
+    response.__enter__.return_value = response
+    return response
+
+
 @pytest.mark.django_db
 def test_download_image_saves_file(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
         title="Test Image",
-        url="https://example.com/test.jpg",
+        url="https://example.com/test.png",
     )
-    mock_resp = MagicMock()
-    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
-    mock_resp.raise_for_status = MagicMock()
 
-    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
         with patch("apps.images.tasks.get_thumbnail"):
             download_image(image.id, image.url)
 
     image.refresh_from_db()
     assert image.image
-    assert image.image.name.endswith(".jpg")
+    assert image.image.name.endswith(".png")
+
+
+@pytest.mark.django_db
+def test_download_image_names_itself_to_the_server(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Test Image", url="https://example.com/test.png"
+    )
+
+    with patch(
+        "apps.images.tasks.requests.get", return_value=make_response()
+    ) as mock_get:
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    assert mock_get.call_args.kwargs["headers"] == {"User-Agent": USER_AGENT}
+
+
+@pytest.mark.django_db
+def test_download_image_names_the_file_after_the_real_format(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Test Image",
+        url="https://example.com/test.jpg",
+    )
+
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image.name.endswith(".png")
 
 
 @pytest.mark.django_db
@@ -50,11 +109,8 @@ def test_download_image_filename_uses_slugified_title(user):
         title="My Cool Image",
         url="https://example.com/photo.png",
     )
-    mock_resp = MagicMock()
-    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
-    mock_resp.raise_for_status = MagicMock()
 
-    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
         with patch("apps.images.tasks.get_thumbnail"):
             download_image(image.id, image.url)
 
@@ -63,22 +119,19 @@ def test_download_image_filename_uses_slugified_title(user):
 
 
 @pytest.mark.django_db
-def test_download_image_pregenerates_thumbnails(user):
+def test_download_image_hands_thumbnails_to_their_own_task(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
         title="Test Image",
         url="https://example.com/test.jpg",
     )
-    mock_resp = MagicMock()
-    mock_resp.iter_content = MagicMock(return_value=[MINIMAL_PNG])
-    mock_resp.raise_for_status = MagicMock()
 
-    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
-        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
+        with patch("apps.images.tasks.generate_image_thumbnails.delay") as mock_delay:
             download_image(image.id, image.url)
 
-    assert mock_thumb.call_count == 3
+    mock_delay.assert_called_once_with(image.id)
 
 
 @pytest.mark.django_db
@@ -131,10 +184,7 @@ def test_download_image_keeps_an_edit_made_while_downloading(user):
     def rename_and_respond(*args, **kwargs):
         # The author edits the image while the download is in flight
         Image.objects.filter(id=image.id).update(title="New Title", slug="new-title")
-        response = MagicMock()
-        response.iter_content = MagicMock(return_value=[MINIMAL_PNG])
-        response.raise_for_status = MagicMock()
-        return response
+        return make_response()
 
     with patch("apps.images.tasks.requests.get", side_effect=rename_and_respond):
         with patch("apps.images.tasks.get_thumbnail"):
@@ -155,10 +205,7 @@ def test_download_image_does_not_resurrect_a_deleted_image(user):
     def delete_and_respond(*args, **kwargs):
         # The author deletes the image while the download is in flight
         Image.objects.filter(id=image.id).delete()
-        response = MagicMock()
-        response.iter_content = MagicMock(return_value=[MINIMAL_PNG])
-        response.raise_for_status = MagicMock()
-        return response
+        return make_response()
 
     with patch("apps.images.tasks.requests.get", side_effect=delete_and_respond):
         with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
@@ -169,7 +216,7 @@ def test_download_image_does_not_resurrect_a_deleted_image(user):
 
 
 @pytest.mark.django_db
-def test_download_image_discards_oversized_file(user):
+def test_download_image_marks_an_oversized_file_as_failed(user):
     user_obj, _ = user
     image = Image.objects.create(
         user=user_obj,
@@ -177,16 +224,259 @@ def test_download_image_discards_oversized_file(user):
         url="https://example.com/huge.jpg",
     )
     oversized = b"x" * (settings.MAX_UPLOAD_SIZE + 1)
-    mock_resp = MagicMock()
-    mock_resp.iter_content = MagicMock(return_value=[oversized])
-    mock_resp.raise_for_status = MagicMock()
+    # A server that streams the body announces no length, so the limit has to
+    # hold while the bytes are still arriving.
+    response = make_response(oversized, headers={"Content-Length": ""})
 
-    with patch("apps.images.tasks.requests.get", return_value=mock_resp):
+    with patch("apps.images.tasks.requests.get", return_value=response):
         with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
             download_image(image.id, image.url)
 
-    assert not Image.objects.filter(id=image.id).exists()
+    image.refresh_from_db()
+    assert image.download_error == TOO_LARGE
+    assert not image.image
     mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_marks_a_file_declared_oversized_as_failed(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Huge Image",
+        url="https://example.com/huge.jpg",
+    )
+    response = make_response(
+        headers={"Content-Length": str(settings.MAX_UPLOAD_SIZE + 1)}
+    )
+
+    with patch("apps.images.tasks.requests.get", return_value=response):
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.download_error == TOO_LARGE
+    response.iter_content.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_marks_a_response_that_is_not_an_image_as_failed(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Not An Image",
+        url="https://example.com/page.jpg",
+    )
+    response = make_response(b"<html></html>", content_type="text/html; charset=utf-8")
+
+    with patch("apps.images.tasks.requests.get", return_value=response):
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.download_error
+    response.iter_content.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_marks_bytes_that_only_claim_to_be_an_image_as_failed(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Liar",
+        url="https://example.com/liar.png",
+    )
+    response = make_response(b"#!/bin/sh\necho hi\n")
+
+    with patch("apps.images.tasks.requests.get", return_value=response):
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.download_error
+    assert not image.image
+
+
+@pytest.mark.django_db
+def test_download_image_follows_a_redirect(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Moved Image",
+        url="https://example.com/moved.png",
+    )
+    hops = [make_redirect("/final.png"), make_response()]
+
+    with patch("apps.images.tasks.requests.get", side_effect=hops) as mock_get:
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image
+    assert mock_get.call_args_list[1].args[0] == "https://example.com/final.png"
+
+
+@pytest.mark.django_db
+def test_download_image_marks_an_endless_redirect_chain_as_failed(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Looping Image",
+        url="https://example.com/loop.png",
+    )
+
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=lambda url, **kwargs: make_redirect("/loop.png"),
+    ) as mock_get:
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.download_error
+    assert mock_get.call_count == MAX_REDIRECTS
+
+
+@pytest.mark.django_db
+def test_download_image_reports_no_failure_over_a_file_stored_meanwhile(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Overtaken", url="https://example.com/test.png"
+    )
+
+    def store_a_file_and_answer_with_a_page(*args, **kwargs):
+        # A retry finished while this run was still waiting on the wire
+        Image.objects.filter(id=image.id).update(image="images/winner.png")
+        return make_response(b"<html></html>", content_type="text/html")
+
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=store_a_file_and_answer_with_a_page,
+    ):
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image.name == "images/winner.png"
+    assert image.download_error == ""
+
+
+@pytest.mark.django_db
+def test_download_image_giving_up_leaves_a_stored_file_alone(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Late Failure", url="https://example.com/test.png"
+    )
+
+    # The file is already stored by the time the task falls over, which is what
+    # an unreachable broker does to the thumbnail dispatch on the last line.
+    with (
+        patch("apps.images.tasks.requests.get", return_value=make_response()),
+        patch(
+            "apps.images.tasks.generate_image_thumbnails.delay",
+            side_effect=RuntimeError("broker is down"),
+        ),
+    ):
+        result = download_image.apply(args=[image.id, image.url])
+
+    image.refresh_from_db()
+    assert result.failed()
+    assert image.image
+    assert image.download_error == ""
+
+
+@pytest.mark.django_db
+def test_download_image_clears_an_earlier_failure(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Second Attempt",
+        url="https://example.com/test.png",
+        download_error="The link did not answer with an image.",
+    )
+
+    with patch("apps.images.tasks.requests.get", return_value=make_response()):
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image
+    assert image.download_error == ""
+
+
+@pytest.mark.django_db
+def test_download_image_skips_an_image_that_already_has_a_file(image):
+    stored_name = image.image.name
+
+    with patch("apps.images.tasks.requests.get") as mock_get:
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    mock_get.assert_not_called()
+    assert image.image.name == stored_name
+
+
+@pytest.mark.django_db
+def test_download_image_drops_its_file_when_another_run_got_there_first(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Contested", url="https://example.com/test.png"
+    )
+
+    def store_another_file_and_respond(*args, **kwargs):
+        # A second delivery of the same task finishes while this one downloads
+        Image.objects.filter(id=image.id).update(image="images/winner.png")
+        return make_response()
+
+    with patch(
+        "apps.images.tasks.requests.get", side_effect=store_another_file_and_respond
+    ):
+        with patch("apps.images.tasks.get_thumbnail") as mock_thumb:
+            download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.image.name == "images/winner.png"
+    mock_thumb.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_refuses_a_link_that_points_inside_the_network(
+    user, settings, monkeypatch
+):
+    settings.BLOCK_PRIVATE_DOWNLOAD_TARGETS = True
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [(socket.AF_INET, None, None, "", ("10.0.0.7", 0))],
+    )
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Internal Image",
+        url="https://internal.example.com/secret.png",
+    )
+
+    with patch("apps.images.tasks.requests.get") as mock_get:
+        download_image(image.id, image.url)
+
+    image.refresh_from_db()
+    assert image.download_error
+    mock_get.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_download_image_records_a_failure_when_it_gives_up(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj,
+        title="Unreachable",
+        url="https://example.com/gone.png",
+    )
+
+    with patch(
+        "apps.images.tasks.requests.get",
+        side_effect=requests.RequestException("connection refused"),
+    ):
+        result = download_image.apply(args=[image.id, image.url])
+
+    image.refresh_from_db()
+    assert result.failed()
+    assert image.download_error == GAVE_UP
 
 
 @pytest.mark.django_db

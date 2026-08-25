@@ -60,7 +60,7 @@
               <div class="text-[13px] text-[#5E5C6A]">or click to browse</div>
             </div>
             <div class="text-[12px] text-[#5E5C6A] px-[13px] py-[7px] bg-surface-input rounded-full">
-              JPG, PNG, WEBP · max 10MB
+              JPG, PNG, WEBP · max {{ max_upload_mb }}MB
             </div>
           </div>
 
@@ -87,7 +87,7 @@
           {% endif %}
         </div>
 
-        <input type="file" name="image" accept="image/*" x-ref="fileInput" class="hidden"
+        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp" x-ref="fileInput" class="hidden"
                @change="handleFile($event.target.files[0])">
 
         <!-- Title -->

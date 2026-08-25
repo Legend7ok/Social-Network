@@ -1,14 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from apps.actions.models import Action
 
 from .cache import feed_cache_key
 from .models import Profile
-from .tasks import generate_avatar_thumbnails
+from .tasks import delete_avatar_file, generate_avatar_thumbnails
 
 User = get_user_model()
 
@@ -47,3 +47,21 @@ def remember_old_photo(sender, instance, **kwargs):
 def generate_avatar_on_photo_change(sender, instance, **kwargs):
     if instance.photo and instance.photo.name != instance._old_photo:
         transaction.on_commit(lambda: generate_avatar_thumbnails.delay(instance.id))
+
+
+@receiver(post_save, sender=Profile, dispatch_uid="account_drop_replaced_photo")
+def drop_replaced_photo(sender, instance, **kwargs):
+    replaced = instance._old_photo
+    if replaced and replaced != instance.photo.name:
+        transaction.on_commit(lambda: delete_avatar_file.delay(replaced))
+
+
+@receiver(
+    post_delete, sender=Profile, dispatch_uid="account_drop_photo_of_gone_profile"
+)
+def drop_photo_of_gone_profile(sender, instance, **kwargs):
+    # Django leaves the file behind when the row goes, and the row goes on its
+    # own whenever a user is deleted.
+    file_name = instance.photo.name
+    if file_name:
+        transaction.on_commit(lambda: delete_avatar_file.delay(file_name))

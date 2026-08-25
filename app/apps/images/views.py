@@ -30,6 +30,10 @@ RANKING_SORTS = {
     "likes": "-total_likes",
 }
 
+# Roughly four minutes of asking, which outlives the download and its retries.
+STATUS_POLL_SLOWDOWN = 15
+STATUS_POLL_LIMIT = 60
+
 
 def bookmarklet_launcher(request):
     js = render(request, "bookmarklet_launcher.js", {"site_url": settings.SITE_URL})
@@ -45,7 +49,9 @@ def image_create(request):
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
-            download_image.delay(new_image.id, new_image.url)
+            transaction.on_commit(
+                lambda: download_image.delay(new_image.id, new_image.url)
+            )
             create_action(request.user, "bookmarked image", new_image)
             messages.success(request, "Image added successfully")
             return redirect(new_image.get_absolute_url())
@@ -149,7 +155,11 @@ def image_upload(request):
             return redirect(new_image.get_absolute_url())
     else:
         form = ImageUploadForm()
-    return render(request, "images/upload.html", {"form": form})
+    return render(
+        request,
+        "images/upload.html",
+        {"form": form, "max_upload_mb": settings.MAX_UPLOAD_SIZE // (1024 * 1024)},
+    )
 
 
 @login_required
@@ -202,9 +212,40 @@ def image_delete(request, id):
     return redirect(f"{reverse('images:list')}?mine=1")
 
 
+@login_required
+@require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def image_retry_download(request, id):
+    image = get_object_or_404(Image, id=id, user=request.user)
+
+    if not image.image:
+        # Clearing the reason is what puts the page back into waiting; the
+        # column is written on its own so a stale copy cannot undo an edit.
+        Image.objects.filter(id=image.id).update(download_error="")
+        transaction.on_commit(lambda: download_image.delay(image.id, image.url))
+        messages.success(request, "Fetching the image again")
+
+    return redirect(image.get_absolute_url())
+
+
 def image_status(request, id):
     image = get_object_or_404(Image, id=id)
-    return render(request, "images/partials/image_status.html", {"image": image})
+    attempt = request.GET.get("attempt", "")
+    attempt = int(attempt) if attempt.isdigit() else 0
+
+    return render(
+        request,
+        "images/partials/image_status.html",
+        {
+            "image": image,
+            "next_attempt": attempt + 1,
+            # Slow down once the quick cases are past, and stop asking
+            # altogether when nobody is going to answer: a worker that never
+            # took the job leaves neither a file nor a reason behind.
+            "poll_interval": "2s" if attempt < STATUS_POLL_SLOWDOWN else "5s",
+            "polling_stopped": attempt >= STATUS_POLL_LIMIT,
+        },
+    )
 
 
 @login_required

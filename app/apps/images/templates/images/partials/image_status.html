@@ -5,14 +5,38 @@
   <img src="{{ im.url }}" class="block w-full h-auto" alt="{{ image.title }}" />
   {% endthumbnail %}
 </a>
+{% elif image.download_error %}
+<div class="flex items-center justify-center h-[300px] w-full max-w-[400px]">
+  <div class="flex flex-col items-center gap-[13px] px-[26px] text-center">
+    <i class="ti ti-photo-off text-[31px] text-[#5E5C6A]"></i>
+    <span class="text-[14px] text-[#9896A4]">{{ image.download_error }}</span>
+    {% if request.user == image.user %}
+    <form method="post" action="{% url 'images:retry' image.id %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl bg-brand text-white text-[14px] font-medium hover:opacity-90 transition-opacity cursor-pointer">
+        <i class="ti ti-refresh text-[16px]"></i>
+        Try again
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 {% else %}
-<div hx-get="{% url 'images:status' image.id %}"
-     hx-trigger="every 2s"
-     hx-swap="outerHTML">
+{# The counters come from the status view only. On the first render, straight #}
+{# from the image page, they are missing and the defaults start the polling. #}
+<div {% if not polling_stopped %}hx-get="{% url 'images:status' image.id %}?attempt={{ next_attempt|default:1 }}"
+     hx-trigger="every {{ poll_interval|default:'2s' }}"
+     hx-swap="outerHTML"{% endif %}>
   <div class="flex items-center justify-center h-[300px] w-full max-w-[400px]">
-    <div class="flex flex-col items-center gap-[13px]">
+    <div class="flex flex-col items-center gap-[13px] px-[26px] text-center">
+      {% if polling_stopped %}
+      <i class="ti ti-clock-pause text-[31px] text-[#5E5C6A]"></i>
+      <span class="text-[14px] text-[#9896A4]">Still working on it. Reload the page to check again.</span>
+      {% else %}
       <div class="w-11 h-11 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
       <span class="text-[14px] text-[#5E5C6A]">Processing...</span>
+      {% endif %}
     </div>
   </div>
 </div>
