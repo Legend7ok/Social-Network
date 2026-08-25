@@ -147,6 +147,15 @@ def get_images_views(image_ids):
     return totals
 
 
+def apply_live_views(images):
+    """Overlay the counts still buffered in Redis on the stored ones, for the
+    page of images about to be rendered. Callers pass a list, not a queryset:
+    the attribute has to survive the template iterating over it."""
+    views = get_images_views([image.id for image in images])
+    for image in images:
+        image.total_views = views.get(image.id, image.total_views)
+
+
 def is_first_view(image_id, viewer_key, ttl=3600):
     try:
         key = f"image:{image_id}:view:{viewer_key}"

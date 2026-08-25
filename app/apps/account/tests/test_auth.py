@@ -4,15 +4,16 @@ import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.urls import reverse
 from social_core.exceptions import AuthException
 
-from apps.account.authentication import EmailAuthBackend
+from apps.account.authentication import EmailOrUsernameBackend
 from apps.account.pipeline import refuse_a_taken_address
 
 
 @pytest.fixture
 def backend():
-    return EmailAuthBackend()
+    return EmailOrUsernameBackend()
 
 
 # ─── authenticate ─────────────────────────────────────────────────────────────
@@ -54,6 +55,30 @@ def test_authenticate_accepts_any_casing(backend, user):
 
 
 @pytest.mark.django_db
+def test_authenticate_accepts_a_username_in_another_case(backend, user):
+    user_obj, password = user
+
+    result = backend.authenticate(
+        request=None, username=user_obj.username.upper(), password=password
+    )
+
+    assert result == user_obj
+
+
+@pytest.mark.django_db
+def test_signing_in_by_username_through_the_page_ignores_case(client, user):
+    user_obj, password = user
+
+    response = client.post(
+        reverse("login"),
+        {"username": user_obj.username.upper(), "password": password},
+    )
+
+    assert response.status_code == 302
+    assert response.wsgi_request.user == user_obj
+
+
+@pytest.mark.django_db
 def test_authenticate_rejects_inactive_user(backend, user):
     user_obj, password = user
     user_obj.is_active = False
@@ -86,6 +111,18 @@ def test_duplicate_email_rejected_whatever_the_case():
     with pytest.raises(IntegrityError):
         User.objects.create_user(
             username="user2", email="SAME@example.com", password="pass2"
+        )
+
+
+@pytest.mark.django_db
+def test_duplicate_username_rejected_whatever_the_case():
+    """The form turns a taken name away, but two requests can pass that check at
+    the same moment; the database is what settles it."""
+    User = get_user_model()
+    User.objects.create_user(username="bob", email="bob@example.com", password="pass1")
+    with pytest.raises(IntegrityError):
+        User.objects.create_user(
+            username="BOB", email="other@example.com", password="pass2"
         )
 
 

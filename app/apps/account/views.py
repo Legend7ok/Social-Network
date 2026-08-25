@@ -18,9 +18,15 @@ from django.views.generic import FormView
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
-from apps.images.services import get_images_views
+from apps.images.services import apply_live_views
 
-from .selectors import with_card_counters
+from .cache import feed_cache_key
+from .selectors import (
+    public_users,
+    sidebar_following,
+    with_card_counters,
+    with_profile_counters,
+)
 from .forms import (
     EmailOrUsernameAuthenticationForm,
     UserRegistrationForm,
@@ -35,6 +41,9 @@ from apps.actions.models import Action
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+# Fits the profile grid exactly: three columns up to tablets, four from xl up.
+PROFILE_IMAGES_PER_PAGE = 12
 
 
 def lockout_view(request, credentials, *args, **kwargs):
@@ -56,10 +65,14 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 @login_required
 def home(request):
-    cache_key = f"home_{request.user.id}"
+    cache_key = feed_cache_key(request.user.id)
     actions = cache.get(cache_key)
     if actions is None:
-        actions_qs = Action.objects.exclude(user=request.user)
+        # Without any subscriptions the feed falls back to everyone's activity,
+        # which is exactly where a staff account would show up.
+        actions_qs = Action.objects.filter(user__in=public_users()).exclude(
+            user=request.user
+        )
         following_ids = request.user.profile.following.values_list("user_id", flat=True)
         if following_ids:
             actions_qs = actions_qs.filter(user_id__in=following_ids)
@@ -70,9 +83,7 @@ def home(request):
         )
         cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     return render(
         request,
@@ -179,8 +190,11 @@ def edit(request):
             user_form.save()
             profile_form.save()
             messages.success(request, "Profile updated successfully")
-        else:
-            messages.error(request, "Error updating your profile")
+            # Answering a successful POST with a page means refreshing it asks
+            # the browser to send the form again; a redirect ends the request.
+            return redirect("my_profile")
+
+        messages.error(request, "Error updating your profile")
 
     else:
         user_form = UserEditForm(instance=request.user)
@@ -190,41 +204,6 @@ def edit(request):
         request,
         "account/edit.html",
         {"user_form": user_form, "profile_form": profile_form},
-    )
-
-
-@login_required
-def my_profile(request):
-    profile = request.user.profile
-    images = list(request.user.images.order_by("-created"))
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, 0)
-
-    total_likes = sum(img.total_likes for img in images)
-
-    follower_profiles = profile.followers.all()
-    following_profiles = profile.following.all()
-
-    followers = User.objects.filter(profile__in=follower_profiles).select_related(
-        "profile"
-    )[:4]
-    following = User.objects.filter(profile__in=following_profiles).select_related(
-        "profile"
-    )[:4]
-
-    return render(
-        request,
-        "account/my_profile.html",
-        {
-            "profile": profile,
-            "images": images,
-            "total_likes": total_likes,
-            "followers": followers,
-            "following": following,
-            "follower_count": follower_profiles.count(),
-            "following_count": following_profiles.count(),
-        },
     )
 
 
@@ -248,19 +227,21 @@ def user_list(request):
     users_only = request.GET.get("users_only")
     viewer_profile = request.user.profile
 
+    people = public_users()
     if filter_type == "following":
-        base_qs = User.objects.filter(profile__in=viewer_profile.following.all())
+        base_qs = people.filter(profile__in=viewer_profile.following.all())
     elif filter_type == "followers":
-        base_qs = User.objects.filter(profile__in=viewer_profile.followers.all())
+        base_qs = people.filter(profile__in=viewer_profile.followers.all())
     else:
-        base_qs = User.objects.filter(is_active=True).exclude(id=request.user.id)
+        base_qs = people.exclude(id=request.user.id)
 
     users_qs = (
         with_card_counters(base_qs)
-        # Most accounts share the same empty name now that sign-up does not ask
-        # for one, and equal keys leave the order to the database — pages would
-        # repeat one person and skip another. The id breaks every tie.
-        .order_by("first_name", "last_name", "id")
+        # Newest first. Sorting by name put every nameless account on top, and
+        # sign-up stopped asking for a name, so that was most of them. The id
+        # breaks ties: equal keys leave the order to the database, and pages
+        # would then repeat one person and skip another.
+        .order_by("-date_joined", "id")
     )
 
     paginator = Paginator(users_qs, 10)
@@ -289,43 +270,74 @@ def user_list(request):
 
 
 @login_required
-def user_detail(request, username):
+def profile(request, username=None):
+    """Both /me/ and /users/<username>/. The two pages differed only in the
+    photo upload and the buttons, so ownership is a flag rather than a view of
+    its own. No username means the viewer is looking at themselves — service
+    accounts are hidden from everyone else, but not from their own owner.
+
+    The context name is profile_user, not user: that one already belongs to the
+    signed-in person and shadowing it would hand templates the wrong human.
+    """
+    if username is None:
+        people = User.objects.filter(pk=request.user.pk)
+    else:
+        people = public_users().filter(username=username)
     profile_user = get_object_or_404(
-        User.objects.select_related("profile"),
-        username=username,
-        is_active=True,
+        with_profile_counters(people, request.user).select_related("profile")
     )
+    is_owner = profile_user == request.user
+    images_only = request.GET.get("images_only")
 
-    images = list(profile_user.images.order_by("-created"))
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, 0)
+    paginator = Paginator(
+        profile_user.images.order_by("-created"), PROFILE_IMAGES_PER_PAGE
+    )
+    try:
+        images = paginator.page(request.GET.get("page"))
+    except PageNotAnInteger:
+        images = paginator.page(1)
+    except EmptyPage:
+        if images_only:
+            return HttpResponse("")
+        images = paginator.page(paginator.num_pages)
 
-    total_likes = sum(img.total_likes for img in images)
+    # Force evaluation so total_views attrs survive template iteration
+    images.object_list = list(images.object_list)
+    apply_live_views(images.object_list)
 
-    follower_profiles = profile_user.profile.followers.all()
-    following_profiles = profile_user.profile.following.all()
+    if images_only:
+        return render(
+            request,
+            "account/partials/profile_images.html",
+            {"images": images, "is_owner": is_owner},
+        )
 
-    is_following = follower_profiles.filter(user=request.user).exists()
-
-    followers = User.objects.filter(profile__in=follower_profiles).select_related(
-        "profile"
-    )[:4]
-    following = User.objects.filter(profile__in=following_profiles).select_related(
-        "profile"
-    )[:4]
+    followers = (
+        public_users()
+        .filter(profile__in=profile_user.profile.followers.all())
+        .select_related("profile")[:4]
+    )
+    following = (
+        public_users()
+        .filter(profile__in=profile_user.profile.following.all())
+        .select_related("profile")[:4]
+    )
 
     return render(
         request,
-        "account/users/detail.html",
+        "account/profile.html",
         {
-            "user": profile_user,
+            "profile_user": profile_user,
+            "is_owner": is_owner,
             "images": images,
-            "total_likes": total_likes,
-            "is_following": is_following,
+            # All four came with the person, counted over everything they have
+            # rather than over the page on screen.
+            "images_count": profile_user.images_count,
+            "total_likes": profile_user.total_likes,
+            "is_following": profile_user.followed_by_viewer,
             "followers": followers,
             "following": following,
-            "follower_count": follower_profiles.count(),
-            "following_count": following_profiles.count(),
+            "follower_count": profile_user.followers_count,
+            "following_count": profile_user.following_count,
         },
     )

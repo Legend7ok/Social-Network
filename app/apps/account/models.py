@@ -16,6 +16,16 @@ def users_with_email(email):
     )
 
 
+def users_with_username(username):
+    """Same idea for auth_user_username_ci_uniq: the stored casing is kept, but
+    two people cannot hold the same name in different cases."""
+    return (
+        get_user_model()
+        .objects.annotate(username_lower=Lower("username"))
+        .filter(username_lower=username.lower())
+    )
+
+
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date_of_birth = models.DateField(blank=True, null=True)

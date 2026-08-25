@@ -49,6 +49,14 @@ def test_user_follow_nonexistent_returns_404(auth_client):
 
 
 @pytest.mark.django_db
+def test_user_follow_staff_account_returns_404(auth_client, staff_user):
+    staff, _ = staff_user
+    url = reverse("user-follow", args=[staff.pk])
+    response = auth_client.post(url, {"action": "follow"}, format="json")
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
 def test_user_follow_invalid_action_returns_400(auth_client, second_user):
     target, _ = second_user
     url = reverse("user-follow", args=[target.pk])

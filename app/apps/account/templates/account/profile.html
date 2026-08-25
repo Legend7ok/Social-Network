@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load thumbnail user_display %}
 
-{% block title %}{{ user|display_name }} · socnet{% endblock %}
+{% block title %}{{ profile_user|display_name }} · socnet{% endblock %}
 
 {% block content %}
 <div class="px-[16px] lg:px-[31px] py-[26px]">
@@ -9,15 +9,47 @@
   <!-- Profile header: avatar on top on phones, beside content from sm up -->
   <div class="flex flex-col sm:flex-row items-start gap-[22px] pb-[26px] border-b border-white/[0.08] mb-[26px]">
 
-    <!-- Avatar -->
-    <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden shrink-0"
-         style="border: 2px solid rgba(124,58,237,0.4);">
-      {% if user.profile.photo %}
-        {% thumbnail user.profile.photo THUMBS.avatar_lg crop="center" as av %}
-        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ user.username }}" />
-        {% endthumbnail %}
-      {% else %}
-        {{ user|initials }}
+    <!-- Avatar; the owner also gets the camera badge that opens the upload form -->
+    <div class="relative shrink-0"
+         {% if is_owner %}x-data="{ photoOpen: false, uploading: false }"{% endif %}>
+      <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden"
+           style="border: 2px solid rgba(124,58,237,0.4);">
+        {% if profile_user.profile.photo %}
+          {% thumbnail profile_user.profile.photo THUMBS.avatar_lg crop="center" as av %}
+          <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ profile_user.username }}" />
+          {% endthumbnail %}
+        {% else %}
+          {{ profile_user|initials }}
+        {% endif %}
+      </div>
+
+      {% if is_owner %}
+      <!-- The form submits the whole page, so until it comes back this is the
+           only sign that anything is happening -->
+      <div x-show="uploading" x-cloak
+           class="absolute inset-0 rounded-full flex items-center justify-center"
+           style="background: rgba(15,14,19,0.7);">
+        <div class="w-[31px] h-[31px] rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+      </div>
+
+      <button @click="photoOpen = !photoOpen"
+              class="absolute bottom-0 right-0 w-[31px] h-[31px] bg-brand rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-brand-light transition-colors">
+        <i class="ti ti-camera text-[12px] text-white"></i>
+      </button>
+
+      <div x-show="photoOpen" x-cloak x-transition
+           @click.outside="photoOpen = false"
+           class="absolute top-full mt-[9px] left-0 bg-surface-card border border-white/[0.15] rounded-xl p-[13px] shadow-xl w-[194px] z-20">
+        <form method="post" action="{% url 'profile_photo' %}" enctype="multipart/form-data" x-ref="photoForm">
+          {% csrf_token %}
+          <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="hidden" x-ref="fileInput"
+                 @change="uploading = true; photoOpen = false; $refs.photoForm.submit()">
+          <button type="button" @click="$refs.fileInput.click()"
+                  class="w-full flex items-center justify-center gap-[9px] bg-brand text-white text-[13px] py-[9px] rounded-lg hover:opacity-90 transition-opacity">
+            <i class="ti ti-upload text-[14px]"></i> Upload photo
+          </button>
+        </form>
+      </div>
       {% endif %}
     </div>
 
@@ -25,10 +57,10 @@
 
       <!-- Name + username + joined -->
       <div class="flex items-center gap-[11px] flex-wrap mb-[13px]">
-        <span class="text-[22px] font-medium text-white">{{ user|display_name }}</span>
-        <span class="text-[13px] text-[#5E5C6A]">@{{ user.username }}</span>
+        <span class="text-[22px] font-medium text-white">{{ profile_user|display_name }}</span>
+        <span class="text-[13px] text-[#5E5C6A]">@{{ profile_user.username }}</span>
         <span class="text-[12px] text-[#5E5C6A] flex items-center gap-1 ml-1">
-          <i class="ti ti-calendar text-[13px]"></i> joined {{ user.date_joined|date:"F Y" }}
+          <i class="ti ti-calendar text-[13px]"></i> joined {{ profile_user.date_joined|date:"F Y" }}
         </span>
       </div>
 
@@ -38,7 +70,7 @@
            @click.outside="followersOpen = false; followingOpen = false">
 
         <div class="text-center">
-          <div class="text-[19px] font-medium text-white">{{ images|length }}</div>
+          <div class="text-[19px] font-medium text-white">{{ images_count }}</div>
           <div class="text-[12px] text-[#5E5C6A]">images</div>
         </div>
         <div class="w-px h-[31px] bg-white/[0.15]"></div>
@@ -119,12 +151,23 @@
 
       </div>
 
-      <!-- Follow button -->
-      {% if request.user != user %}
+      <!-- Action buttons: your own page manages the account, someone else's follows it -->
+      {% if is_owner %}
+      <div class="flex flex-wrap gap-[9px]">
+        <a href="{% url 'edit' %}"
+           class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+          <i class="ti ti-edit text-[15px]"></i> Edit Profile
+        </a>
+        <a href="{% url 'password_change' %}"
+           class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+          <i class="ti ti-lock text-[15px]"></i> Change Password
+        </a>
+      </div>
+      {% else %}
       <div x-data="{
         following: {% if is_following %}true{% else %}false{% endif %},
         async toggle() {
-          const res = await fetch('{% url 'user-follow' user.id %}', {
+          const res = await fetch('{% url 'user-follow' profile_user.id %}', {
             method: 'POST',
             headers: {
               'X-CSRFToken': Alpine.store('csrf'),
@@ -157,32 +200,20 @@
 
   <!-- Image grid: 3 columns up to tablets, 4 from xl up -->
   <div class="grid grid-cols-3 xl:grid-cols-4 gap-[9px]">
-    {% for image in images %}
-    <a href="{{ image.get_absolute_url }}"
-       class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative group border border-white/[0.06] hover:border-brand/30 transition-colors">
-      {% if image.image %}
-        {% thumbnail image.image THUMBS.content_card crop="center" as th %}
-        <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" loading="lazy" />
-        {% endthumbnail %}
-      {% else %}
-        <i class="ti ti-photo text-[33px] text-[#5E5C6A]"></i>
-      {% endif %}
-      <div class="absolute inset-0 bg-surface-page/65 flex items-center justify-center gap-[13px] opacity-0 group-hover:opacity-100 transition-opacity">
-        <span class="text-white text-[13px] flex items-center gap-[7px]">
-          <i class="ti ti-heart"></i> {{ image.total_likes }}
-        </span>
-        <span class="text-white text-[13px] flex items-center gap-[7px]">
-          <i class="ti ti-eye"></i> {{ image.total_views }}
-        </span>
-      </div>
-    </a>
-    {% empty %}
-      <div class="col-span-full text-center py-[70px] text-[#5E5C6A]">
-        <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
-        <p class="text-[15px]">No images yet</p>
-      </div>
-    {% endfor %}
+    {% include 'account/partials/profile_images.html' %}
   </div>
+
+  <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
+
+  {% if is_owner %}
+    {% include 'images/partials/confirm_delete.html' %}
+  {% endif %}
 
 </div>
 {% endblock %}

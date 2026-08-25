@@ -26,6 +26,9 @@
         </button>
         <form method="post" :action="url">
           {% csrf_token %}
+          {% comment %}Sends the deletion back to the page it started from: the
+          profile grid carries the same buttons as the bookmarks page.{% endcomment %}
+          <input type="hidden" name="next" :value="window.location.pathname + window.location.search">
           <button type="submit"
                   class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-red-700/50 bg-red-900/30 text-[14px] font-medium text-red-300 hover:bg-red-900/50 transition-all">
             <i class="ti ti-trash text-[15px]"></i> Delete

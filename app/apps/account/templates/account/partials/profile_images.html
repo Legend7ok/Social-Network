@@ -1,0 +1,58 @@
+{% load thumbnail %}
+{% for image in images %}
+<div class="relative group">
+{% if is_owner %}
+  <!-- Kept outside the tile link: a link cannot contain other controls.
+       Always visible, like on the bookmarks page: a touch screen has no hover,
+       so buttons that appear on it cannot be reached at all. -->
+  <div class="absolute top-[7px] right-[7px] z-10 flex items-center gap-[5px]">
+    <a href="{% url 'images:edit' image.id %}"
+       class="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-white transition-colors"
+       style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
+       title="Edit">
+      <i class="ti ti-pencil text-[13px]"></i>
+    </a>
+    <button type="button"
+            @click="$dispatch('confirm-delete', { url: '{% url 'images:delete' image.id %}', title: '{{ image.title|escapejs }}' })"
+            class="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-red-400 transition-colors"
+            style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
+            title="Delete">
+      <i class="ti ti-trash text-[13px]"></i>
+    </button>
+  </div>
+{% endif %}
+<a href="{{ image.get_absolute_url }}"
+   class="rounded-xl overflow-hidden bg-surface-input aspect-square flex items-center justify-center relative border border-white/[0.06] group-hover:border-brand/30 transition-colors">
+  {% if image.image %}
+    {% thumbnail image.image THUMBS.content_card crop="center" as th %}
+    <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ image.title }}" loading="lazy" />
+    {% endthumbnail %}
+  {% else %}
+    <i class="ti ti-photo text-[33px] text-[#5E5C6A]"></i>
+  {% endif %}
+  <div class="absolute inset-0 bg-surface-page/65 flex items-center justify-center gap-[13px] opacity-0 group-hover:opacity-100 transition-opacity">
+    <span class="text-white text-[13px] flex items-center gap-[7px]">
+      <i class="ti ti-heart"></i> {{ image.total_likes }}
+    </span>
+    <span class="text-white text-[13px] flex items-center gap-[7px]">
+      <i class="ti ti-eye"></i> {{ image.total_views|default:0 }}
+    </span>
+  </div>
+</a>
+</div>
+{% empty %}
+  <div class="col-span-full text-center py-[70px] text-[#5E5C6A]">
+    <i class="ti ti-photo-off text-[53px] block mb-[13px]"></i>
+    <p class="text-[15px]">No images yet</p>
+  </div>
+{% endfor %}
+
+{% if images.has_next %}
+{% comment %}Scrolled into view, it swaps itself for the next page of tiles.{% endcomment %}
+<div class="col-span-full h-px"
+     hx-get="{% querystring images_only=1 page=images.next_page_number %}"
+     hx-trigger="intersect once"
+     hx-swap="outerHTML"
+     hx-indicator="#loading">
+</div>
+{% endif %}

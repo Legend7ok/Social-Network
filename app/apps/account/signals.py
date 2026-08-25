@@ -6,6 +6,7 @@ from django.dispatch import receiver
 
 from apps.actions.models import Action
 
+from .cache import feed_cache_key
 from .models import Profile
 from .tasks import delete_avatar_file, generate_avatar_thumbnails
 
@@ -26,7 +27,7 @@ def invalidate_dashboard_cache(sender, instance, created, **kwargs):
     if not created:
         return
     for profile in instance.user.profile.followers.all():
-        cache.delete(f"home_{profile.user_id}")
+        cache.delete(feed_cache_key(profile.user_id))
 
 
 @receiver(pre_save, sender=Profile, dispatch_uid="account_remember_old_photo")

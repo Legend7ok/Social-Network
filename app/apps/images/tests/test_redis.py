@@ -5,6 +5,7 @@ import pytest
 from apps.images.models import Image
 from apps.images.services import (
     DIRTY_IMAGES_KEY,
+    apply_live_views,
     get_dirty_image_ids,
     get_image_views,
     get_images_views,
@@ -69,6 +70,30 @@ def test_get_images_views_adds_delta_to_stored_total(image):
 @pytest.mark.django_db
 def test_get_images_views_empty_input_returns_empty_dict():
     assert get_images_views([]) == {}
+
+
+# ─── apply_live_views ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_apply_live_views_adds_the_buffered_count_to_each_image(image):
+    Image.objects.filter(id=image.id).update(total_views=7)
+    image.refresh_from_db()
+    record_image_view(image.id)
+
+    apply_live_views([image])
+
+    assert image.total_views == 8
+
+
+@pytest.mark.django_db
+def test_apply_live_views_keeps_the_stored_count_when_nothing_is_buffered(image):
+    Image.objects.filter(id=image.id).update(total_views=7)
+    image.refresh_from_db()
+
+    apply_live_views([image])
+
+    assert image.total_views == 7
 
 
 # ─── is_first_view ────────────────────────────────────────────────────────────

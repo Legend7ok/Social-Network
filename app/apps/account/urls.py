@@ -7,8 +7,9 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("register/", views.RegisterView.as_view(), name="register"),
     path("edit/", views.edit, name="edit"),
-    path("me/", views.my_profile, name="my_profile"),
+    # One view behind both: the owner's page is the same page without a name.
+    path("me/", views.profile, name="my_profile"),
     path("me/photo/", views.profile_photo_update, name="profile_photo"),
     path("users/", views.user_list, name="user_list"),
-    path("users/<username>/", views.user_detail, name="user_detail"),
+    path("users/<username>/", views.profile, name="user_detail"),
 ]

@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django_ratelimit.decorators import ratelimit
 
 from apps.account.selectors import with_card_counters
-from apps.images.services import get_images_views
+from apps.images.services import apply_live_views
 
 from .selectors import search_images, search_users
 
@@ -76,9 +76,7 @@ def search(request):
     else:
         # Force evaluation so total_views attrs survive template iteration
         results.object_list = list(results.object_list)
-        views_map = get_images_views([image.id for image in results.object_list])
-        for image in results.object_list:
-            image.total_views = views_map.get(image.id, image.total_views)
+        apply_live_views(results.object_list)
         context["images"] = results
         partial = "images/partials/image_cards.html"
 

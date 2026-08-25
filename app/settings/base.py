@@ -119,7 +119,7 @@ LOGOUT_REDIRECT_URL = "login"
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
-    "apps.account.authentication.EmailAuthBackend",
+    "apps.account.authentication.EmailOrUsernameBackend",
     "social_core.backends.google.GoogleOAuth2",
     "social_core.backends.github.GithubOAuth2",
 ]

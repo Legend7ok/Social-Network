@@ -258,6 +258,19 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staff_user):
+    liker, _ = second_user
+    staff, _ = staff_user
+    image.users_like.add(liker, staff)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    likers = list(response.context["users_like"])
+    assert liker in likers
+    assert staff not in likers
+
+
+@pytest.mark.django_db
 def test_image_detail_returns_404_for_unknown_id(client):
     response = client.get(reverse("images:detail", args=[9999, "no-such-slug"]))
     assert response.status_code == 404
@@ -661,6 +674,44 @@ def test_image_delete_removes_own_image_and_redirects(client, user, image):
     assert response.status_code == 302
     assert response["Location"] == f"{reverse('images:list')}?mine=1"
     assert not Image.objects.filter(id=image.id).exists()
+
+
+@pytest.mark.django_db
+def test_image_delete_returns_to_the_page_it_started_from(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:delete", args=[image.id]), {"next": reverse("my_profile")}
+    )
+
+    assert response["Location"] == reverse("my_profile")
+
+
+@pytest.mark.django_db
+def test_image_delete_does_not_return_to_the_deleted_image(client, user, image):
+    """Deleting from the image's own page has nowhere to go back to."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:delete", args=[image.id]),
+        {"next": image.get_absolute_url()},
+    )
+
+    assert response["Location"] == f"{reverse('images:list')}?mine=1"
+
+
+@pytest.mark.django_db
+def test_image_delete_ignores_a_next_pointing_off_the_site(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:delete", args=[image.id]), {"next": "https://evil.example.com/"}
+    )
+
+    assert response["Location"] == f"{reverse('images:list')}?mine=1"
 
 
 @pytest.mark.django_db

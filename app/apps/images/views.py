@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -7,21 +6,21 @@ from django.http import HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from .forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from .models import Image
 from .services import (
+    apply_live_views,
     record_image_view,
     get_image_views,
-    get_images_views,
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
+from apps.account.selectors import public_users, sidebar_following
 from apps.actions.utils import create_action
-
-User = get_user_model()
 
 # The podium is rendered separately from the list below it.
 RANKING_TOP = 3
@@ -34,13 +33,6 @@ RANKING_SORTS = {
 # Roughly four minutes of asking, which outlives the download and its retries.
 STATUS_POLL_SLOWDOWN = 15
 STATUS_POLL_LIMIT = 60
-
-
-def _show_live_views(images):
-    """Overlay the counts still buffered in Redis on top of the stored ones."""
-    views_map = get_images_views([img.id for img in images])
-    for img in images:
-        img.total_views = views_map.get(img.id, img.total_views)
 
 
 def bookmarklet_launcher(request):
@@ -91,14 +83,10 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    users_like = image.users_like.select_related("profile").all()
+    users_like = public_users().filter(images_liked=image).select_related("profile")
 
     following_users = (
-        User.objects.filter(
-            profile__in=request.user.profile.following.all()
-        ).select_related("profile")[:8]
-        if request.user.is_authenticated
-        else []
+        sidebar_following(request.user) if request.user.is_authenticated else []
     )
 
     return render(
@@ -136,11 +124,9 @@ def image_list(request):
 
     # Force evaluation so total_views attrs survive template iteration
     images.object_list = list(images.object_list)
-    _show_live_views(images.object_list)
+    apply_live_views(images.object_list)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     context = {
         "images": images,
@@ -204,8 +190,25 @@ def image_delete(request, id):
     # Filtering by author means someone else's image is a 404 rather than a
     # 403: there is nothing to say about images that are not yours.
     image = get_object_or_404(Image, id=id, user=request.user)
+    # The page it was deleted from is one of the places to send it back to, and
+    # the image's own page is not: it no longer exists a line below.
+    image_url = image.get_absolute_url()
     image.delete()
     messages.success(request, "Image deleted")
+
+    # Deletion is offered on several pages now, so it returns to the one it was
+    # started from. Checked before use: an unchecked next is an open redirect.
+    next_url = request.POST.get("next")
+    if (
+        next_url
+        and next_url != image_url
+        and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
+    ):
+        return redirect(next_url)
     return redirect(f"{reverse('images:list')}?mine=1")
 
 
@@ -286,18 +289,16 @@ def image_ranking(request):
     }
 
     if ranking_only:
-        _show_live_views(ranking_list)
+        apply_live_views(ranking_list)
         return render(request, "images/partials/ranking_rows.html", context)
 
     top3 = list(ranked[:podium_size]) if podium_size else []
     for rank, img in enumerate(top3, start=1):
         img.rank = rank
     # Both halves of the page in one Redis round trip
-    _show_live_views(ranking_list + top3)
+    apply_live_views(ranking_list + top3)
 
-    following_users = User.objects.filter(
-        profile__in=request.user.profile.following.all()
-    ).select_related("profile")[:8]
+    following_users = sidebar_following(request.user)
 
     context |= {"top3": top3, "following_users": following_users}
     return render(request, "images/ranking.html", context)
