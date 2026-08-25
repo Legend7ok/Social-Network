@@ -501,6 +501,29 @@ def test_image_edit_saves_title_and_description(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_edit_keeps_a_file_that_arrived_while_editing(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Old Title", url="https://example.com/late.png"
+    )
+
+    form = ImageEditForm(
+        {"title": "New Title", "description": "New words"},
+        instance=Image.objects.get(id=image.id),
+    )
+    assert form.is_valid()
+    # The download finishes between reading the row and saving the form
+    Image.objects.filter(id=image.id).update(image="images/arrived.png")
+    form.save()
+
+    image.refresh_from_db()
+    assert image.image.name == "images/arrived.png"
+    assert image.title == "New Title"
+    assert image.slug == "new-title"
+    assert image.edited_at
+
+
+@pytest.mark.django_db
 def test_image_edit_redirects_to_the_new_address(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)

@@ -45,10 +45,22 @@ class ImageEditForm(forms.ModelForm):
         model = Image
         fields = ["title", "description"]
 
+    # Everything this form is allowed to write. Saving the whole row instead
+    # would put the copy read at the start of the request back over the file
+    # column, which a download running right now may have just filled. The slug
+    # is here because the model recomputes it from the title on every save, and
+    # a column left out of this list is silently not written.
+    WRITTEN_FIELDS = ["title", "slug", "description", "edited_at"]
+
     def save(self, commit=True):
         if self.has_changed():
             self.instance.edited_at = timezone.now()
-        return super().save(commit=commit)
+        if not commit:
+            return super().save(commit=False)
+
+        self.instance.save(update_fields=self.WRITTEN_FIELDS)
+        self._save_m2m()
+        return self.instance
 
 
 class ImageUploadForm(forms.ModelForm):
