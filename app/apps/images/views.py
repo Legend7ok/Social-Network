@@ -180,14 +180,23 @@ def image_delete(request, id):
     # Filtering by author means someone else's image is a 404 rather than a
     # 403: there is nothing to say about images that are not yours.
     image = get_object_or_404(Image, id=id, user=request.user)
+    # The page it was deleted from is one of the places to send it back to, and
+    # the image's own page is not: it no longer exists a line below.
+    image_url = image.get_absolute_url()
     image.delete()
     messages.success(request, "Image deleted")
 
     # Deletion is offered on several pages now, so it returns to the one it was
     # started from. Checked before use: an unchecked next is an open redirect.
     next_url = request.POST.get("next")
-    if next_url and url_has_allowed_host_and_scheme(
-        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    if (
+        next_url
+        and next_url != image_url
+        and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
     ):
         return redirect(next_url)
     return redirect(f"{reverse('images:list')}?mine=1")

@@ -628,6 +628,20 @@ def test_image_delete_returns_to_the_page_it_started_from(client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_delete_does_not_return_to_the_deleted_image(client, user, image):
+    """Deleting from the image's own page has nowhere to go back to."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.post(
+        reverse("images:delete", args=[image.id]),
+        {"next": image.get_absolute_url()},
+    )
+
+    assert response["Location"] == f"{reverse('images:list')}?mine=1"
+
+
+@pytest.mark.django_db
 def test_image_delete_ignores_a_next_pointing_off_the_site(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)

@@ -2,8 +2,10 @@
 {% for image in images %}
 <div class="relative group">
 {% if is_owner %}
-  <!-- Kept outside the tile link: a link cannot contain other controls -->
-  <div class="absolute top-[7px] right-[7px] z-10 flex items-center gap-[5px] opacity-0 group-hover:opacity-100 transition-opacity">
+  <!-- Kept outside the tile link: a link cannot contain other controls.
+       Always visible, like on the bookmarks page: a touch screen has no hover,
+       so buttons that appear on it cannot be reached at all. -->
+  <div class="absolute top-[7px] right-[7px] z-10 flex items-center gap-[5px]">
     <a href="{% url 'images:edit' image.id %}"
        class="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-white transition-colors"
        style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
