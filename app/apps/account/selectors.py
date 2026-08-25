@@ -17,12 +17,15 @@ def public_users():
 
 
 def sidebar_following(user):
-    """The handful of people the right-hand sidebar lists. Every page carrying
-    that sidebar asks for the same thing, so the query lives in one place."""
+    """The handful of people the right-hand sidebar lists, with the image count
+    it shows under each name. Every page carrying that sidebar asks for the same
+    thing, so the query lives in one place — and counting here rather than in
+    the template turns eight queries per page into none."""
     return (
         public_users()
         .filter(profile__in=user.profile.following.all())
-        .select_related("profile")[:SIDEBAR_FOLLOWING_LIMIT]
+        .select_related("profile")
+        .annotate(images_count=Count("images"))[:SIDEBAR_FOLLOWING_LIMIT]
     )
 
 
