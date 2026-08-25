@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 from core.validators import validate_image_upload
-from .models import Profile, users_with_email
+from .models import Profile, users_with_email, users_with_username
 
 EMAIL_MAX_LENGTH = User._meta.get_field("email").max_length
 
@@ -43,7 +43,7 @@ class UserRegistrationForm(forms.ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data["username"]
-        if User.objects.filter(username__iexact=username).exists():
+        if users_with_username(username).exists():
             raise forms.ValidationError("This username is already taken")
         return username
 

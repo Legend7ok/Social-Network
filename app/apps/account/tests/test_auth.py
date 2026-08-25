@@ -90,6 +90,18 @@ def test_duplicate_email_rejected_whatever_the_case():
 
 
 @pytest.mark.django_db
+def test_duplicate_username_rejected_whatever_the_case():
+    """The form turns a taken name away, but two requests can pass that check at
+    the same moment; the database is what settles it."""
+    User = get_user_model()
+    User.objects.create_user(username="bob", email="bob@example.com", password="pass1")
+    with pytest.raises(IntegrityError):
+        User.objects.create_user(
+            username="BOB", email="other@example.com", password="pass2"
+        )
+
+
+@pytest.mark.django_db
 def test_blank_emails_stay_allowed():
     """Social logins may hand us no address at all, so blanks must not collide."""
     User = get_user_model()
