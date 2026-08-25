@@ -1,16 +1,21 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 
-from .models import users_with_email
+from .models import users_with_email, users_with_username
 
 User = get_user_model()
 
 
-class EmailAuthBackend(ModelBackend):
-    """Signing in with an email address instead of a username.
+class EmailOrUsernameBackend(ModelBackend):
+    """Signing in with an email address, or with a username typed in any casing.
 
     Subclasses ModelBackend so permissions, the inactive-user rule and session
     lookups keep Django's own behaviour; only finding the user differs.
+
+    Matching a username loosely is only safe because the database holds names
+    unique regardless of case (account/0008): without that index, bob and Bob
+    could be two people and this would sign one of them into the other's
+    account.
     """
 
     def authenticate(self, request, username=None, password=None, **kwargs):
@@ -18,10 +23,15 @@ class EmailAuthBackend(ModelBackend):
         if not username or not password:
             return None
 
-        try:
-            user = users_with_email(username.lower()).get()
-        except User.DoesNotExist:
-            # Keep hashing so an unknown address takes as long as a wrong password.
+        # Both lookups go through the case-insensitive indexes. Django's own
+        # backend runs first and settles exact matches, so this one mostly
+        # handles addresses and unusual casing.
+        user = (
+            users_with_email(username.lower()).first()
+            or users_with_username(username).first()
+        )
+        if user is None:
+            # Keep hashing so an unknown name takes as long as a wrong password.
             User().set_password(password)
             return None
 
