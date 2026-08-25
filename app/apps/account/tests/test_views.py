@@ -557,6 +557,23 @@ def test_failed_login_never_prints_a_template_comment(client, user):
 
 
 @pytest.mark.django_db
+def test_failed_login_says_nothing_about_which_half_was_wrong(client, user):
+    """The message must read the same for an unknown account and a wrong
+    password, or the page becomes a way to check who is registered here."""
+    user_obj, _ = user
+
+    known = client.post(
+        reverse("login"), {"username": user_obj.username, "password": "wrong"}
+    )
+    unknown = client.post(
+        reverse("login"), {"username": "nobody@example.com", "password": "wrong"}
+    )
+
+    assert b"Wrong email or password." in known.content
+    assert b"Wrong email or password." in unknown.content
+
+
+@pytest.mark.django_db
 def test_profile_next_page_returns_the_grid_partial(client, user):
     from apps.images.models import Image
 
