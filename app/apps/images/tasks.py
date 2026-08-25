@@ -35,6 +35,10 @@ DOWNLOAD_TIMEOUT = 10
 MAX_REDIRECTS = 5
 TOO_LARGE = "The file behind the link is larger than we accept."
 GAVE_UP = "The image could not be downloaded."
+# Plenty of sites turn away the default python-requests signature. Naming
+# ourselves is the polite way past that, and the name alone tells them nothing
+# beyond what the request already does.
+USER_AGENT = "socnet/1.0"
 
 
 @shared_task
@@ -143,7 +147,11 @@ def _fetch(url):
     for _ in range(MAX_REDIRECTS):
         validate_public_url(url)
         response = requests.get(
-            url, timeout=DOWNLOAD_TIMEOUT, stream=True, allow_redirects=False
+            url,
+            timeout=DOWNLOAD_TIMEOUT,
+            stream=True,
+            allow_redirects=False,
+            headers={"User-Agent": USER_AGENT},
         )
         if not response.is_redirect:
             return response

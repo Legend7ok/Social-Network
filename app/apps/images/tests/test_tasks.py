@@ -18,6 +18,7 @@ from apps.images.tasks import (
     GAVE_UP,
     MAX_REDIRECTS,
     TOO_LARGE,
+    USER_AGENT,
     delete_image_artifacts,
     download_image,
     flush_image_views,
@@ -65,6 +66,22 @@ def test_download_image_saves_file(user):
     image.refresh_from_db()
     assert image.image
     assert image.image.name.endswith(".png")
+
+
+@pytest.mark.django_db
+def test_download_image_names_itself_to_the_server(user):
+    user_obj, _ = user
+    image = Image.objects.create(
+        user=user_obj, title="Test Image", url="https://example.com/test.png"
+    )
+
+    with patch(
+        "apps.images.tasks.requests.get", return_value=make_response()
+    ) as mock_get:
+        with patch("apps.images.tasks.get_thumbnail"):
+            download_image(image.id, image.url)
+
+    assert mock_get.call_args.kwargs["headers"] == {"User-Agent": USER_AGENT}
 
 
 @pytest.mark.django_db
