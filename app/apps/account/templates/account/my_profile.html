@@ -10,7 +10,7 @@
   <div class="flex flex-col sm:flex-row items-start gap-[22px] pb-[26px] border-b border-white/[0.08] mb-[26px]">
 
     <!-- Avatar with camera badge -->
-    <div class="relative shrink-0" x-data="{ photoOpen: false }">
+    <div class="relative shrink-0" x-data="{ photoOpen: false, uploading: false }">
       <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden"
            style="border: 2px solid rgba(124,58,237,0.4);">
         {% if profile.photo %}
@@ -20,6 +20,14 @@
         {% else %}
           {{ request.user|initials }}
         {% endif %}
+      </div>
+
+      <!-- The form submits the whole page, so until it comes back this is the
+           only sign that anything is happening -->
+      <div x-show="uploading" x-cloak
+           class="absolute inset-0 rounded-full flex items-center justify-center"
+           style="background: rgba(15,14,19,0.7);">
+        <div class="w-[31px] h-[31px] rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
       </div>
 
       <button @click="photoOpen = !photoOpen"
@@ -32,8 +40,8 @@
            class="absolute top-full mt-[9px] left-0 bg-surface-card border border-white/[0.15] rounded-xl p-[13px] shadow-xl w-[194px] z-20">
         <form method="post" action="{% url 'profile_photo' %}" enctype="multipart/form-data" x-ref="photoForm">
           {% csrf_token %}
-          <input type="file" name="photo" accept="image/*" class="hidden" x-ref="fileInput"
-                 @change="$refs.photoForm.submit()">
+          <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="hidden" x-ref="fileInput"
+                 @change="uploading = true; photoOpen = false; $refs.photoForm.submit()">
           <button type="button" @click="$refs.fileInput.click()"
                   class="w-full flex items-center justify-center gap-[9px] bg-brand text-white text-[13px] py-[9px] rounded-lg hover:opacity-90 transition-opacity">
             <i class="ti ti-upload text-[14px]"></i> Upload photo
