@@ -237,10 +237,11 @@ def user_list(request):
 
     users_qs = (
         with_card_counters(base_qs)
-        # Most accounts share the same empty name now that sign-up does not ask
-        # for one, and equal keys leave the order to the database — pages would
-        # repeat one person and skip another. The id breaks every tie.
-        .order_by("first_name", "last_name", "id")
+        # Newest first. Sorting by name put every nameless account on top, and
+        # sign-up stopped asking for a name, so that was most of them. The id
+        # breaks ties: equal keys leave the order to the database, and pages
+        # would then repeat one person and skip another.
+        .order_by("-date_joined", "id")
     )
 
     paginator = Paginator(users_qs, 10)

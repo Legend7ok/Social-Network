@@ -367,6 +367,19 @@ def test_user_list_returns_200(client, user):
 
 
 @pytest.mark.django_db
+def test_user_list_puts_the_newest_accounts_first(client, user, make_user):
+    viewer, password = user
+    older, _ = make_user("older", "older@example.com", "testpass123")
+    newer, _ = make_user("newer", "newer@example.com", "testpass123")
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("user_list"))
+
+    listed = list(response.context["users"])
+    assert listed.index(newer) < listed.index(older)
+
+
+@pytest.mark.django_db
 def test_user_list_hides_staff_accounts(client, user, second_user, staff_user):
     user_obj, password = user
     other, _ = second_user
