@@ -7,7 +7,7 @@ from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.account.models import Profile
+from apps.account.models import Contact, Profile
 from apps.actions.models import Action
 from conftest import MINIMAL_PNG, png_bytes
 
@@ -140,9 +140,38 @@ def test_home_returns_200(client, user):
 
 
 @pytest.mark.django_db
+def test_home_shows_activity_of_people_you_do_not_follow(
+    client, user, second_user, make_user
+):
+    """The feed carries the whole site. It used to narrow to your own
+    subscriptions, so the first follow hid everybody else."""
+    user_obj, password = user
+    followed, _ = second_user
+    stranger, _ = make_user("carol", "carol@example.com", "testpass789")
+    Contact.objects.create(user_from=user_obj.profile, user_to=followed.profile)
+    Action.objects.create(user=followed, verb="liked an image")
+    Action.objects.create(user=stranger, verb="liked an image")
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    actors = {action.user for action in response.context["actions"]}
+    assert actors == {followed, stranger}
+
+
+@pytest.mark.django_db
+def test_home_leaves_out_your_own_activity(client, user):
+    user_obj, password = user
+    Action.objects.create(user=user_obj, verb="liked an image")
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    assert list(response.context["actions"]) == []
+
+
+@pytest.mark.django_db
 def test_home_hides_staff_activity(client, user, second_user, staff_user):
-    """With no subscriptions the feed falls back to everyone's activity, which
-    is where a staff account used to surface."""
     user_obj, password = user
     other, _ = second_user
     staff, _ = staff_user

@@ -63,17 +63,15 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 @login_required
 def home(request):
-    # Without any subscriptions the feed falls back to everyone's activity,
-    # which is exactly where a staff account would show up.
-    actions_qs = Action.objects.filter(user__in=public_users()).exclude(
-        user=request.user
+    # Everyone's activity, whoever you follow. Narrowing the feed to your own
+    # subscriptions emptied it on the first follow, and an open feed is what
+    # gives a new account something to follow in the first place.
+    actions = (
+        Action.objects.filter(user__in=public_users())
+        .exclude(user=request.user)
+        .select_related("user", "user__profile")
+        .prefetch_related("target")[:10]
     )
-    following_ids = request.user.profile.following.values_list("user_id", flat=True)
-    if following_ids:
-        actions_qs = actions_qs.filter(user_id__in=following_ids)
-    actions = actions_qs.select_related("user", "user__profile").prefetch_related(
-        "target"
-    )[:10]
 
     following_users = sidebar_following(request.user)
 
