@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
@@ -20,7 +19,6 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
 
-from .cache import feed_cache_key
 from .selectors import (
     public_users,
     sidebar_following,
@@ -65,23 +63,17 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 @login_required
 def home(request):
-    cache_key = feed_cache_key(request.user.id)
-    actions = cache.get(cache_key)
-    if actions is None:
-        # Without any subscriptions the feed falls back to everyone's activity,
-        # which is exactly where a staff account would show up.
-        actions_qs = Action.objects.filter(user__in=public_users()).exclude(
-            user=request.user
-        )
-        following_ids = request.user.profile.following.values_list("user_id", flat=True)
-        if following_ids:
-            actions_qs = actions_qs.filter(user_id__in=following_ids)
-        actions = list(
-            actions_qs.select_related("user", "user__profile").prefetch_related(
-                "target"
-            )[:10]
-        )
-        cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
+    # Without any subscriptions the feed falls back to everyone's activity,
+    # which is exactly where a staff account would show up.
+    actions_qs = Action.objects.filter(user__in=public_users()).exclude(
+        user=request.user
+    )
+    following_ids = request.user.profile.following.values_list("user_id", flat=True)
+    if following_ids:
+        actions_qs = actions_qs.filter(user_id__in=following_ids)
+    actions = actions_qs.select_related("user", "user__profile").prefetch_related(
+        "target"
+    )[:10]
 
     following_users = sidebar_following(request.user)
 
