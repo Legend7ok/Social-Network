@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.images.models import Image
+from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.throttles import LikeRateThrottle
 from .serializers import LikeSerializer
@@ -21,7 +22,7 @@ class ImageLikeView(APIView):
         action = serializer.validated_data["action"]
         if action == "like":
             image.users_like.add(request.user)
-            create_action(request.user, "likes", image)
+            create_action(request.user, Action.Verb.LIKED_IMAGE, image)
         else:
             image.users_like.remove(request.user)
 

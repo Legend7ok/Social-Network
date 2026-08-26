@@ -147,7 +147,7 @@ class RegisterView(RedirectURLMixin, FormView):
         try:
             with transaction.atomic():
                 new_user = form.save()
-                create_action(new_user, "has created an account")
+                create_action(new_user, Action.Verb.CREATED_ACCOUNT)
         except IntegrityError:
             # The form found the name and address free, then someone else took
             # one of them before this row reached the table.

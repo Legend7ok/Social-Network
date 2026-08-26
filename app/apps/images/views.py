@@ -20,6 +20,7 @@ from .services import (
 )
 from .tasks import download_image, generate_image_thumbnails
 from apps.account.selectors import public_users, sidebar_following
+from apps.actions.models import Action
 from apps.actions.utils import create_action
 
 # The podium is rendered separately from the list below it.
@@ -52,7 +53,7 @@ def image_create(request):
             transaction.on_commit(
                 lambda: download_image.delay(new_image.id, new_image.url)
             )
-            create_action(request.user, "bookmarked image", new_image)
+            create_action(request.user, Action.Verb.BOOKMARKED_IMAGE, new_image)
             messages.success(request, "Image added successfully")
             return redirect(new_image.get_absolute_url())
     else:
@@ -150,7 +151,7 @@ def image_upload(request):
             new_image.user = request.user
             new_image.save()
             transaction.on_commit(lambda: generate_image_thumbnails.delay(new_image.id))
-            create_action(request.user, "uploaded image", new_image)
+            create_action(request.user, Action.Verb.UPLOADED_IMAGE, new_image)
             messages.success(request, "Image uploaded successfully")
             return redirect(new_image.get_absolute_url())
     else:

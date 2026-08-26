@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from apps.account.models import Contact
 from apps.account.selectors import public_users
+from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.throttles import FollowRateThrottle
 from .serializers import FollowSerializer
@@ -32,7 +33,7 @@ class UserFollowView(APIView):
             Contact.objects.get_or_create(
                 user_from=request.user.profile, user_to=user.profile
             )
-            create_action(request.user, "is following", user)
+            create_action(request.user, Action.Verb.FOLLOWED_USER, user)
         else:
             Contact.objects.filter(
                 user_from=request.user.profile, user_to=user.profile
