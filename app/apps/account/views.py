@@ -18,6 +18,7 @@ from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
+from core.pagination import cursor_page
 
 from .selectors import (
     public_users,
@@ -67,21 +68,29 @@ def home(request):
     # Everyone's activity, whoever you follow. Narrowing the feed to your own
     # subscriptions emptied it on the first follow, and an open feed is what
     # gives a new account something to follow in the first place.
-    actions = feed(request.user)[:10]
-
-    following_users = sidebar_following(request.user)
-
-    return render(
-        request,
-        "account/home.html",
-        {
-            "actions": actions,
-            "following_users": following_users,
-            # The cards tell one kind of entry from another by verb; this hands
-            # the template the same names the rest of the code uses.
-            "verbs": Action.Verb,
-        },
+    page = cursor_page(
+        feed(request.user),
+        settings.FEED_ACTIONS_PER_PAGE,
+        cursor=request.GET.get("after"),
     )
+    actions_only = request.GET.get("actions_only")
+
+    if actions_only and not page.rows:
+        return HttpResponse("")
+
+    context = {
+        "actions": page.rows,
+        "next_cursor": page.next_cursor,
+        # The cards tell one kind of entry from another by verb; this hands
+        # the template the same names the rest of the code uses.
+        "verbs": Action.Verb,
+    }
+
+    if actions_only:
+        return render(request, "account/partials/feed_actions.html", context)
+
+    context["following_users"] = sidebar_following(request.user)
+    return render(request, "account/home.html", context)
 
 
 # The views in this project are functions; these two are the exception. Signing

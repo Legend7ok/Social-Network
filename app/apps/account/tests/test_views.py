@@ -250,6 +250,112 @@ def test_home_costs_the_same_however_many_entries_it_holds(client, user, second_
     assert len(nine_entries) == len(three_entries)
 
 
+def _feed_entries(actor, count):
+    for number in range(count):
+        Action.objects.create(user=actor, verb=Action.Verb.CREATED_ACCOUNT)
+
+
+@pytest.mark.django_db
+def test_home_shows_one_page_of_entries(client, user, second_user, settings):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    assert len(response.context["actions"]) == 3
+    assert response.context["next_cursor"]
+
+
+@pytest.mark.django_db
+def test_home_next_batch_carries_on_where_the_page_stopped(
+    client, user, second_user, settings
+):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    second = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = [action.id for action in first.context["actions"]]
+    following = [action.id for action in second.context["actions"]]
+    assert following == [action.id for action in Action.objects.all()[3:5]]
+    assert not set(seen) & set(following)
+    assert second.context["next_cursor"] == ""
+
+
+@pytest.mark.django_db
+def test_home_repeats_nothing_when_the_feed_grows_mid_scroll(
+    client, user, second_user, settings
+):
+    """The reason for a cursor: with page numbers the entries added here would
+    push the first batch down, and the second batch would serve it again."""
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    _feed_entries(other, 4)
+    second = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = {action.id for action in first.context["actions"]}
+    following = {action.id for action in second.context["actions"]}
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_home_scroll_past_the_last_entry_returns_nothing(
+    client, user, second_user, settings
+):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    """The tail can go while the page is open: what is left to load is deleted
+    here between the two requests."""
+    _feed_entries(other, 4)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    Action.objects.exclude(
+        id__in=[action.id for action in first.context["actions"]]
+    ).delete()
+    past_the_end = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    assert past_the_end.content == b""
+
+
+@pytest.mark.django_db
+def test_home_reads_from_the_top_when_the_cursor_is_gibberish(
+    client, user, second_user, settings
+):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"), {"after": "not-a-cursor"})
+
+    assert len(response.context["actions"]) == 3
+    assert response.status_code == 200
+
+
 # ─── register ─────────────────────────────────────────────────────────────────
 
 

@@ -5,6 +5,14 @@
 {% block content %}
 <div class="max-w-[704px] mx-auto px-[16px] sm:px-[22px] py-[22px]">
   {% include 'account/partials/feed_actions.html' %}
+
+  <div id="loading" class="htmx-indicator flex justify-center py-[26px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
