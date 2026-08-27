@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.db.models import Exists, OuterRef
 
@@ -20,6 +21,12 @@ def feed(viewer):
     return (
         Action.objects.filter(user__in=public_users())
         .exclude(user=viewer)
+        # A hidden person is hidden as a target too, or "alice is following
+        # @admin" walks the service account back onto the page.
+        .exclude(
+            target_ct=ContentType.objects.get_for_model(User),
+            target_id__in=User.objects.exclude(pk__in=public_users()).values("pk"),
+        )
         .select_related("user", "user__profile")
         .prefetch_related(
             GenericPrefetch("target", [_liked_images(viewer), _people(viewer)])

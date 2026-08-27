@@ -187,6 +187,25 @@ def test_home_hides_staff_activity(client, user, second_user, staff_user):
 
 
 @pytest.mark.django_db
+def test_home_hides_entries_aimed_at_a_staff_account(
+    client, user, second_user, staff_user
+):
+    """Only the author used to be checked, so a service account came back into
+    the feed as the person somebody had just followed."""
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    Action.objects.create(user=other, verb=Action.Verb.FOLLOWED_USER, target=staff)
+    Action.objects.create(user=other, verb=Action.Verb.FOLLOWED_USER, target=user_obj)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    targets = {action.target for action in response.context["actions"]}
+    assert targets == {user_obj}
+
+
+@pytest.mark.django_db
 def test_home_costs_the_same_however_many_entries_it_holds(client, user, second_user):
     """Counting queries rather than fixing a number: the cards used to ask for
     the likes, the followers and the image count of every entry they drew."""
