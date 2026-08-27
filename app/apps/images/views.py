@@ -22,6 +22,7 @@ from .tasks import download_image, generate_image_thumbnails
 from apps.account.selectors import public_users, sidebar_following
 from apps.actions.models import Action
 from apps.actions.utils import create_action
+from core.pagination import cursor_page
 
 # The podium is rendered separately from the list below it.
 RANKING_TOP = 3
@@ -105,39 +106,29 @@ def image_detail(request, id, slug):
 @login_required
 def image_list(request):
     mine = request.GET.get("mine")
+    images = Image.objects.select_related("user", "user__profile")
     if mine:
-        images = Image.objects.filter(user=request.user).select_related(
-            "user", "user__profile"
-        )
-    else:
-        images = Image.objects.all().select_related("user", "user__profile")
-    paginator = Paginator(images, 6)
-    page = request.GET.get("page")
+        images = images.filter(user=request.user)
+
+    page = cursor_page(
+        images, settings.IMAGES_PER_PAGE, cursor=request.GET.get("after")
+    )
     images_only = request.GET.get("images_only")
-    try:
-        images = paginator.page(page)
-    except PageNotAnInteger:
-        images = paginator.page(1)
-    except EmptyPage:
-        if images_only:
-            return HttpResponse("")
-        images = paginator.page(paginator.num_pages)
+    if images_only and not page.rows:
+        return HttpResponse("")
 
-    # Force evaluation so total_views attrs survive template iteration
-    images.object_list = list(images.object_list)
-    apply_live_views(images.object_list)
-
-    following_users = sidebar_following(request.user)
+    apply_live_views(page.rows)
 
     context = {
-        "images": images,
-        "following_users": following_users,
+        "images": page.rows,
+        "next_cursor": page.next_cursor,
         "mine": mine,
     }
 
     if images_only:
         return render(request, "images/partials/image_cards.html", context)
 
+    context["following_users"] = sidebar_following(request.user)
     return render(request, "images/list.html", context)
 
 

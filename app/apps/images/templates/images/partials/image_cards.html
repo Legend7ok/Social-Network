@@ -1,74 +1,11 @@
-{% load thumbnail user_display %}
-
 {% for image in images %}
-<div class="img-card relative">
-{% if mine %}
-  <!-- Kept outside the card link: a link cannot contain other controls -->
-  <div class="absolute top-[9px] right-[9px] z-10 flex items-center gap-[5px]">
-    <a href="{% url 'images:edit' image.id %}"
-       class="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-white transition-colors"
-       style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
-       title="Edit">
-      <i class="ti ti-pencil text-[14px]"></i>
-    </a>
-    <button type="button"
-            @click="$dispatch('confirm-delete', { url: '{% url 'images:delete' image.id %}', title: '{{ image.title|escapejs }}' })"
-            class="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[#9896A4] hover:text-red-400 transition-colors"
-            style="background: rgba(15,14,19,0.75); border: 0.5px solid rgba(255,255,255,0.15);"
-            title="Delete">
-      <i class="ti ti-trash text-[14px]"></i>
-    </button>
-  </div>
-{% endif %}
-<a href="{{ image.get_absolute_url }}"
-   class="bg-surface-card border border-white/[0.08] rounded-xl overflow-hidden block">
-
-  <div class="aspect-[4/3] bg-surface-input relative overflow-hidden">
-    {% if image.image %}
-      {% thumbnail image.image THUMBS.content_card crop="center" as im %}
-      <img src="{{ im.url }}"
-           class="w-full h-full object-cover"
-           alt="{{ image.title }}"
-           loading="lazy" />
-      {% endthumbnail %}
-    {% else %}
-      <div class="w-full h-full flex items-center justify-center">
-        <i class="ti ti-photo text-[40px] text-[#5E5C6A]"></i>
-      </div>
-    {% endif %}
-    <div class="thumb-overlay">
-      <span class="flex items-center gap-[7px] text-white text-[14px]">
-        <i class="ti ti-heart"></i> {{ image.total_likes }}
-      </span>
-      <span class="flex items-center gap-[7px] text-white text-[14px]">
-        <i class="ti ti-eye"></i> {{ image.total_views|default:0 }}
-      </span>
-    </div>
-  </div>
-
-  <div class="p-[13px]">
-    <div class="text-[14px] font-medium text-white mb-[7px] truncate">{{ image.title }}</div>
-    <div class="flex items-center gap-[9px]">
-      <div class="w-[22px] h-[22px] rounded-full bg-brand/30 flex items-center justify-center text-[10px] font-medium text-brand-light shrink-0 overflow-hidden">
-        {% if image.user.profile.photo %}
-          {% thumbnail image.user.profile.photo THUMBS.avatar_sm crop="center" as avatar %}
-          <img src="{{ avatar.url }}" class="w-full h-full object-cover" alt="{{ image.user.username }}" />
-          {% endthumbnail %}
-        {% else %}
-          {{ image.user|initials }}
-        {% endif %}
-      </div>
-      <span class="text-[13px] text-[#9896A4] truncate">{{ image.user|display_name }}</span>
-      <span class="ml-auto text-[12px] text-[#5E5C6A] shrink-0">{{ image.created|timesince }}</span>
-    </div>
-  </div>
-
-</a>
-</div>
+  {% include 'images/partials/image_card.html' %}
 {% endfor %}
-{% if images.has_next %}
+
+{% if next_cursor %}
+{% comment %}Scrolled into view, it swaps itself for the next batch of cards.{% endcomment %}
 <div class="col-span-full h-px"
-     hx-get="{% querystring images_only=1 page=images.next_page_number %}"
+     hx-get="{% querystring images_only=1 after=next_cursor %}"
      hx-trigger="intersect once"
      hx-swap="outerHTML"
      hx-indicator="#loading">

@@ -941,7 +941,7 @@ def test_image_list_uses_full_template(client, user):
 
 
 @pytest.mark.django_db
-def test_image_list_images_only_uses_partial_template(client, user):
+def test_image_list_images_only_uses_partial_template(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:list"), {"images_only": "1"})
@@ -951,32 +951,70 @@ def test_image_list_images_only_uses_partial_template(client, user):
     assert "images/list.html" not in template_names
 
 
+def _make_images(owner, count):
+    for number in range(count):
+        Image.objects.create(
+            user=owner,
+            title=f"Image {number}",
+            url=f"https://example.com/img{number}.png",
+            image=SimpleUploadedFile(
+                f"img{number}.png", MINIMAL_PNG, content_type="image/png"
+            ),
+        )
+
+
 @pytest.mark.django_db
-def test_image_list_empty_page_with_images_only_returns_empty_body(client, user):
+def test_image_list_scroll_past_the_last_image_returns_empty_body(client, user):
+    """What was left to load can be gone by the time the scroll asks for it."""
     user_obj, password = user
+    _make_images(user_obj, 7)
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:list"), {"page": "999", "images_only": "1"})
+
+    first = client.get(reverse("images:list"))
+    Image.objects.exclude(
+        id__in=[image.id for image in first.context["images"]]
+    ).delete()
+    response = client.get(
+        reverse("images:list"),
+        {"images_only": "1", "after": first.context["next_cursor"]},
+    )
+
     assert response.status_code == 200
     assert response.content == b""
 
 
 @pytest.mark.django_db
-def test_image_list_second_page_contains_remaining_images(client, user):
+def test_image_list_next_batch_contains_the_remaining_images(client, user):
     user_obj, password = user
-    for i in range(10):
-        img_file = SimpleUploadedFile(
-            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
-        )
-        Image.objects.create(
-            user=user_obj,
-            title=f"Image {i}",
-            url=f"https://example.com/img{i}.png",
-            image=img_file,
-        )
+    _make_images(user_obj, 10)
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:list"), {"page": "2"})
-    assert response.status_code == 200
-    assert len(response.context["images"]) == 4  # 10 images, 6 per page → page 2 has 4
+
+    first = client.get(reverse("images:list"))
+    second = client.get(reverse("images:list"), {"after": first.context["next_cursor"]})
+
+    assert len(first.context["images"]) == 6
+    assert len(second.context["images"]) == 4
+    assert second.context["next_cursor"] == ""
+
+
+@pytest.mark.django_db
+def test_image_list_repeats_nothing_when_someone_uploads_mid_scroll(client, user):
+    """Page numbers repeated the first batch here: a fresh upload pushed every
+    image one place down."""
+    user_obj, password = user
+    _make_images(user_obj, 10)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("images:list"))
+    _make_images(user_obj, 3)
+    second = client.get(
+        reverse("images:list"),
+        {"images_only": "1", "after": first.context["next_cursor"]},
+    )
+
+    seen = {image.id for image in first.context["images"]}
+    following = {image.id for image in second.context["images"]}
+    assert not seen & following
 
 
 @pytest.mark.django_db
@@ -1027,41 +1065,32 @@ def test_image_list_hides_owner_controls_on_the_common_list(client, user, image)
 
 
 @pytest.mark.django_db
-def test_image_list_partial_has_sentinel_when_has_next(client, user):
+def test_image_list_partial_carries_a_sentinel_while_more_is_left(client, user):
     user_obj, password = user
-    for i in range(9):
-        img_file = SimpleUploadedFile(
-            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
-        )
-        Image.objects.create(
-            user=user_obj,
-            title=f"Image {i}",
-            url=f"https://example.com/img{i}.png",
-            image=img_file,
-        )
+    _make_images(user_obj, 9)
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:list"), {"images_only": "1", "page": "1"})
+
+    response = client.get(reverse("images:list"), {"images_only": "1"})
+
     assert response.status_code == 200
-    assert b'hx-get="?images_only=1&amp;page=2"' in response.content
+    cursor = response.context["next_cursor"]
+    assert f'hx-get="?images_only=1&amp;after={cursor}"'.encode() in response.content
 
 
 @pytest.mark.django_db
-def test_image_list_partial_no_sentinel_on_last_page(client, user):
+def test_image_list_partial_drops_the_sentinel_on_the_last_batch(client, user):
     user_obj, password = user
-    for i in range(9):
-        img_file = SimpleUploadedFile(
-            f"img{i}.png", MINIMAL_PNG, content_type="image/png"
-        )
-        Image.objects.create(
-            user=user_obj,
-            title=f"Image {i}",
-            url=f"https://example.com/img{i}.png",
-            image=img_file,
-        )
+    _make_images(user_obj, 9)
     client.login(username=user_obj.username, password=password)
-    response = client.get(reverse("images:list"), {"images_only": "1", "page": "2"})
-    assert response.status_code == 200
-    assert b"hx-get" not in response.content
+
+    first = client.get(reverse("images:list"), {"images_only": "1"})
+    last = client.get(
+        reverse("images:list"),
+        {"images_only": "1", "after": first.context["next_cursor"]},
+    )
+
+    assert last.status_code == 200
+    assert b"hx-get" not in last.content
 
 
 # ─── View Tests: image_ranking ───────────────────────────────────────────────

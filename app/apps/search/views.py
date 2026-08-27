@@ -78,7 +78,7 @@ def search(request):
         results.object_list = list(results.object_list)
         apply_live_views(results.object_list)
         context["images"] = results
-        partial = "images/partials/image_cards.html"
+        partial = "search/partials/image_results.html"
 
     if results_only:
         return render(request, partial, context)

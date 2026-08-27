@@ -110,7 +110,7 @@ def test_scroll_request_returns_cards_only(logged_client, images):
     )
 
     rendered = [template.name for template in response.templates]
-    assert "images/partials/image_cards.html" in rendered
+    assert "search/partials/image_results.html" in rendered
     assert "search/results.html" not in rendered
 
 
