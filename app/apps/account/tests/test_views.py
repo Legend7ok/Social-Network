@@ -186,6 +186,51 @@ def test_home_hides_staff_activity(client, user, second_user, staff_user):
     assert staff not in actors
 
 
+@pytest.mark.django_db
+def test_home_costs_the_same_however_many_entries_it_holds(client, user, second_user):
+    """Counting queries rather than fixing a number: the cards used to ask for
+    the likes, the followers and the image count of every entry they drew."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    from apps.images.models import Image
+
+    user_obj, password = user
+    other, _ = second_user
+    client.login(username=user_obj.username, password=password)
+
+    def add_entries(count):
+        for number in range(count):
+            image = Image.objects.create(
+                user=other,
+                title=f"Image {number}",
+                url=f"https://example.com/{number}.png",
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.UPLOADED_IMAGE, target=image
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.LIKED_IMAGE, target=image
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.FOLLOWED_USER, target=user_obj
+            )
+
+    add_entries(1)
+    with CaptureQueriesContext(connection) as three_entries:
+        client.get(reverse("home"))
+
+    add_entries(2)
+    with CaptureQueriesContext(connection) as nine_entries:
+        response = client.get(reverse("home"))
+
+    # The count means nothing unless the cards whose numbers it covers really
+    # rendered: a body that never matched a verb would ask for nothing at all.
+    assert b"Image 0" in response.content
+    assert b"followers" in response.content
+    assert len(nine_entries) == len(three_entries)
+
+
 # ─── register ─────────────────────────────────────────────────────────────────
 
 

@@ -33,8 +33,9 @@ from .forms import (
     ProfilePhotoForm,
 )
 from .tasks import send_welcome_email
-from apps.actions.utils import create_action
 from apps.actions.models import Action
+from apps.actions.selectors import feed
+from apps.actions.utils import create_action
 
 User = get_user_model()
 
@@ -66,12 +67,7 @@ def home(request):
     # Everyone's activity, whoever you follow. Narrowing the feed to your own
     # subscriptions emptied it on the first follow, and an open feed is what
     # gives a new account something to follow in the first place.
-    actions = (
-        Action.objects.filter(user__in=public_users())
-        .exclude(user=request.user)
-        .select_related("user", "user__profile")
-        .prefetch_related("target")[:10]
-    )
+    actions = feed(request.user)[:10]
 
     following_users = sidebar_following(request.user)
 
@@ -81,6 +77,9 @@ def home(request):
         {
             "actions": actions,
             "following_users": following_users,
+            # The cards tell one kind of entry from another by verb; this hands
+            # the template the same names the rest of the code uses.
+            "verbs": Action.Verb,
         },
     )
 
