@@ -4,6 +4,33 @@
 
 {% block content %}
 <div class="max-w-[704px] mx-auto px-[16px] sm:px-[22px] py-[22px]">
+
+  {% if top_cursor %}
+  <div class="sticky top-[13px] z-20 flex justify-center"
+       x-data="{
+         count: 0,
+         label: '',
+         async check() {
+           if (document.hidden) return;
+           const res = await fetch('{% url 'feed_updates' %}?after={{ top_cursor }}');
+           if (!res.ok) return;
+           const data = await res.json();
+           this.count = data.count;
+           this.label = data.count > 99 ? '99+ new' : `${data.count} new`;
+         },
+         init() {
+           setInterval(() => this.check(), 60000);
+           document.addEventListener('visibilitychange', () => this.check());
+         },
+       }">
+    <button x-show="count > 0" x-cloak @click="window.location.reload()"
+            class="flex items-center gap-[7px] px-[15px] py-[7px] mb-[13px] rounded-full bg-brand text-white text-[13px] font-medium shadow-lg hover:opacity-90 transition-opacity">
+      <i class="ti ti-arrow-up text-[15px]"></i>
+      <span x-text="label"></span>
+    </button>
+  </div>
+  {% endif %}
+
   {% include 'account/partials/feed_actions.html' %}
 
   <div id="loading" class="htmx-indicator flex justify-center py-[26px]">

@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
 from django.db import IntegrityError, transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
@@ -18,7 +18,7 @@ from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
-from core.pagination import cursor_page
+from core.pagination import count_newer, cursor_page
 
 from .selectors import (
     public_users,
@@ -81,6 +81,7 @@ def home(request):
     context = {
         "actions": page.rows,
         "next_cursor": page.next_cursor,
+        "top_cursor": page.top_cursor,
         # The cards tell one kind of entry from another by verb; this hands
         # the template the same names the rest of the code uses.
         "verbs": Action.Verb,
@@ -91,6 +92,18 @@ def home(request):
 
     context["following_users"] = sidebar_following(request.user)
     return render(request, "account/home.html", context)
+
+
+@login_required
+@ratelimit(key="user", rate="30/m", block=True)
+def feed_updates(request):
+    """How much the feed has grown since the page was opened.
+
+    An open tab asks now and then; the answer is only a number, and the page
+    offers to fetch the entries themselves when the reader asks for them.
+    """
+    count = count_newer(feed(request.user), request.GET.get("after"))
+    return JsonResponse({"count": count})
 
 
 # The views in this project are functions; these two are the exception. Signing

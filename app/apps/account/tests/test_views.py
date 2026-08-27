@@ -356,6 +356,82 @@ def test_home_reads_from_the_top_when_the_cursor_is_gibberish(
     assert response.status_code == 200
 
 
+@pytest.mark.django_db
+def test_feed_updates_requires_login(client):
+    response = client.get(reverse("feed_updates"))
+
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_feed_updates_counts_what_arrived_above_the_cursor(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 2)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    _feed_entries(other, 3)
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 3}
+
+
+@pytest.mark.django_db
+def test_feed_updates_ignores_what_the_feed_itself_hides(
+    client, user, second_user, staff_user
+):
+    """The same query the page is built from, so anything it leaves out — your
+    own doings, a service account — is not announced either."""
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    _feed_entries(other, 1)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    _feed_entries(user_obj, 2)
+    _feed_entries(staff, 2)
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 0}
+
+
+@pytest.mark.django_db
+def test_feed_updates_stops_counting_past_the_cap(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 1)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    Action.objects.bulk_create(
+        [Action(user=other, verb=Action.Verb.CREATED_ACCOUNT) for _ in range(101)]
+    )
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 100}
+
+
+@pytest.mark.django_db
+def test_feed_updates_without_a_cursor_announces_nothing(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 3)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("feed_updates"))
+
+    assert response.json() == {"count": 0}
+
+
 # ─── register ─────────────────────────────────────────────────────────────────
 
 

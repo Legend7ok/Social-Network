@@ -5,6 +5,7 @@ urlpatterns = [
     path("login/", views.LoginView.as_view(), name="login"),
     path("", include("django.contrib.auth.urls")),
     path("", views.home, name="home"),
+    path("feed/updates/", views.feed_updates, name="feed_updates"),
     path("register/", views.RegisterView.as_view(), name="register"),
     path("edit/", views.edit, name="edit"),
     # One view behind both: the owner's page is the same page without a name.

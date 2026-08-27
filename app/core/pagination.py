@@ -18,6 +18,7 @@ from django.utils.dateparse import parse_datetime
 class CursorPage(NamedTuple):
     rows: list
     next_cursor: str
+    top_cursor: str
 
 
 def cursor_page(queryset, per_page, cursor=None, field="created"):
@@ -38,10 +39,27 @@ def cursor_page(queryset, per_page, cursor=None, field="created"):
     # One row past the page: its presence is the answer to "is there more",
     # without a second query counting what is left.
     rows = list(queryset[: per_page + 1])
+    top = _encode(rows[0], field) if rows else ""
     if len(rows) > per_page:
         rows = rows[:per_page]
-        return CursorPage(rows, _encode(rows[-1], field))
-    return CursorPage(rows, "")
+        return CursorPage(rows, _encode(rows[-1], field), top)
+    return CursorPage(rows, "", top)
+
+
+def count_newer(queryset, cursor, field="created", cap=99):
+    """How many rows arrived above the cursor, counted no further than `cap`.
+
+    The page only needs to say "99+" past that, and stopping there keeps the
+    count off the whole table however long the tab has been open.
+    """
+    position = _decode(cursor)
+    if not position:
+        return 0
+    moment, last_id = position
+    newer = queryset.filter(
+        Q(**{f"{field}__gt": moment}) | Q(**{field: moment, "id__gt": last_id})
+    )
+    return newer[: cap + 1].count()
 
 
 def _encode(row, field):
