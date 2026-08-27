@@ -667,6 +667,76 @@ def test_user_list_hides_staff_accounts(client, user, second_user, staff_user):
     assert staff not in listed
 
 
+def _make_people(make_user, count):
+    return [
+        make_user(f"person{number}", f"person{number}@example.com", "testpass123")[0]
+        for number in range(count)
+    ]
+
+
+@pytest.mark.django_db
+def test_user_list_next_batch_carries_on_where_the_page_stopped(
+    client, user, make_user, settings
+):
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    _make_people(make_user, 5)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    second = client.get(reverse("user_list"), {"after": first.context["next_cursor"]})
+
+    seen = {person.id for person in first.context["users"]}
+    following = {person.id for person in second.context["users"]}
+    assert len(first.context["users"]) == 3
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_user_list_repeats_nobody_when_someone_signs_up_mid_scroll(
+    client, user, make_user, settings
+):
+    """Page numbers repeated the first batch here: a fresh account pushed
+    everyone one place down."""
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    _make_people(make_user, 5)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    make_user("latecomer", "latecomer@example.com", "testpass123")
+    second = client.get(
+        reverse("user_list"),
+        {"users_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = {person.id for person in first.context["users"]}
+    following = {person.id for person in second.context["users"]}
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_user_list_scroll_past_the_last_person_returns_nothing(
+    client, user, make_user, settings
+):
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    people = _make_people(make_user, 4)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    listed = list(first.context["users"])
+    get_user_model().objects.filter(
+        id__in=[person.id for person in people if person not in listed]
+    ).delete()
+    response = client.get(
+        reverse("user_list"),
+        {"users_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    assert response.content == b""
+
+
 # ─── profile ──────────────────────────────────────────────────────────────────
 
 

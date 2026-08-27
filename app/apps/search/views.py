@@ -72,7 +72,7 @@ def search(request):
         context["following_ids"] = set(
             request.user.profile.following.values_list("user_id", flat=True)
         )
-        partial = "account/partials/user_cards.html"
+        partial = "search/partials/people_results.html"
     else:
         # Force evaluation so total_views attrs survive template iteration
         results.object_list = list(results.object_list)

@@ -7,18 +7,18 @@
 
   <!-- Tabs -->
   <div class="flex border-b border-white/[0.08] mb-[22px]">
-    {# Page is dropped: switching tabs starts the new list from the top. #}
-    <a href="{% querystring filter='all' page=None %}"
+    {# The cursor is dropped: switching tabs starts the new list from the top. #}
+    <a href="{% querystring filter='all' after=None %}"
        class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if not filter or filter == 'all' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       All
     </a>
-    <a href="{% querystring filter='following' page=None %}"
+    <a href="{% querystring filter='following' after=None %}"
        class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if filter == 'following' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       Following
     </a>
-    <a href="{% querystring filter='followers' page=None %}"
+    <a href="{% querystring filter='followers' after=None %}"
        class="px-[18px] py-[9px] text-[14px] border-b-2 transition-colors
               {% if filter == 'followers' %}text-brand-light border-brand{% else %}text-[#9896A4] border-transparent hover:text-white{% endif %}">
       Followers

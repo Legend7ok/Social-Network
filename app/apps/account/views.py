@@ -246,32 +246,24 @@ def user_list(request):
     else:
         base_qs = people.exclude(id=request.user.id)
 
-    users_qs = (
-        with_card_counters(base_qs)
-        # Newest first. Sorting by name put every nameless account on top, and
-        # sign-up stopped asking for a name, so that was most of them. The id
-        # breaks ties: equal keys leave the order to the database, and pages
-        # would then repeat one person and skip another.
-        .order_by("-date_joined", "id")
+    # Newest first. Sorting by name put every nameless account on top, and
+    # sign-up stopped asking for a name, so that was most of them.
+    page = cursor_page(
+        with_card_counters(base_qs),
+        settings.USERS_PER_PAGE,
+        cursor=request.GET.get("after"),
+        field="date_joined",
     )
-
-    paginator = Paginator(users_qs, 10)
-    page = request.GET.get("page")
-    try:
-        users = paginator.page(page)
-    except PageNotAnInteger:
-        users = paginator.page(1)
-    except EmptyPage:
-        if users_only:
-            return HttpResponse("")
-        users = paginator.page(paginator.num_pages)
-
-    following_ids = set(viewer_profile.following.values_list("user_id", flat=True))
+    if users_only and not page.rows:
+        return HttpResponse("")
 
     context = {
-        "users": users,
+        "users": page.rows,
+        "next_cursor": page.next_cursor,
         "filter": filter_type,
-        "following_ids": following_ids,
+        "following_ids": set(
+            viewer_profile.following.values_list("user_id", flat=True)
+        ),
     }
 
     if users_only:

@@ -1,0 +1,75 @@
+{% load thumbnail user_display %}
+<div class="bg-surface-card border border-white/[0.08] rounded-2xl px-[22px] py-[18px] flex flex-wrap items-center gap-[18px]
+            hover:border-brand/30 transition-all hover:-translate-y-px">
+
+  <!-- Avatar -->
+  <a href="{% url 'user_detail' profile_user.username %}" class="shrink-0">
+    <div class="w-[62px] h-[62px] rounded-full bg-brand/30 flex items-center justify-center text-[20px] font-medium text-brand-light overflow-hidden"
+         style="box-shadow: 0 0 0 2px rgba(124,58,237,0.25), 0 0 0 4px rgba(99,102,241,0.08);">
+      {% if profile_user.profile.photo %}
+        {% thumbnail profile_user.profile.photo THUMBS.avatar_md crop="center" as av %}
+        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ profile_user.username }}" />
+        {% endthumbnail %}
+      {% else %}
+        {{ profile_user|initials }}
+      {% endif %}
+    </div>
+  </a>
+
+  <!-- Info -->
+  <div class="flex-1 min-w-0">
+    <a href="{% url 'user_detail' profile_user.username %}"
+       class="flex items-baseline gap-[9px] mb-[11px] min-w-0 hover:opacity-80 transition-opacity">
+      <span class="text-[17px] font-medium text-white truncate">{{ profile_user|display_name }}</span>
+      <span class="text-[13px] text-[#5E5C6A] shrink-0">@{{ profile_user.username }}</span>
+    </a>
+    <div class="flex items-center gap-[18px]">
+      <div class="text-center">
+        <div class="text-[15px] font-medium text-white">{{ profile_user.images_count }}</div>
+        <div class="text-[12px] text-[#5E5C6A]">images</div>
+      </div>
+      <div class="w-px h-[26px] bg-white/[0.12]"></div>
+      <div class="text-center">
+        <div class="text-[15px] font-medium text-white">{{ profile_user.followers_count }}</div>
+        <div class="text-[12px] text-[#5E5C6A]">followers</div>
+      </div>
+      <div class="w-px h-[26px] bg-white/[0.12]"></div>
+      <div class="text-center">
+        <div class="text-[15px] font-medium text-white">{{ profile_user.total_likes }}</div>
+        <div class="text-[12px] text-[#5E5C6A]">likes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Follow button -->
+  {% if profile_user != request.user %}
+  <div class="w-full sm:w-auto" x-data="{
+    following: {% if profile_user.id in following_ids %}true{% else %}false{% endif %},
+    async toggle() {
+      const res = await fetch('{% url 'user-follow' profile_user.id %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': Alpine.store('csrf'),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
+      });
+      if (res.status === 429) {
+        Alpine.store('messages').push('Too many requests. Please slow down.');
+        return;
+      }
+      const data = await res.json();
+      if (data.status === 'ok') this.following = !this.following;
+    },
+  }">
+    <button @click="toggle()"
+            :class="following
+              ? 'bg-transparent border-brand/30 text-brand-light hover:bg-brand/10'
+              : 'bg-brand border-brand text-white hover:opacity-90'"
+            class="text-[14px] font-medium px-[22px] py-[9px] rounded-xl border transition-all w-full sm:w-auto sm:min-w-[110px]">
+      <span x-text="following ? 'Following' : '+ Follow'"></span>
+    </button>
+  </div>
+  {% endif %}
+
+</div>
