@@ -292,9 +292,7 @@ def profile(request, username=None):
     is_owner = profile_user == request.user
     images_only = request.GET.get("images_only")
 
-    paginator = Paginator(
-        profile_user.images.order_by("-created"), PROFILE_IMAGES_PER_PAGE
-    )
+    paginator = Paginator(profile_user.images.all(), PROFILE_IMAGES_PER_PAGE)
     try:
         images = paginator.page(request.GET.get("page"))
     except PageNotAnInteger:
