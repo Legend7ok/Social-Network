@@ -33,6 +33,42 @@ def test_image_like_removes_user(auth_client, user, image):
 
 
 @pytest.mark.django_db
+def test_image_like_writes_a_feed_entry_for_someone_elses_picture(
+    auth_client, user, second_user, image
+):
+    from apps.actions.models import Action
+
+    user_obj, _ = user
+    other, _ = second_user
+    image.user = other
+    image.save()
+
+    auth_client.post(
+        reverse("image-like", args=[image.pk]), {"action": "like"}, format="json"
+    )
+
+    assert Action.objects.filter(
+        user=user_obj, verb=Action.Verb.LIKED_IMAGE, target_id=image.pk
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_image_like_writes_no_feed_entry_for_your_own_picture(auth_client, user, image):
+    """The like itself stands; only the announcement is dropped — followers
+    have already seen this picture as an upload."""
+    from apps.actions.models import Action
+
+    user_obj, _ = user
+
+    auth_client.post(
+        reverse("image-like", args=[image.pk]), {"action": "like"}, format="json"
+    )
+
+    assert image.users_like.filter(pk=user_obj.pk).exists()
+    assert not Action.objects.filter(verb=Action.Verb.LIKED_IMAGE).exists()
+
+
+@pytest.mark.django_db
 def test_image_like_nonexistent_returns_404(auth_client):
     url = reverse("image-like", args=[9999])
     response = auth_client.post(url, {"action": "like"}, format="json")

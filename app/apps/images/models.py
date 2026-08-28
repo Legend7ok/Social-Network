@@ -41,12 +41,12 @@ class Image(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["-created"]),
+            models.Index(fields=["-created", "-id"]),
             models.Index(fields=["-total_likes"]),
             models.Index(fields=["-total_views"]),
             GinIndex(fields=["search_vector"], name="image_search_vector_gin"),
         ]
-        ordering = ["-created"]
+        ordering = ["-created", "-id"]
 
     def __str__(self):
         return self.title

@@ -1,0 +1,16 @@
+{% comment %}
+Search pages by number, not by cursor: results are ordered by how well they
+match, and that order does not move under the reader the way a feed does.
+{% endcomment %}
+{% for image in images %}
+  {% include 'images/partials/image_card.html' %}
+{% endfor %}
+
+{% if images.has_next %}
+<div class="col-span-full h-px"
+     hx-get="{% querystring images_only=1 page=images.next_page_number %}"
+     hx-trigger="intersect once"
+     hx-swap="outerHTML"
+     hx-indicator="#loading">
+</div>
+{% endif %}

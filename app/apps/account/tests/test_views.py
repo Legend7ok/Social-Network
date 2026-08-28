@@ -7,7 +7,7 @@ from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.account.models import Profile
+from apps.account.models import Contact, Profile
 from apps.actions.models import Action
 from conftest import MINIMAL_PNG, png_bytes
 
@@ -140,9 +140,38 @@ def test_home_returns_200(client, user):
 
 
 @pytest.mark.django_db
+def test_home_shows_activity_of_people_you_do_not_follow(
+    client, user, second_user, make_user
+):
+    """The feed carries the whole site. It used to narrow to your own
+    subscriptions, so the first follow hid everybody else."""
+    user_obj, password = user
+    followed, _ = second_user
+    stranger, _ = make_user("carol", "carol@example.com", "testpass789")
+    Contact.objects.create(user_from=user_obj.profile, user_to=followed.profile)
+    Action.objects.create(user=followed, verb="liked an image")
+    Action.objects.create(user=stranger, verb="liked an image")
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    actors = {action.user for action in response.context["actions"]}
+    assert actors == {followed, stranger}
+
+
+@pytest.mark.django_db
+def test_home_leaves_out_your_own_activity(client, user):
+    user_obj, password = user
+    Action.objects.create(user=user_obj, verb="liked an image")
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    assert list(response.context["actions"]) == []
+
+
+@pytest.mark.django_db
 def test_home_hides_staff_activity(client, user, second_user, staff_user):
-    """With no subscriptions the feed falls back to everyone's activity, which
-    is where a staff account used to surface."""
     user_obj, password = user
     other, _ = second_user
     staff, _ = staff_user
@@ -155,6 +184,252 @@ def test_home_hides_staff_activity(client, user, second_user, staff_user):
     actors = {action.user for action in response.context["actions"]}
     assert other in actors
     assert staff not in actors
+
+
+@pytest.mark.django_db
+def test_home_hides_entries_aimed_at_a_staff_account(
+    client, user, second_user, staff_user
+):
+    """Only the author used to be checked, so a service account came back into
+    the feed as the person somebody had just followed."""
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    Action.objects.create(user=other, verb=Action.Verb.FOLLOWED_USER, target=staff)
+    Action.objects.create(user=other, verb=Action.Verb.FOLLOWED_USER, target=user_obj)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    targets = {action.target for action in response.context["actions"]}
+    assert targets == {user_obj}
+
+
+@pytest.mark.django_db
+def test_home_costs_the_same_however_many_entries_it_holds(client, user, second_user):
+    """Counting queries rather than fixing a number: the cards used to ask for
+    the likes, the followers and the image count of every entry they drew."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    from apps.images.models import Image
+
+    user_obj, password = user
+    other, _ = second_user
+    client.login(username=user_obj.username, password=password)
+
+    def add_entries(count):
+        for number in range(count):
+            image = Image.objects.create(
+                user=other,
+                title=f"Image {number}",
+                url=f"https://example.com/{number}.png",
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.UPLOADED_IMAGE, target=image
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.LIKED_IMAGE, target=image
+            )
+            Action.objects.create(
+                user=other, verb=Action.Verb.FOLLOWED_USER, target=user_obj
+            )
+
+    add_entries(1)
+    with CaptureQueriesContext(connection) as three_entries:
+        client.get(reverse("home"))
+
+    add_entries(2)
+    with CaptureQueriesContext(connection) as nine_entries:
+        response = client.get(reverse("home"))
+
+    # The count means nothing unless the cards whose numbers it covers really
+    # rendered: a body that never matched a verb would ask for nothing at all.
+    assert b"Image 0" in response.content
+    assert b"followers" in response.content
+    assert len(nine_entries) == len(three_entries)
+
+
+def _feed_entries(actor, count):
+    for number in range(count):
+        Action.objects.create(user=actor, verb=Action.Verb.CREATED_ACCOUNT)
+
+
+@pytest.mark.django_db
+def test_home_shows_one_page_of_entries(client, user, second_user, settings):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"))
+
+    assert len(response.context["actions"]) == 3
+    assert response.context["next_cursor"]
+
+
+@pytest.mark.django_db
+def test_home_next_batch_carries_on_where_the_page_stopped(
+    client, user, second_user, settings
+):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    second = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = [action.id for action in first.context["actions"]]
+    following = [action.id for action in second.context["actions"]]
+    assert following == [action.id for action in Action.objects.all()[3:5]]
+    assert not set(seen) & set(following)
+    assert second.context["next_cursor"] == ""
+
+
+@pytest.mark.django_db
+def test_home_repeats_nothing_when_the_feed_grows_mid_scroll(
+    client, user, second_user, settings
+):
+    """The reason for a cursor: with page numbers the entries added here would
+    push the first batch down, and the second batch would serve it again."""
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    _feed_entries(other, 4)
+    second = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = {action.id for action in first.context["actions"]}
+    following = {action.id for action in second.context["actions"]}
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_home_scroll_past_the_last_entry_returns_nothing(
+    client, user, second_user, settings
+):
+    """The tail can go while the page is open: what is left to load is deleted
+    here between the two requests."""
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 4)
+    client.login(username=user_obj.username, password=password)
+
+    first = client.get(reverse("home"))
+    Action.objects.exclude(
+        id__in=[action.id for action in first.context["actions"]]
+    ).delete()
+    past_the_end = client.get(
+        reverse("home"),
+        {"actions_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    assert past_the_end.content == b""
+
+
+@pytest.mark.django_db
+def test_home_reads_from_the_top_when_the_cursor_is_gibberish(
+    client, user, second_user, settings
+):
+    settings.FEED_ACTIONS_PER_PAGE = 3
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 5)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("home"), {"after": "not-a-cursor"})
+
+    assert len(response.context["actions"]) == 3
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_feed_updates_requires_login(client):
+    response = client.get(reverse("feed_updates"))
+
+    assert response.status_code == 302
+    assert "login" in response["Location"]
+
+
+@pytest.mark.django_db
+def test_feed_updates_counts_what_arrived_above_the_cursor(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 2)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    _feed_entries(other, 3)
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 3}
+
+
+@pytest.mark.django_db
+def test_feed_updates_ignores_what_the_feed_itself_hides(
+    client, user, second_user, staff_user
+):
+    """The same query the page is built from, so anything it leaves out — your
+    own doings, a service account — is not announced either."""
+    user_obj, password = user
+    other, _ = second_user
+    staff, _ = staff_user
+    _feed_entries(other, 1)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    _feed_entries(user_obj, 2)
+    _feed_entries(staff, 2)
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 0}
+
+
+@pytest.mark.django_db
+def test_feed_updates_stops_counting_past_the_cap(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 1)
+    client.login(username=user_obj.username, password=password)
+    opened = client.get(reverse("home"))
+
+    Action.objects.bulk_create(
+        [Action(user=other, verb=Action.Verb.CREATED_ACCOUNT) for _ in range(101)]
+    )
+    response = client.get(
+        reverse("feed_updates"), {"after": opened.context["top_cursor"]}
+    )
+
+    assert response.json() == {"count": 100}
+
+
+@pytest.mark.django_db
+def test_feed_updates_without_a_cursor_announces_nothing(client, user, second_user):
+    user_obj, password = user
+    other, _ = second_user
+    _feed_entries(other, 3)
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("feed_updates"))
+
+    assert response.json() == {"count": 0}
 
 
 # ─── register ─────────────────────────────────────────────────────────────────
@@ -390,6 +665,76 @@ def test_user_list_hides_staff_accounts(client, user, second_user, staff_user):
     listed = list(response.context["users"])
     assert other in listed
     assert staff not in listed
+
+
+def _make_people(make_user, count):
+    return [
+        make_user(f"person{number}", f"person{number}@example.com", "testpass123")[0]
+        for number in range(count)
+    ]
+
+
+@pytest.mark.django_db
+def test_user_list_next_batch_carries_on_where_the_page_stopped(
+    client, user, make_user, settings
+):
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    _make_people(make_user, 5)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    second = client.get(reverse("user_list"), {"after": first.context["next_cursor"]})
+
+    seen = {person.id for person in first.context["users"]}
+    following = {person.id for person in second.context["users"]}
+    assert len(first.context["users"]) == 3
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_user_list_repeats_nobody_when_someone_signs_up_mid_scroll(
+    client, user, make_user, settings
+):
+    """Page numbers repeated the first batch here: a fresh account pushed
+    everyone one place down."""
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    _make_people(make_user, 5)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    make_user("latecomer", "latecomer@example.com", "testpass123")
+    second = client.get(
+        reverse("user_list"),
+        {"users_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    seen = {person.id for person in first.context["users"]}
+    following = {person.id for person in second.context["users"]}
+    assert not seen & following
+
+
+@pytest.mark.django_db
+def test_user_list_scroll_past_the_last_person_returns_nothing(
+    client, user, make_user, settings
+):
+    settings.USERS_PER_PAGE = 3
+    viewer, password = user
+    people = _make_people(make_user, 4)
+    client.login(username=viewer.username, password=password)
+
+    first = client.get(reverse("user_list"))
+    listed = list(first.context["users"])
+    get_user_model().objects.filter(
+        id__in=[person.id for person in people if person not in listed]
+    ).delete()
+    response = client.get(
+        reverse("user_list"),
+        {"users_only": 1, "after": first.context["next_cursor"]},
+    )
+
+    assert response.content == b""
 
 
 # ─── profile ──────────────────────────────────────────────────────────────────

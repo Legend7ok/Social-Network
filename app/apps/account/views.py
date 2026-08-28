@@ -5,10 +5,9 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login as auth_login, views as auth_views
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import RedirectURLMixin, redirect_to_login
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
@@ -19,8 +18,8 @@ from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
+from core.pagination import count_newer, cursor_page
 
-from .cache import feed_cache_key
 from .selectors import (
     public_users,
     sidebar_following,
@@ -35,8 +34,9 @@ from .forms import (
     ProfilePhotoForm,
 )
 from .tasks import send_welcome_email
-from apps.actions.utils import create_action
 from apps.actions.models import Action
+from apps.actions.selectors import feed
+from apps.actions.utils import create_action
 
 User = get_user_model()
 
@@ -65,34 +65,45 @@ def lockout_view(request, credentials, *args, **kwargs):
 
 @login_required
 def home(request):
-    cache_key = feed_cache_key(request.user.id)
-    actions = cache.get(cache_key)
-    if actions is None:
-        # Without any subscriptions the feed falls back to everyone's activity,
-        # which is exactly where a staff account would show up.
-        actions_qs = Action.objects.filter(user__in=public_users()).exclude(
-            user=request.user
-        )
-        following_ids = request.user.profile.following.values_list("user_id", flat=True)
-        if following_ids:
-            actions_qs = actions_qs.filter(user_id__in=following_ids)
-        actions = list(
-            actions_qs.select_related("user", "user__profile").prefetch_related(
-                "target"
-            )[:10]
-        )
-        cache.set(cache_key, actions, settings.HOME_CACHE_TTL)
-
-    following_users = sidebar_following(request.user)
-
-    return render(
-        request,
-        "account/home.html",
-        {
-            "actions": actions,
-            "following_users": following_users,
-        },
+    # Everyone's activity, whoever you follow. Narrowing the feed to your own
+    # subscriptions emptied it on the first follow, and an open feed is what
+    # gives a new account something to follow in the first place.
+    page = cursor_page(
+        feed(request.user),
+        settings.FEED_ACTIONS_PER_PAGE,
+        cursor=request.GET.get("after"),
     )
+    actions_only = request.GET.get("actions_only")
+
+    if actions_only and not page.rows:
+        return HttpResponse("")
+
+    context = {
+        "actions": page.rows,
+        "next_cursor": page.next_cursor,
+        "top_cursor": page.top_cursor,
+        # The cards tell one kind of entry from another by verb; this hands
+        # the template the same names the rest of the code uses.
+        "verbs": Action.Verb,
+    }
+
+    if actions_only:
+        return render(request, "account/partials/feed_actions.html", context)
+
+    context["following_users"] = sidebar_following(request.user)
+    return render(request, "account/home.html", context)
+
+
+@login_required
+@ratelimit(key="user", rate="30/m", block=True)
+def feed_updates(request):
+    """How much the feed has grown since the page was opened.
+
+    An open tab asks now and then; the answer is only a number, and the page
+    offers to fetch the entries themselves when the reader asks for them.
+    """
+    count = count_newer(feed(request.user), request.GET.get("after"))
+    return JsonResponse({"count": count})
 
 
 # The views in this project are functions; these two are the exception. Signing
@@ -157,7 +168,7 @@ class RegisterView(RedirectURLMixin, FormView):
         try:
             with transaction.atomic():
                 new_user = form.save()
-                create_action(new_user, "has created an account")
+                create_action(new_user, Action.Verb.CREATED_ACCOUNT)
         except IntegrityError:
             # The form found the name and address free, then someone else took
             # one of them before this row reached the table.
@@ -235,32 +246,24 @@ def user_list(request):
     else:
         base_qs = people.exclude(id=request.user.id)
 
-    users_qs = (
-        with_card_counters(base_qs)
-        # Newest first. Sorting by name put every nameless account on top, and
-        # sign-up stopped asking for a name, so that was most of them. The id
-        # breaks ties: equal keys leave the order to the database, and pages
-        # would then repeat one person and skip another.
-        .order_by("-date_joined", "id")
+    # Newest first. Sorting by name put every nameless account on top, and
+    # sign-up stopped asking for a name, so that was most of them.
+    page = cursor_page(
+        with_card_counters(base_qs),
+        settings.USERS_PER_PAGE,
+        cursor=request.GET.get("after"),
+        field="date_joined",
     )
-
-    paginator = Paginator(users_qs, 10)
-    page = request.GET.get("page")
-    try:
-        users = paginator.page(page)
-    except PageNotAnInteger:
-        users = paginator.page(1)
-    except EmptyPage:
-        if users_only:
-            return HttpResponse("")
-        users = paginator.page(paginator.num_pages)
-
-    following_ids = set(viewer_profile.following.values_list("user_id", flat=True))
+    if users_only and not page.rows:
+        return HttpResponse("")
 
     context = {
-        "users": users,
+        "users": page.rows,
+        "next_cursor": page.next_cursor,
         "filter": filter_type,
-        "following_ids": following_ids,
+        "following_ids": set(
+            viewer_profile.following.values_list("user_id", flat=True)
+        ),
     }
 
     if users_only:
@@ -289,9 +292,7 @@ def profile(request, username=None):
     is_owner = profile_user == request.user
     images_only = request.GET.get("images_only")
 
-    paginator = Paginator(
-        profile_user.images.order_by("-created"), PROFILE_IMAGES_PER_PAGE
-    )
+    paginator = Paginator(profile_user.images.all(), PROFILE_IMAGES_PER_PAGE)
     try:
         images = paginator.page(request.GET.get("page"))
     except PageNotAnInteger:

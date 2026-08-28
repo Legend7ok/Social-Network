@@ -29,6 +29,13 @@ def sidebar_following(user):
     )
 
 
+def is_followed_by(viewer):
+    """Whether the viewer already follows the person a row is about."""
+    return Exists(
+        Contact.objects.filter(user_from=viewer.profile, user_to__user=OuterRef("pk"))
+    )
+
+
 def _first_number(subquery):
     """A grouped subquery returns one row or none; none means zero."""
     return Coalesce(Subquery(subquery, output_field=IntegerField()), 0)
@@ -52,11 +59,7 @@ def with_profile_counters(people, viewer):
         total_likes=_first_number(images.annotate(n=Sum("total_likes")).values("n")),
         followers_count=_first_number(followers.annotate(n=Count("id")).values("n")),
         following_count=_first_number(following.annotate(n=Count("id")).values("n")),
-        followed_by_viewer=Exists(
-            Contact.objects.filter(
-                user_from=viewer.profile, user_to__user=OuterRef("pk")
-            )
-        ),
+        followed_by_viewer=is_followed_by(viewer),
     )
 
 

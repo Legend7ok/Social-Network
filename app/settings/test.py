@@ -9,6 +9,11 @@ CACHES = {
     }
 }
 
+# The real hasher is slow on purpose, and the suite pays that price on every
+# account it makes and every sign-in it performs. Nothing here tests how
+# expensive a hash is to compute.
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 RATELIMIT_IP_META_KEY = "REMOTE_ADDR"
 AXES_ENABLED = False
 # Off by default so no test reaches for a real resolver; the tests that cover

@@ -5,10 +5,20 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class Action(models.Model):
+    class Verb(models.TextChoices):
+        """What the feed can say about someone. The stored value is the phrase
+        itself, printed straight after the name: "alice likes <image>"."""
+
+        CREATED_ACCOUNT = "has created an account"
+        UPLOADED_IMAGE = "uploaded image"
+        BOOKMARKED_IMAGE = "bookmarked image"
+        LIKED_IMAGE = "likes"
+        FOLLOWED_USER = "is following"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name="actions", on_delete=models.CASCADE
     )
-    verb = models.CharField(max_length=255)
+    verb = models.CharField(max_length=255, choices=Verb)
     created = models.DateTimeField(auto_now_add=True)
     target_ct = models.ForeignKey(
         ContentType,
@@ -23,7 +33,7 @@ class Action(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["-created"]),
-            models.Index(fields=["target_ct", "created"]),
+            models.Index(fields=["-created", "-id"]),
+            models.Index(fields=["target_ct", "target_id"]),
         ]
-        ordering = ["-created"]
+        ordering = ["-created", "-id"]

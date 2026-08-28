@@ -1,0 +1,23 @@
+{% for action in actions %}
+  {% include 'account/partials/feed_card.html' %}
+{% empty %}
+  <div class="text-center py-[88px] text-[#5E5C6A]">
+    <i class="ti ti-timeline-event text-[53px] block mb-[13px]"></i>
+    <p class="text-[17px]">Nothing has happened here yet</p>
+    <p class="text-[14px] mt-[7px]">Uploads, likes and follows from everyone show up on this page</p>
+    <a href="{% url 'images:upload' %}"
+       class="inline-block mt-[18px] px-[22px] py-[9px] bg-brand text-white text-[14px] rounded-lg hover:opacity-90 transition-opacity">
+      Upload an image
+    </a>
+  </div>
+{% endfor %}
+
+{% if next_cursor %}
+{% comment %}Scrolled into view, it swaps itself for the next batch of cards.{% endcomment %}
+<div class="h-px"
+     hx-get="{% querystring actions_only=1 after=next_cursor %}"
+     hx-trigger="intersect once"
+     hx-swap="outerHTML"
+     hx-indicator="#loading">
+</div>
+{% endif %}

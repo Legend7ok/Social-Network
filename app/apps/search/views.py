@@ -13,6 +13,12 @@ from .selectors import search_images, search_users
 TABS = ("images", "people")
 
 
+def search_rate(group, request):
+    """Read at call time, not at import: a rate frozen into the decorator can
+    only be changed by restarting the process."""
+    return settings.SEARCH_RATE
+
+
 def normalize_query(raw):
     # Postgres rejects NUL bytes outright, and a huge string would be pushed
     # into a tsquery and into three similarity() calls per row.
@@ -20,7 +26,7 @@ def normalize_query(raw):
 
 
 @login_required
-@ratelimit(key="user", rate=settings.SEARCH_RATE, method="GET", block=True)
+@ratelimit(key="user", rate=search_rate, method="GET", block=True)
 def search(request):
     query = normalize_query(request.GET.get("q", ""))
     chosen_tab = request.GET.get("tab")
@@ -72,13 +78,13 @@ def search(request):
         context["following_ids"] = set(
             request.user.profile.following.values_list("user_id", flat=True)
         )
-        partial = "account/partials/user_cards.html"
+        partial = "search/partials/people_results.html"
     else:
         # Force evaluation so total_views attrs survive template iteration
         results.object_list = list(results.object_list)
         apply_live_views(results.object_list)
         context["images"] = results
-        partial = "images/partials/image_cards.html"
+        partial = "search/partials/image_results.html"
 
     if results_only:
         return render(request, partial, context)
