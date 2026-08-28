@@ -320,11 +320,11 @@ def test_home_repeats_nothing_when_the_feed_grows_mid_scroll(
 def test_home_scroll_past_the_last_entry_returns_nothing(
     client, user, second_user, settings
 ):
+    """The tail can go while the page is open: what is left to load is deleted
+    here between the two requests."""
     settings.FEED_ACTIONS_PER_PAGE = 3
     user_obj, password = user
     other, _ = second_user
-    """The tail can go while the page is open: what is left to load is deleted
-    here between the two requests."""
     _feed_entries(other, 4)
     client.login(username=user_obj.username, password=password)
 
