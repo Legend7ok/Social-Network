@@ -114,6 +114,23 @@ def test_unfollowing_takes_its_entry_down(user, second_user):
 
 
 @pytest.mark.django_db
+def test_deleting_a_person_takes_the_entries_aimed_at_them_down(
+    user, second_user, make_user
+):
+    follower, _ = user
+    leaving, _ = second_user
+    staying, _ = make_user("carol", "carol@example.com", "testpass789")
+    create_action(follower, Action.Verb.FOLLOWED_USER, leaving)
+    create_action(follower, Action.Verb.FOLLOWED_USER, staying)
+
+    leaving.delete()
+
+    remaining = Action.objects.filter(verb=Action.Verb.FOLLOWED_USER)
+    assert remaining.count() == 1
+    assert remaining.first().target == staying
+
+
+@pytest.mark.django_db
 def test_unfollowing_leaves_the_other_direction_alone(user, second_user):
     follower, _ = user
     followed, _ = second_user

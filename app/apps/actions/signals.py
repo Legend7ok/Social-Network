@@ -51,3 +51,16 @@ def drop_entry_of_undone_follow(sender, instance, **kwargs):
         target_ct=ContentType.objects.get_for_model(User),
         target_id__in=Profile.objects.filter(pk=instance.user_to_id).values("user_id"),
     ).delete()
+
+
+@receiver(
+    post_delete, sender=User, dispatch_uid="actions_drop_entries_aimed_at_a_gone_person"
+)
+def drop_entries_aimed_at_a_gone_person(sender, instance, **kwargs):
+    # A target is reached without a foreign key, so nothing cascades to it:
+    # what this person did leaves with them, what was done to them stays and
+    # draws a card pointing at nobody.
+    Action.objects.filter(
+        target_ct=ContentType.objects.get_for_model(User),
+        target_id=instance.pk,
+    ).delete()
