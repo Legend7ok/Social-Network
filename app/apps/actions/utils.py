@@ -20,10 +20,8 @@ def create_action(user, verb, target=None):
             target_id=target.id,
         )
 
-    if not similar_actions:
-        action = Action(user=user, verb=verb, target=target)
-        action.save()
+    if similar_actions.exists():
+        return False
 
-        return True
-
-    return False
+    Action.objects.create(user=user, verb=verb, target=target)
+    return True
