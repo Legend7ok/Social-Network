@@ -54,6 +54,15 @@ class Contact(models.Model):
         indexes = [
             models.Index(fields=["-created"]),
         ]
+        constraints = [
+            # One row per pair. get_or_create reads before it writes, so two
+            # requests racing each other (a double click, a second tab) both
+            # saw nothing and both inserted; the follower count then showed
+            # two, and the same person appeared twice in the list.
+            models.UniqueConstraint(
+                fields=["user_from", "user_to"], name="account_contact_from_to_uniq"
+            ),
+        ]
         ordering = ["-created"]
 
     def __str__(self):
