@@ -126,9 +126,12 @@ def test_scroll_past_the_last_page_returns_nothing(logged_client, images):
 
 @pytest.mark.django_db
 def test_search_is_rate_limited(logged_client, settings):
-    limit = int(settings.SEARCH_RATE.split("/")[0])
+    """Two requests rather than the fifty the real rate allows: the counter
+    lives in a window of a minute, and a run long enough to cross the end of
+    that window would start counting again and never reach the refusal."""
+    settings.SEARCH_RATE = "2/m"
 
-    for _ in range(limit):
+    for _ in range(2):
         assert logged_client.get(reverse("search:search")).status_code == 200
 
     assert logged_client.get(reverse("search:search")).status_code == 429
