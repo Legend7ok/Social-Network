@@ -13,7 +13,9 @@
          async check() {
            if (document.hidden) return;
            const res = await fetch('{% url 'feed_updates' %}?after={{ top_cursor }}');
-           if (!res.ok) return;
+           // A session that ran out answers with the login page, and reading
+           // that as a number would throw here every minute.
+           if (!res.ok || res.redirected) return;
            const data = await res.json();
            this.count = data.count;
            this.label = data.count > 99 ? '99+ new' : `${data.count} new`;
