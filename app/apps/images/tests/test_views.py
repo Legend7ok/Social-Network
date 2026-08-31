@@ -465,6 +465,16 @@ def test_image_detail_hides_owner_controls_from_anonymous(client, image):
     assert reverse("images:delete", args=[image.id]).encode() not in response.content
 
 
+@pytest.mark.django_db
+def test_image_detail_gives_anonymous_a_way_into_the_site(client, image):
+    """This page is the one public page, so it is where a shared link lands
+    someone with no account; without a navbar there was no way on from it."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"<header" in response.content
+    assert f"{reverse('login')}?register=1".encode() in response.content
+
+
 # ─── View Tests: image_edit ──────────────────────────────────────────────────
 
 

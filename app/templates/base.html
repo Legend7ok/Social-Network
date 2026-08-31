@@ -68,33 +68,42 @@
     </template>
   </div>
 
-  {% if request.user.is_authenticated %}
-
+  {% comment %}
+    Pages that are a screen of their own — signing in is the one so far —
+    drop the navbar by overriding this block with nothing.
+  {% endcomment %}
+  {% block navbar %}
     <header class="h-[57px] shrink-0 sticky top-0 bg-surface-card border-b border-white/[0.08] flex items-center px-[22px] gap-0 z-20">
-      {% include 'partials/navbar.html' %}
+      {% if request.user.is_authenticated %}
+        {% include 'partials/navbar.html' %}
+      {% else %}
+        {% include 'partials/navbar_guest.html' %}
+      {% endif %}
     </header>
+  {% endblock %}
 
-    <!-- Layout -->
-    <div class="flex flex-1 lg:overflow-hidden">
+  <!-- Layout -->
+  <div class="flex flex-1 lg:overflow-hidden">
 
+    {% if request.user.is_authenticated %}
       {% include 'partials/sidebar_left.html' %}
+    {% endif %}
 
-      <!-- Main content -->
-      <main class="flex-1 lg:overflow-y-auto">
-  {% else %}
-      <main class="flex-1 lg:overflow-y-auto flex items-center justify-center">
-  {% endif %}
+    {% comment %}
+      main_class is how a page asks for a shape of its own. Centring used to
+      be handed to every signed-out page at once, which suited the sign-in
+      card and wrecked the public image page.
+    {% endcomment %}
+    <main class="flex-1 lg:overflow-y-auto {% block main_class %}{% endblock %}">
+      {% block content %}{% endblock %}
+    </main>
 
-        {% block content %}{% endblock %}
-
-  {% if request.user.is_authenticated %}
-      </main>
+    {% if request.user.is_authenticated %}
       <!-- Right sidebar -->
       {% block sidebar_right %}{% endblock %}
-    </div>
-  {% else %}
-      </main>
-  {% endif %}
+    {% endif %}
+
+  </div>
 
   <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
   <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>

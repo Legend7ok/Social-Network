@@ -2,6 +2,14 @@
 
 {% block title %}{% if show_register %}Create account{% else %}Sign in{% endif %} · socnet{% endblock %}
 
+{% comment %}
+  No navbar: the card is the whole screen here, and a Sign in button above a
+  sign-in form would only repeat it.
+{% endcomment %}
+{% block navbar %}{% endblock %}
+
+{% block main_class %}flex items-center justify-center{% endblock %}
+
 {% block content %}
 <div
   x-data="{

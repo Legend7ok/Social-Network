@@ -1,0 +1,22 @@
+{% comment %}
+  The navbar for signed-out visitors. Only the image page is public, and
+  someone arriving there from a shared link had no way back to the site
+  before this; the two links are that way back.
+{% endcomment %}
+
+<a href="{% url 'login' %}" class="text-[17px] font-medium text-white tracking-tight">
+  <span class="text-brand-light">●</span> socnet
+</a>
+
+<div class="flex-1"></div>
+
+<div class="flex items-center gap-[9px]">
+  <a href="{% url 'login' %}"
+     class="px-[15px] sm:px-[18px] py-[7px] rounded-lg border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+    Sign in
+  </a>
+  <a href="{% url 'login' %}?register=1"
+     class="px-[15px] sm:px-[18px] py-[7px] rounded-lg bg-brand text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
+    Register
+  </a>
+</div>
