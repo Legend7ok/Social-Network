@@ -2,27 +2,44 @@
 <aside class="hidden 2xl:flex w-[264px] shrink-0 border-l border-white/[0.08] px-[18px] py-[22px] overflow-y-auto flex-col">
 
   <p class="text-[13px] text-[#5E5C6A] tracking-widest uppercase mb-[13px]">Following</p>
-  <div class="flex flex-col gap-[13px] mb-[22px]">
-    {% for u in following_users %}
-    <a href="{% url 'user_detail' u.username %}"
-       class="flex items-center gap-[13px] hover:opacity-80 transition-opacity">
-      <div class="w-[42px] h-[42px] rounded-full bg-brand/30 flex items-center justify-center text-[12px] font-medium text-brand-light shrink-0 overflow-hidden">
-        {% if u.profile.photo %}
-          {% thumbnail u.profile.photo THUMBS.avatar_md crop="center" as av %}
-          <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
-          {% endthumbnail %}
-        {% else %}
-          {{ u|initials }}
-        {% endif %}
-      </div>
-      <div class="flex-1 min-w-0">
-        <p class="text-[15px] text-white truncate">{{ u|display_name }}</p>
-        <p class="text-[13px] text-[#5E5C6A]">{{ u.images_count }} images</p>
-      </div>
+
+  {% if request.user.is_authenticated %}
+    <div class="flex flex-col gap-[13px] mb-[22px]">
+      {% for u in following_users %}
+      <a href="{% url 'user_detail' u.username %}"
+         class="flex items-center gap-[13px] hover:opacity-80 transition-opacity">
+        <div class="w-[42px] h-[42px] rounded-full bg-brand/30 flex items-center justify-center text-[12px] font-medium text-brand-light shrink-0 overflow-hidden">
+          {% if u.profile.photo %}
+            {% thumbnail u.profile.photo THUMBS.avatar_md crop="center" as av %}
+            <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ u.username }}" />
+            {% endthumbnail %}
+          {% else %}
+            {{ u|initials }}
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[15px] text-white truncate">{{ u|display_name }}</p>
+          <p class="text-[13px] text-[#5E5C6A]">{{ u.images_count }} images</p>
+        </div>
+      </a>
+      {% empty %}
+        <p class="text-[14px] text-[#5E5C6A]">You are not following anyone yet</p>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% comment %}
+      A guest has no list to show, and an empty column reads as a page that
+      failed to load. The invitation names what an account is for, in the
+      column that will hold it.
+    {% endcomment %}
+    <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]">
+      Follow the people whose pictures you like, and their new ones show up here.
+    </p>
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
+       class="flex items-center justify-center gap-[9px] py-[9px] rounded-xl bg-brand text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
+      <i class="ti ti-login text-[15px]"></i>
+      Sign in
     </a>
-    {% empty %}
-      <p class="text-[14px] text-[#5E5C6A]">You are not following anyone yet</p>
-    {% endfor %}
-  </div>
+  {% endif %}
 
 </aside>

@@ -98,10 +98,8 @@
       {% block content %}{% endblock %}
     </main>
 
-    {% if request.user.is_authenticated %}
-      <!-- Right sidebar -->
-      {% block sidebar_right %}{% endblock %}
-    {% endif %}
+    <!-- Right sidebar -->
+    {% block sidebar_right %}{% endblock %}
 
   </div>
 
