@@ -576,7 +576,7 @@ def test_image_detail_invites_anonymous_from_the_right_sidebar(client, image):
     page that failed to load."""
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
-    assert b"Follow the people whose pictures you like" in response.content
+    assert b"Sign in to follow people" in response.content
 
 
 @pytest.mark.django_db
@@ -607,7 +607,7 @@ def test_image_detail_keeps_the_sidebar_list_for_signed_in_people(client, user, 
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
-    assert b"Follow the people whose pictures you like" not in response.content
+    assert b"Sign in to follow people" not in response.content
 
 
 # ─── View Tests: image_edit ──────────────────────────────────────────────────

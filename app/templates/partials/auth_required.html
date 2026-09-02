@@ -25,24 +25,28 @@
       <div class="flex items-start justify-between gap-[13px] mb-[9px]">
         <h2 class="text-[17px] font-medium text-white">Sign in to continue</h2>
         <button type="button" @click="open = false" aria-label="Close"
-                class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors">
+                class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
           <i class="ti ti-x text-[18px]"></i>
         </button>
       </div>
 
       <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]" x-text="message"></p>
 
-      <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
-         class="w-full flex items-center justify-center gap-[9px] py-[11px] rounded-xl bg-brand text-[15px] font-medium text-white hover:opacity-90 transition-opacity">
-        <i class="ti ti-login text-[17px]"></i>
-        Sign in
-      </a>
-
-      <p class="text-[13px] text-[#5E5C6A] text-center mt-[13px]">
-        No account yet?
-        <a href="{% url 'login' %}?register=1&next={{ request.get_full_path|urlencode }}"
-           class="text-brand-light hover:underline">Register</a>
-      </p>
+      {% comment %}Two equal ways in, not one button and one afterthought in
+      small print: someone without an account needs the second one just as
+      much.{% endcomment %}
+      <div class="flex flex-col sm:flex-row gap-[9px]">
+        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
+           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl bg-brand text-[15px] font-medium text-white hover:opacity-90 transition-opacity">
+          <i class="ti ti-login text-[17px]"></i>
+          Sign in
+        </a>
+        <a href="{% url 'login' %}?register=1&amp;next={{ request.get_full_path|urlencode }}"
+           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl border border-white/[0.15] text-[15px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+          <i class="ti ti-user-plus text-[17px]"></i>
+          Register
+        </a>
+      </div>
 
     </div>
   </div>
