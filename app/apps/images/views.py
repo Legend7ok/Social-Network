@@ -19,7 +19,7 @@ from .services import (
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
-from apps.account.selectors import public_users, sidebar_following
+from apps.account.selectors import followers_count, public_users, sidebar_following
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.pagination import cursor_page
@@ -39,6 +39,9 @@ STATUS_POLL_LIMIT = 60
 # Faces shown under a picture before the rest become a number. A popular
 # picture used to hand every one of its likers to the template.
 LIKED_BY_LIMIT = 10
+
+# Fills the two-column grid beside the picture exactly.
+MORE_FROM_AUTHOR = 4
 
 
 def bookmarklet_launcher(request):
@@ -69,7 +72,10 @@ def image_create(request):
 
 def image_detail(request, id, slug):
     image = get_object_or_404(
-        Image.objects.select_related("user", "user__profile"), id=id
+        Image.objects.select_related("user", "user__profile").annotate(
+            author_followers=followers_count("user")
+        ),
+        id=id,
     )
     # Stale links redirect instead of 404. Temporary: a cached permanent one
     # would loop if a title is ever renamed back.
@@ -102,6 +108,11 @@ def image_detail(request, id, slug):
         and image.users_like.filter(pk=request.user.pk).exists()
     )
 
+    # The picture being looked at is not "more from this author".
+    more_from_author = Image.objects.filter(user=image.user_id).exclude(pk=image.pk)[
+        :MORE_FROM_AUTHOR
+    ]
+
     following_users = (
         sidebar_following(request.user) if request.user.is_authenticated else []
     )
@@ -115,6 +126,7 @@ def image_detail(request, id, slug):
             "users_like": users_like,
             "hidden_likers": max(likes_count - LIKED_BY_LIMIT, 0),
             "liked_by_viewer": liked_by_viewer,
+            "more_from_author": more_from_author,
             "following_users": following_users,
         },
     )

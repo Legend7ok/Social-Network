@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
+from apps.account.models import Contact
 from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
 from apps.images.views import (
@@ -314,6 +315,37 @@ def test_image_detail_marks_nothing_liked_for_anonymous(client, image, second_us
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
     assert response.context["liked_by_viewer"] is False
+
+
+@pytest.mark.django_db
+def test_image_detail_keeps_the_open_picture_out_of_more_from_author(
+    client, user, image
+):
+    """It used to be the first tile of "More from this author" — a link back to
+    the page you are already on."""
+    user_obj, _ = user
+    other = Image.objects.create(
+        user=user_obj, title="Another", url="https://example.com/other.png"
+    )
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    shown = list(response.context["more_from_author"])
+    assert other in shown
+    assert image not in shown
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_the_authors_followers_in_the_query(
+    client, image, second_user
+):
+    """The template used to ask the database for this number itself."""
+    follower, _ = second_user
+    Contact.objects.create(user_from=follower.profile, user_to=image.user.profile)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["image"].author_followers == 1
 
 
 @pytest.mark.django_db
