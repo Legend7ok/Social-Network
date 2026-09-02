@@ -21,17 +21,31 @@ document.addEventListener('alpine:init', () => {
    * keeps showing what the server actually holds.
    */
   async function send(url, action) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': Alpine.store('csrf'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ action }),
-    });
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': Alpine.store('csrf'),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+    } catch {
+      // A connection that never arrived throws here rather than answering.
+      announce('No connection. Please try again.');
+      return false;
+    }
 
     if (res.status === 429) {
       announce('Too many requests. Please slow down.');
+      return false;
+    }
+
+    // The session ran out while the page stayed open. Saying so beats a button
+    // that quietly stops working.
+    if (res.status === 401 || res.status === 403) {
+      announce('Your session has expired. Reload the page and try again.');
       return false;
     }
 
