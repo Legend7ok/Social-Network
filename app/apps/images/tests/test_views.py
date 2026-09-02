@@ -487,6 +487,27 @@ def test_image_detail_invites_anonymous_from_the_right_sidebar(client, image):
 
 
 @pytest.mark.django_db
+def test_image_detail_carries_the_sign_in_dialog_for_anonymous(client, image):
+    """The like and follow buttons stay in place for a guest, so pressing one
+    has to answer with something; the server would only say 403."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"auth-required.window" in response.content
+    assert b"Alpine.store('signedIn', false)" in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_leaves_the_dialog_out_for_signed_in_people(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"auth-required.window" not in response.content
+    assert b"Alpine.store('signedIn', true)" in response.content
+
+
+@pytest.mark.django_db
 def test_image_detail_keeps_the_sidebar_list_for_signed_in_people(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)

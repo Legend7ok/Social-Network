@@ -5,6 +5,10 @@
  * cards, the profile header — and every one of them used to carry its own copy
  * of the same request. One copy here instead, so a change to how these calls
  * are made is a change in one place.
+ *
+ * A signed-out visitor never reaches the server: the press opens the sign-in
+ * dialog instead. The server would only answer 403, which the page had no way
+ * of showing — the button looked broken.
  */
 document.addEventListener('alpine:init', () => {
   /**
@@ -36,6 +40,12 @@ document.addEventListener('alpine:init', () => {
     count,
 
     async toggle() {
+      if (!this.$store.signedIn) {
+        this.$dispatch('auth-required', {
+          message: 'Sign in to like this picture and keep it in your account.',
+        });
+        return;
+      }
       if (!(await send(url, this.liked ? 'unlike' : 'like'))) return;
       this.liked = !this.liked;
       this.count += this.liked ? 1 : -1;
@@ -46,6 +56,12 @@ document.addEventListener('alpine:init', () => {
     following,
 
     async toggle() {
+      if (!this.$store.signedIn) {
+        this.$dispatch('auth-required', {
+          message: 'Sign in to follow people and see their new pictures.',
+        });
+        return;
+      }
       if (!(await send(url, this.following ? 'unfollow' : 'follow'))) return;
       this.following = !this.following;
     },

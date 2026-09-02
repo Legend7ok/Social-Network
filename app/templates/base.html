@@ -103,12 +103,18 @@
 
   </div>
 
+  {% if not request.user.is_authenticated %}
+    {% include 'partials/auth_required.html' %}
+  {% endif %}
+
   <script src="{% static 'js/vendor/htmx.min.js' %}"></script>
   <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.store('csrf', document.querySelector('meta[name="csrf-token"]').content);
       Alpine.store('messages', []);
+      // Read once here rather than passed into every button on the page.
+      Alpine.store('signedIn', {{ request.user.is_authenticated|yesno:'true,false' }});
     });
   </script>
   {% comment %}
