@@ -22,7 +22,6 @@
   class="bg-surface-page text-white min-h-screen lg:h-screen flex flex-col lg:overflow-hidden"
   x-data="{ navOpen: false }"
   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-  @show-message.window="$store.messages.push(event.detail.value)"
   @keydown.escape.window="navOpen = false"
 >
 
@@ -58,9 +57,14 @@
         x-init="setTimeout(() => show = false, 4000)"
         x-show="show"
         x-transition
-        class="flex items-center justify-between gap-[13px] px-[18px] py-[13px] rounded-xl text-[15px] border bg-red-900/60 border-red-700/40 text-red-300 pointer-events-auto"
+        {% comment %}Every one of these used to be red, so "Link copied!" was
+        announced in the colour of a failure.{% endcomment %}
+        :class="msg.tone === 'success'
+          ? 'bg-green-900/60 border-green-700/40 text-green-300'
+          : 'bg-red-900/60 border-red-700/40 text-red-300'"
+        class="flex items-center justify-between gap-[13px] px-[18px] py-[13px] rounded-xl text-[15px] border pointer-events-auto"
       >
-        <span x-text="msg"></span>
+        <span x-text="msg.text"></span>
         <button @click="show = false" class="shrink-0 opacity-60 hover:opacity-100">
           <i class="ti ti-x text-[18px]"></i>
         </button>

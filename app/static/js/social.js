@@ -1,16 +1,20 @@
 /**
- * The like and follow buttons.
+ * The buttons on a picture and on a person: like, follow, share.
  *
- * Both live on several pages each — the image page, the feed cards, the people
- * cards, the profile header — and every one of them used to carry its own copy
- * of the same request. One copy here instead, so a change to how these calls
- * are made is a change in one place.
+ * The first two live on several pages each — the image page, the feed cards,
+ * the people cards, the profile header — and every one of them used to carry
+ * its own copy of the same request. One copy here instead, so a change to how
+ * these calls are made is a change in one place.
  *
  * A signed-out visitor never reaches the server: the press opens the sign-in
  * dialog instead. The server would only answer 403, which the page had no way
  * of showing — the button looked broken.
  */
 document.addEventListener('alpine:init', () => {
+  function announce(text, tone = 'error') {
+    Alpine.store('messages').push({ text, tone });
+  }
+
   /**
    * Sends one action and reports whether the server took it. Anything other
    * than a plain acceptance is treated as "nothing happened", so the button
@@ -27,12 +31,26 @@ document.addEventListener('alpine:init', () => {
     });
 
     if (res.status === 429) {
-      Alpine.store('messages').push('Too many requests. Please slow down.');
+      announce('Too many requests. Please slow down.');
       return false;
     }
 
     const data = await res.json().catch(() => null);
     return data?.status === 'ok';
+  }
+
+  /**
+   * The clipboard is refused outside a secure page, and the promise it returns
+   * is rejected rather than throwing where you would look for it. Saying so is
+   * the point: this used to claim success without copying anything.
+   */
+  async function copyLink(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      announce('Link copied!', 'success');
+    } catch {
+      announce('Could not copy the link. Copy it from the address bar instead.');
+    }
   }
 
   Alpine.data('likeButton', (url, liked, count) => ({
@@ -64,6 +82,30 @@ document.addEventListener('alpine:init', () => {
       }
       if (!(await send(url, this.following ? 'unfollow' : 'follow'))) return;
       this.following = !this.following;
+    },
+  }));
+
+  Alpine.data('shareButton', (title) => ({
+    /**
+     * The system's own share menu where there is one — every phone, and Chrome,
+     * Edge and Safari on the desktop — and the clipboard everywhere else.
+     * Sharing is offered from a picture's own page, so the address bar already
+     * holds the link worth passing on.
+     */
+    async share() {
+      const url = window.location.href;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, url });
+          return;
+        } catch (error) {
+          // Closing the menu is an answer, not a failure.
+          if (error.name === 'AbortError') return;
+        }
+      }
+
+      await copyLink(url);
     },
   }));
 });

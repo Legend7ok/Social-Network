@@ -42,7 +42,7 @@
           <i class="ti ti-eye text-[17px]"></i>
           <span>{{ total_views|floatformat:"-1" }}</span>
         </div>
-        <button @click="navigator.clipboard.writeText(window.location.href); Alpine.store('messages').push('Link copied!')"
+        <button x-data="shareButton('{{ image.title|escapejs }}')" @click="share()"
                 class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
           <i class="ti ti-share text-[17px]"></i> Share
         </button>
