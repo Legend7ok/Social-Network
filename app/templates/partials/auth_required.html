@@ -32,17 +32,18 @@
 
       <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]" x-text="message"></p>
 
-      {% comment %}Two equal ways in, not one button and one afterthought in
-      small print: someone without an account needs the second one just as
-      much.{% endcomment %}
+      {% comment %}Registering is the filled button, in the order and the
+      weight the guest navbar and the side menu already use. Someone who has an
+      account will find the quiet one anyway; someone who has not is the one
+      worth inviting, and the dialog exists for him.{% endcomment %}
       <div class="flex flex-col sm:flex-row gap-[9px]">
         <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
-           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl bg-brand text-[15px] font-medium text-white hover:opacity-90 transition-opacity">
+           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl border border-white/[0.15] text-[15px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
           <i class="ti ti-login text-[17px]"></i>
           Sign in
         </a>
         <a href="{% url 'login' %}?register=1&amp;next={{ request.get_full_path|urlencode }}"
-           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl border border-white/[0.15] text-[15px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+           class="flex-1 flex items-center justify-center gap-[9px] py-[11px] rounded-xl bg-brand text-[15px] font-medium text-white hover:opacity-90 transition-opacity">
           <i class="ti ti-user-plus text-[17px]"></i>
           Register
         </a>
