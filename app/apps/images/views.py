@@ -19,7 +19,12 @@ from .services import (
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
-from apps.account.selectors import followers_count, public_users, sidebar_following
+from apps.account.selectors import (
+    followers_count,
+    follows,
+    public_users,
+    sidebar_following,
+)
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.pagination import cursor_page
@@ -108,8 +113,12 @@ def image_detail(request, id, slug):
         and image.users_like.filter(pk=request.user.pk).exists()
     )
 
+    following_author = request.user.is_authenticated and follows(
+        request.user, image.user_id
+    )
+
     # The picture being looked at is not "more from this author".
-    more_from_author = Image.objects.filter(user=image.user_id).exclude(pk=image.pk)[
+    more_from_author = Image.objects.filter(user_id=image.user_id).exclude(pk=image.pk)[
         :MORE_FROM_AUTHOR
     ]
 
@@ -126,6 +135,7 @@ def image_detail(request, id, slug):
             "users_like": users_like,
             "hidden_likers": max(likes_count - LIKED_BY_LIMIT, 0),
             "liked_by_viewer": liked_by_viewer,
+            "following_author": following_author,
             "more_from_author": more_from_author,
             "following_users": following_users,
         },

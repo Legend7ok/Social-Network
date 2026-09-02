@@ -36,6 +36,17 @@ def is_followed_by(viewer):
     )
 
 
+def follows(viewer, person_id):
+    """Whether the viewer already follows one particular person.
+
+    The page used to answer this by pulling every follower of that person into
+    memory and looking for itself among them.
+    """
+    return Contact.objects.filter(
+        user_from=viewer.profile, user_to__user=person_id
+    ).exists()
+
+
 def _first_number(subquery):
     """A grouped subquery returns one row or none; none means zero."""
     return Coalesce(Subquery(subquery, output_field=IntegerField()), 0)

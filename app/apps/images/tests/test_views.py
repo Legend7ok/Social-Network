@@ -336,6 +336,23 @@ def test_image_detail_keeps_the_open_picture_out_of_more_from_author(
 
 
 @pytest.mark.django_db
+def test_image_detail_answers_whether_the_viewer_follows_the_author(
+    client, image, second_user
+):
+    """Asked of the database now; the template used to pull every follower of
+    the author into memory to look for one of them."""
+    viewer, password = second_user
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.context["following_author"] is False
+
+    Contact.objects.create(user_from=viewer.profile, user_to=image.user.profile)
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.context["following_author"] is True
+
+
+@pytest.mark.django_db
 def test_image_detail_counts_the_authors_followers_in_the_query(
     client, image, second_user
 ):

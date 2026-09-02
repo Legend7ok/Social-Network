@@ -64,7 +64,7 @@
 
     <!-- Right column: description + author + more from (single card) -->
     <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full xl:flex-[3] min-w-0"
-         x-data="followButton('{% url 'user-follow' image.user.id %}', {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %})">
+         x-data="followButton('{% url 'user-follow' image.user.id %}', {% if following_author %}true{% else %}false{% endif %})">
 
       <!-- Description -->
       <div class="px-[18px] pt-[18px] pb-[18px]">
