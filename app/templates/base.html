@@ -89,7 +89,18 @@
   <!-- Layout -->
   <div class="flex flex-1 lg:overflow-hidden">
 
-    {% include 'partials/sidebar_left.html' %}
+    {% comment %}
+      The menu belongs to the site itself, so a signed-in person carries it
+      everywhere. A guest gets it only where a page asks for it — on the one
+      public page there is. Signing in, resetting a password or reading an
+      error page is not the place for a menu whose every entry would send him
+      back to the page he is already on.
+    {% endcomment %}
+    {% block sidebar_left %}
+      {% if request.user.is_authenticated %}
+        {% include 'partials/sidebar_left.html' %}
+      {% endif %}
+    {% endblock %}
 
     {% comment %}
       main_class is how a page asks for a shape of its own. Centring used to

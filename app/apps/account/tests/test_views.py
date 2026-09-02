@@ -549,6 +549,35 @@ def test_login_page_has_no_navbar(client):
 
 
 @pytest.mark.django_db
+def test_login_page_has_no_side_menu(client):
+    """Every entry in it would lead back to this very page."""
+    response = client.get(reverse("login"))
+
+    assert b"<aside" not in response.content
+
+
+@pytest.mark.django_db
+def test_signed_in_pages_keep_the_side_menu_everywhere(client, user):
+    """A signed-in person carries the menu through the whole site, service
+    pages included — that is how it was before guests were let near it."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("password_change"))
+
+    assert b"<aside" in response.content
+
+
+@pytest.mark.django_db
+def test_password_reset_page_has_no_side_menu(client):
+    """Same for the rest of the signed-out pages: the menu belongs to the site,
+    and a guest reaches it from the one public page there is."""
+    response = client.get(reverse("password_reset"))
+
+    assert b"<aside" not in response.content
+
+
+@pytest.mark.django_db
 def test_failed_registration_opens_the_register_panel(client):
     response = client.post(
         reverse("register"),

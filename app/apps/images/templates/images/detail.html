@@ -2,6 +2,12 @@
 {% load thumbnail user_display %}
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
+{% comment %}
+  The public page, so a guest gets the menu here too: it is what tells him the
+  site has a feed, a ranking and people in it.
+{% endcomment %}
+{% block sidebar_left %}{% include 'partials/sidebar_left.html' %}{% endblock %}
+
 {% block content %}
 <div class="px-[16px] lg:px-[26px] py-[22px]">
 
