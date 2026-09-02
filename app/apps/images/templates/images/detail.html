@@ -28,7 +28,7 @@
 
       <!-- Actions row -->
       <div class="flex flex-wrap items-center gap-[9px] mt-[13px]"
-           x-data="likeButton('{% url 'image-like' image.id %}', {% if request.user in users_like %}true{% else %}false{% endif %}, {{ image.total_likes }})">
+           x-data="likeButton('{% url 'image-like' image.id %}', {% if liked_by_viewer %}true{% else %}false{% endif %}, {{ image.total_likes }})">
         <button @click="toggle()"
                 :class="liked
                   ? 'bg-brand/15 border-brand/50 text-white'

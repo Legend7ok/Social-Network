@@ -36,6 +36,10 @@ RANKING_SORTS = {
 STATUS_POLL_SLOWDOWN = 15
 STATUS_POLL_LIMIT = 60
 
+# Faces shown under a picture before the rest become a number. A popular
+# picture used to hand every one of its likers to the template.
+LIKED_BY_LIMIT = 10
+
 
 def bookmarklet_launcher(request):
     js = render(request, "bookmarklet_launcher.js", {"site_url": settings.SITE_URL})
@@ -85,7 +89,18 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    users_like = public_users().filter(images_liked=image).select_related("profile")
+    likers = public_users().filter(images_liked=image).select_related("profile")
+    # Counted over the same filtered set the faces come from, so the "and N
+    # more" cannot disagree with what is on screen.
+    likes_count = likers.count()
+    users_like = likers[:LIKED_BY_LIMIT]
+
+    # Asked of the database rather than searched for in the list above: the
+    # answer is one row either way, and the list is now only its first page.
+    liked_by_viewer = (
+        request.user.is_authenticated
+        and image.users_like.filter(pk=request.user.pk).exists()
+    )
 
     following_users = (
         sidebar_following(request.user) if request.user.is_authenticated else []
@@ -98,6 +113,8 @@ def image_detail(request, id, slug):
             "image": image,
             "total_views": total_views,
             "users_like": users_like,
+            "hidden_likers": max(likes_count - LIKED_BY_LIMIT, 0),
+            "liked_by_viewer": liked_by_viewer,
             "following_users": following_users,
         },
     )

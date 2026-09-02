@@ -5,7 +5,11 @@ from django.urls import reverse
 
 from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
-from apps.images.views import STATUS_POLL_LIMIT, STATUS_POLL_SLOWDOWN
+from apps.images.views import (
+    LIKED_BY_LIMIT,
+    STATUS_POLL_LIMIT,
+    STATUS_POLL_SLOWDOWN,
+)
 from apps.images.services import record_image_view
 from conftest import MINIMAL_PNG, png_bytes
 
@@ -270,6 +274,46 @@ def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staf
     likers = list(response.context["users_like"])
     assert liker in likers
     assert staff not in likers
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_the_likers_it_does_not_show(client, image, make_user):
+    """A picture with a thousand likes used to hand every one of them to the
+    template; past the limit the rest are a number."""
+    extra = 3
+    for index in range(LIKED_BY_LIMIT + extra):
+        liker, _ = make_user(f"liker{index}", f"liker{index}@example.com", "pass12345")
+        image.users_like.add(liker)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert len(response.context["users_like"]) == LIKED_BY_LIMIT
+    assert response.context["hidden_likers"] == extra
+    assert f"+{extra}".encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_nothing_extra_when_everyone_fits(
+    client, image, second_user
+):
+    liker, _ = second_user
+    image.users_like.add(liker)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["hidden_likers"] == 0
+
+
+@pytest.mark.django_db
+def test_image_detail_marks_nothing_liked_for_anonymous(client, image, second_user):
+    """Whether the viewer liked it is now a question to the database, and there
+    is nobody to ask it about."""
+    liker, _ = second_user
+    image.users_like.add(liker)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["liked_by_viewer"] is False
 
 
 @pytest.mark.django_db

@@ -17,6 +17,12 @@
       {% endif %}
     </a>
     {% endfor %}
+    {% if hidden_likers %}
+    <span title="{{ hidden_likers }} more"
+          class="w-[35px] h-[35px] rounded-full bg-surface-input flex items-center justify-center text-[12px] font-medium text-[#9896A4] border border-white/[0.08] shrink-0">
+      +{{ hidden_likers }}
+    </span>
+    {% endif %}
   </div>
 </div>
 {% endif %}
