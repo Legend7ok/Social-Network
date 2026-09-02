@@ -1015,7 +1015,8 @@ def test_user_detail_renders_following_false_when_not_following(
     target, _ = second_user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[target.username]))
-    assert b"following: false" in response.content
+    follow_url = reverse("user-follow", args=[target.id])
+    assert f"followButton('{follow_url}', false)".encode() in response.content
 
 
 @pytest.mark.django_db
@@ -1027,7 +1028,8 @@ def test_user_detail_renders_following_true_when_following(client, user, second_
     Contact.objects.create(user_from=user_obj.profile, user_to=target.profile)
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[target.username]))
-    assert b"following: true" in response.content
+    follow_url = reverse("user-follow", args=[target.id])
+    assert f"followButton('{follow_url}', true)".encode() in response.content
 
 
 @pytest.mark.django_db

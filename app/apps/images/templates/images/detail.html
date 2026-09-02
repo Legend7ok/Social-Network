@@ -28,29 +28,7 @@
 
       <!-- Actions row -->
       <div class="flex flex-wrap items-center gap-[9px] mt-[13px]"
-           x-data="{
-             liked: {% if request.user in users_like %}true{% else %}false{% endif %},
-             count: {{ image.total_likes }},
-             async toggle() {
-               const res = await fetch('{% url 'image-like' image.id %}', {
-                 method: 'POST',
-                 headers: {
-                   'X-CSRFToken': Alpine.store('csrf'),
-                   'Content-Type': 'application/json',
-                 },
-                 body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
-               });
-               if (res.status === 429) {
-                 Alpine.store('messages').push('Too many requests. Please slow down.');
-                 return;
-               }
-               const data = await res.json();
-               if (data.status === 'ok') {
-                 this.liked = !this.liked;
-                 this.count += this.liked ? 1 : -1;
-               }
-             },
-           }">
+           x-data="likeButton('{% url 'image-like' image.id %}', {% if request.user in users_like %}true{% else %}false{% endif %}, {{ image.total_likes }})">
         <button @click="toggle()"
                 :class="liked
                   ? 'bg-brand/15 border-brand/50 text-white'
@@ -86,27 +64,7 @@
 
     <!-- Right column: description + author + more from (single card) -->
     <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full xl:flex-[3] min-w-0"
-         x-data="{
-           following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
-           async toggle() {
-             const res = await fetch('{% url 'user-follow' image.user.id %}', {
-               method: 'POST',
-               headers: {
-                 'X-CSRFToken': Alpine.store('csrf'),
-                 'Content-Type': 'application/json',
-               },
-               body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-             });
-             if (res.status === 429) {
-               Alpine.store('messages').push('Too many requests. Please slow down.');
-               return;
-             }
-             const data = await res.json();
-             if (data.status === 'ok') {
-               this.following = !this.following;
-             }
-           },
-         }">
+         x-data="followButton('{% url 'user-follow' image.user.id %}', {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %})">
 
       <!-- Description -->
       <div class="px-[18px] pt-[18px] pb-[18px]">

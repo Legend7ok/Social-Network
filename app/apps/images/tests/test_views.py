@@ -245,7 +245,8 @@ def test_image_detail_renders_liked_false_when_not_liked(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
-    assert b"liked: false" in response.content
+    like_url = reverse("image-like", args=[image.id])
+    assert f"likeButton('{like_url}', false, 0)".encode() in response.content
 
 
 @pytest.mark.django_db
@@ -254,7 +255,8 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
     image.users_like.add(user_obj)
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
-    assert b"liked: true" in response.content
+    like_url = reverse("image-like", args=[image.id])
+    assert f"likeButton('{like_url}', true, 1)".encode() in response.content
 
 
 @pytest.mark.django_db

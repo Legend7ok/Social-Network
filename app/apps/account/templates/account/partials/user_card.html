@@ -43,25 +43,8 @@
 
   <!-- Follow button -->
   {% if profile_user != request.user %}
-  <div class="w-full sm:w-auto" x-data="{
-    following: {% if profile_user.id in following_ids %}true{% else %}false{% endif %},
-    async toggle() {
-      const res = await fetch('{% url 'user-follow' profile_user.id %}', {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': Alpine.store('csrf'),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-      });
-      if (res.status === 429) {
-        Alpine.store('messages').push('Too many requests. Please slow down.');
-        return;
-      }
-      const data = await res.json();
-      if (data.status === 'ok') this.following = !this.following;
-    },
-  }">
+  <div class="w-full sm:w-auto"
+       x-data="followButton('{% url 'user-follow' profile_user.id %}', {% if profile_user.id in following_ids %}true{% else %}false{% endif %})">
     <button @click="toggle()"
             :class="following
               ? 'bg-transparent border-brand/30 text-brand-light hover:bg-brand/10'

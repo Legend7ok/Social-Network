@@ -53,20 +53,7 @@
           </div>
         </a>
         <div class="px-[18px] py-[13px]"
-             x-data="{
-               liked: {% if target.liked_by_viewer %}true{% else %}false{% endif %},
-               count: {{ target.total_likes }},
-               async toggle() {
-                 const res = await fetch('{% url 'image-like' target.id %}', {
-                   method: 'POST',
-                   headers: { 'X-CSRFToken': Alpine.store('csrf'), 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
-                 });
-                 if (res.status === 429) { Alpine.store('messages').push('Too many requests. Please slow down.'); return; }
-                 const data = await res.json();
-                 if (data.status === 'ok') { this.liked = !this.liked; this.count += this.liked ? 1 : -1; }
-               },
-             }">
+             x-data="likeButton('{% url 'image-like' target.id %}', {% if target.liked_by_viewer %}true{% else %}false{% endif %}, {{ target.total_likes }})">
           <a href="{{ target.get_absolute_url }}"
              class="text-[15px] font-medium text-white hover:text-brand-light transition-colors block mb-1">
             {{ target.title }}
@@ -84,19 +71,7 @@
 
       {% elif action.verb == verbs.FOLLOWED_USER %}
         <div class="px-[18px] pb-[15px] flex gap-[11px]"
-             x-data="{
-               following: {% if target.followed_by_viewer %}true{% else %}false{% endif %},
-               async toggle() {
-                 const res = await fetch('{% url 'user-follow' target.id %}', {
-                   method: 'POST',
-                   headers: { 'X-CSRFToken': Alpine.store('csrf'), 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-                 });
-                 if (res.status === 429) { Alpine.store('messages').push('Too many requests. Please slow down.'); return; }
-                 const data = await res.json();
-                 if (data.status === 'ok') { this.following = !this.following; }
-               },
-             }">
+             x-data="followButton('{% url 'user-follow' target.id %}', {% if target.followed_by_viewer %}true{% else %}false{% endif %})">
           <a href="{% url 'user_detail' target.username %}"
              class="w-10 h-10 rounded-full bg-brand/30 flex items-center justify-center text-[13px] font-medium text-brand-light shrink-0 overflow-hidden">
             {% if target.profile.photo %}

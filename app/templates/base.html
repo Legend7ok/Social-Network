@@ -111,6 +111,12 @@
       Alpine.store('messages', []);
     });
   </script>
+  {% comment %}
+    Without defer, like the block above it: Alpine is deferred, and a deferred
+    script here would run after Alpine had already started — too late to be
+    listening for alpine:init.
+  {% endcomment %}
+  <script src="{% static 'js/social.js' %}"></script>
   {% block scripts %}{% endblock %}
 
 </body>
