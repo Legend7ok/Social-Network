@@ -89,9 +89,7 @@
   <!-- Layout -->
   <div class="flex flex-1 lg:overflow-hidden">
 
-    {% if request.user.is_authenticated %}
-      {% include 'partials/sidebar_left.html' %}
-    {% endif %}
+    {% include 'partials/sidebar_left.html' %}
 
     {% comment %}
       main_class is how a page asks for a shape of its own. Centring used to

@@ -1,7 +1,11 @@
 {% load thumbnail user_display %}
 {% comment %}
-  The signed-in left menu: a slide-in drawer on phones, a plain column on
-  desktop. Opened through navOpen, which is declared on <body>.
+  The left menu: a slide-in drawer on phones, a plain column on desktop.
+  Opened through navOpen, which is declared on <body>.
+
+  A guest sees the same menu. Every entry leads somewhere that asks him to
+  sign in first and returns him there afterwards, so the menu costs nothing
+  and shows what the site is made of — which is the argument for joining.
 {% endcomment %}
 
 <!-- Dark backdrop behind the drawer (phones only) -->
@@ -73,7 +77,9 @@
             {% if request.resolver_match.url_name == 'list' and request.GET.mine %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
     <i class="ti ti-bookmark text-[19px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
     <span class="text-[15px]">My Bookmarks</span>
-    <span class="ml-auto text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">{{ request.user.images.count }}</span>
+    <span class="ml-auto text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">
+      {% if request.user.is_authenticated %}{{ request.user.images.count }}{% else %}0{% endif %}
+    </span>
   </a>
 
   <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-[13px] mb-1 tracking-widest uppercase">Bookmarks</p>
@@ -83,13 +89,24 @@
       <span class="text-[14px] font-medium text-white">Bookmark it</span>
     </div>
     <p class="text-[11px] text-[#5E5C6A] leading-snug mb-[9px]">Drag the button to your bookmarks toolbar</p>
+    {% if request.user.is_authenticated %}
     <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
        class="block bg-brand rounded-md py-[7px] text-[12px] font-medium text-white text-center cursor-grab select-none">
       ⊕ Bookmark it
     </a>
+    {% else %}
+    {% comment %}The bookmarklet saves a picture to an account, so without one
+    there is nothing for it to drag to. It leads to signing in instead.
+    {% endcomment %}
+    <a href="{% url 'login' %}"
+       class="block bg-brand rounded-md py-[7px] text-[12px] font-medium text-white text-center">
+      ⊕ Bookmark it
+    </a>
+    {% endif %}
   </div>
 
   <div class="mt-auto pt-[13px] border-t border-white/[0.08]">
+    {% if request.user.is_authenticated %}
     <a href="{% url 'my_profile' %}"
        class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg hover:bg-surface-input transition-colors">
       <div class="w-[44px] h-[44px] rounded-full bg-brand flex items-center justify-center text-[13px] font-medium text-white shrink-0 overflow-hidden">
@@ -106,6 +123,23 @@
         <p class="text-[12px] text-[#5E5C6A]">@{{ request.user.username }}</p>
       </div>
     </a>
+    {% else %}
+    {% comment %}Where the signed-in person's own name sits. A guest has no
+    name to show there, and the foot of the menu is the last thing read on the
+    way down it.{% endcomment %}
+    <div class="flex flex-col gap-[7px] px-[11px] py-[9px]">
+      <a href="{% url 'login' %}"
+         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg border border-white/[0.15] text-[14px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+        <i class="ti ti-login text-[15px]"></i>
+        Sign in
+      </a>
+      <a href="{% url 'login' %}?register=1"
+         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg bg-brand text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
+        <i class="ti ti-user-plus text-[15px]"></i>
+        Register
+      </a>
+    </div>
+    {% endif %}
   </div>
 
 </aside>

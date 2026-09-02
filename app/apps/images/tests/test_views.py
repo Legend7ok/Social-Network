@@ -571,6 +571,31 @@ def test_image_detail_gives_anonymous_a_way_into_the_site(client, image):
 
 
 @pytest.mark.django_db
+def test_image_detail_shows_anonymous_the_left_menu(client, image):
+    """The menu is what tells a visitor the site has a feed, a ranking and
+    people in it — the argument for joining. Every entry asks for a sign-in
+    when followed, so showing it opens nothing."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert reverse("images:ranking").encode() in response.content
+    assert reverse("user_list").encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_ends_the_left_menu_with_a_way_in(client, user, image):
+    """The foot of the menu holds the signed-in person's own name. A guest has
+    no name to put there, so it holds the two buttons instead."""
+    owner, password = user
+
+    guest_page = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert f"@{owner.username}".encode() not in guest_page.content
+
+    client.login(username=owner.username, password=password)
+    signed_in_page = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert f"@{owner.username}".encode() in signed_in_page.content
+
+
+@pytest.mark.django_db
 def test_image_detail_invites_anonymous_from_the_right_sidebar(client, image):
     """The column has nothing to list for a guest, and left empty it reads as a
     page that failed to load."""
