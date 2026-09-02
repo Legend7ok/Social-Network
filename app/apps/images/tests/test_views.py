@@ -265,10 +265,14 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
 
 
 @pytest.mark.django_db
-def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staff_user):
+def test_image_detail_hides_staff_from_liked_by(
+    client, user, image, second_user, staff_user
+):
+    viewer, password = user
     liker, _ = second_user
     staff, _ = staff_user
     image.users_like.add(liker, staff)
+    client.login(username=viewer.username, password=password)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
@@ -278,13 +282,17 @@ def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staf
 
 
 @pytest.mark.django_db
-def test_image_detail_counts_the_likers_it_does_not_show(client, image, make_user):
+def test_image_detail_counts_the_likers_it_does_not_show(
+    client, user, image, make_user
+):
     """A picture with a thousand likes used to hand every one of them to the
     template; past the limit the rest are a number."""
+    viewer, password = user
     extra = 3
     for index in range(LIKED_BY_LIMIT + extra):
         liker, _ = make_user(f"liker{index}", f"liker{index}@example.com", "pass12345")
         image.users_like.add(liker)
+    client.login(username=viewer.username, password=password)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
@@ -295,14 +303,31 @@ def test_image_detail_counts_the_likers_it_does_not_show(client, image, make_use
 
 @pytest.mark.django_db
 def test_image_detail_counts_nothing_extra_when_everyone_fits(
-    client, image, second_user
+    client, user, image, second_user
 ):
+    viewer, password = user
+    liker, _ = second_user
+    image.users_like.add(liker)
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["hidden_likers"] == 0
+
+
+@pytest.mark.django_db
+def test_image_detail_keeps_the_likers_from_anonymous(client, image, second_user):
+    """The page is public, the people list and the profiles are not. Showing a
+    guest who liked it — with names — would be a way around that; the number by
+    the button says the picture was liked without saying by whom."""
     liker, _ = second_user
     image.users_like.add(liker)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
-    assert response.context["hidden_likers"] == 0
+    assert list(response.context["users_like"]) == []
+    assert b"Liked by" not in response.content
+    assert liker.username.encode() not in response.content
 
 
 @pytest.mark.django_db

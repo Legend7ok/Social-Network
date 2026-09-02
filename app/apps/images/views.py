@@ -100,11 +100,18 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    likers = public_users().filter(images_liked=image).select_related("profile")
-    # Counted over the same filtered set the faces come from, so the "and N
-    # more" cannot disagree with what is on screen.
-    likes_count = likers.count()
-    users_like = likers[:LIKED_BY_LIMIT]
+    # Who liked it is for members only: this page is public, while the people
+    # list and every profile are not, so handing a guest the faces — names and
+    # all — would walk around that. The count by the button stays visible.
+    if request.user.is_authenticated:
+        likers = public_users().filter(images_liked=image).select_related("profile")
+        # Counted over the same filtered set the faces come from, so the "and N
+        # more" cannot disagree with what is on screen.
+        likes_count = likers.count()
+        users_like = likers[:LIKED_BY_LIMIT]
+    else:
+        likes_count = 0
+        users_like = []
 
     # Asked of the database rather than searched for in the list above: the
     # answer is one row either way, and the list is now only its first page.
