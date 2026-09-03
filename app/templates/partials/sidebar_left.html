@@ -89,7 +89,7 @@
     <p class="text-[11px] text-[#5E5C6A] leading-snug mb-[9px]">Drag the button to your bookmarks toolbar</p>
     {% if request.user.is_authenticated %}
     <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
-       class="block bg-brand rounded-md py-[7px] text-[12px] font-medium text-white text-center cursor-grab select-none">
+       class="block bg-brand hover:bg-brand-dark transition-colors rounded-md py-[7px] text-[12px] font-medium text-white text-center cursor-grab select-none">
       ⊕ Bookmark it
     </a>
     {% else %}
@@ -97,7 +97,7 @@
     there is nothing for it to drag to. It leads to signing in instead.
     {% endcomment %}
     <a href="{% url 'login' %}"
-       class="block bg-brand rounded-md py-[7px] text-[12px] font-medium text-white text-center">
+       class="block bg-brand hover:bg-brand-dark transition-colors rounded-md py-[7px] text-[12px] font-medium text-white text-center">
       ⊕ Bookmark it
     </a>
     {% endif %}
@@ -132,7 +132,7 @@
         Sign in
       </a>
       <a href="{% url 'login' %}?register=1"
-         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg bg-brand text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
+         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg bg-brand text-[14px] font-medium text-white hover:bg-brand-dark transition-colors">
         <i class="ti ti-user-plus text-[15px]"></i>
         Register
       </a>

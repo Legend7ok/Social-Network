@@ -117,7 +117,7 @@
         <button type="submit"
                 :disabled="!hasFile || submitting"
                 :class="hasFile && !submitting
-                  ? 'bg-brand text-white hover:opacity-90 cursor-pointer'
+                  ? 'bg-brand text-white hover:bg-brand-dark cursor-pointer'
                   : 'bg-surface-input text-[#5E5C6A] cursor-not-allowed border border-white/[0.08]'"
                 class="flex items-center justify-center gap-[9px] px-[35px] py-[13px] rounded-xl text-[15px] font-medium transition-all self-start">
           <i class="ti ti-loader-2 animate-spin text-[18px]" x-show="submitting" x-cloak></i>

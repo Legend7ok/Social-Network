@@ -33,7 +33,7 @@
       </div>
 
       <button @click="photoOpen = !photoOpen"
-              class="absolute bottom-0 right-0 w-[31px] h-[31px] bg-brand rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-brand-light transition-colors">
+              class="absolute bottom-0 right-0 w-[31px] h-[31px] bg-brand rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-brand-dark transition-colors">
         <i class="ti ti-camera text-[12px] text-white"></i>
       </button>
 
@@ -45,7 +45,7 @@
           <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="hidden" x-ref="fileInput"
                  @change="uploading = true; photoOpen = false; $refs.photoForm.submit()">
           <button type="button" @click="$refs.fileInput.click()"
-                  class="w-full flex items-center justify-center gap-[9px] bg-brand text-white text-[13px] py-[9px] rounded-lg hover:opacity-90 transition-opacity">
+                  class="w-full flex items-center justify-center gap-[9px] bg-brand text-white text-[13px] py-[9px] rounded-lg hover:bg-brand-dark transition-colors">
             <i class="ti ti-upload text-[14px]"></i> Upload photo
           </button>
         </form>
@@ -168,7 +168,7 @@
         <button @click="toggle()"
                 :class="following
                   ? 'bg-transparent border-brand/30 text-brand-light hover:bg-brand/10'
-                  : 'bg-brand border-brand text-white hover:opacity-90'"
+                  : 'bg-brand border-brand text-white hover:bg-brand-dark hover:border-brand-dark'"
                 class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
           <i class="ti ti-user-check text-[15px]" x-show="following" x-cloak></i>
           <i class="ti ti-user-plus text-[15px]" x-show="!following"></i>

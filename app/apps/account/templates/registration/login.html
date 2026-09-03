@@ -26,7 +26,7 @@
        shrinks to a 56px vertical strip (tap to expand). On desktop both panels are
        half-width and the sliding overlay covers one of them. -->
   <div @click="isMobile && isRegister && (isRegister = false)"
-       :class="!isMobile ? '' : (isRegister ? 'w-[56px] cursor-pointer bg-brand hover:opacity-90' : 'w-[calc(100%_-_56px)]')"
+       :class="!isMobile ? '' : (isRegister ? 'w-[56px] cursor-pointer bg-brand hover:bg-brand-dark' : 'w-[calc(100%_-_56px)]')"
        class="relative shrink-0 flex flex-col items-center justify-center px-[31px] py-[35px] transition-[width,background-color] duration-500 ease-in-out
               lg:w-1/2 lg:shrink-0">
 
@@ -101,7 +101,7 @@
         <a href="{% url 'password_reset' %}" class="text-[12px] text-brand-light hover:underline">Forgot password?</a>
       </div>
       <button type="submit"
-              class="w-full bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:opacity-90 transition-opacity">
+              class="w-full bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:bg-brand-dark transition-colors">
         Sign in
       </button>
     </form>
@@ -110,7 +110,7 @@
 
   <!-- Register (right panel). On phones: collapsible split — mirror of Sign in. -->
   <div @click="isMobile && !isRegister && (isRegister = true)"
-       :class="!isMobile ? '' : (isRegister ? 'w-[calc(100%_-_56px)]' : 'w-[56px] cursor-pointer bg-brand hover:opacity-90')"
+       :class="!isMobile ? '' : (isRegister ? 'w-[calc(100%_-_56px)]' : 'w-[56px] cursor-pointer bg-brand hover:bg-brand-dark')"
        class="relative shrink-0 flex flex-col items-center justify-center px-[31px] py-[35px] transition-[width,background-color] duration-500 ease-in-out
               lg:w-1/2 lg:shrink-0">
 
@@ -202,7 +202,7 @@
       {% endfor %}
 
       <button type="submit"
-              class="w-full mt-[13px] bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:opacity-90 transition-opacity">
+              class="w-full mt-[13px] bg-brand text-white text-[14px] font-medium py-[11px] rounded-lg hover:bg-brand-dark transition-colors">
         Create account
       </button>
     </form>

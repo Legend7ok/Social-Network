@@ -110,8 +110,8 @@
         {% if request.user != image.user %}
         <button @click="toggle()"
                 :class="following
-                  ? 'bg-surface-input border-white/[0.15] text-white'
-                  : 'bg-brand border-brand text-white'"
+                  ? 'bg-surface-input border-white/[0.15] text-white hover:border-white/[0.3]'
+                  : 'bg-brand border-brand text-white hover:bg-brand-dark hover:border-brand-dark'"
                 class="w-full flex items-center justify-center gap-[9px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
           <i class="ti ti-user-plus text-[15px]" x-show="!following"></i>
           <i class="ti ti-user-check text-[15px]" x-show="following"></i>

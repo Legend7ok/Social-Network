@@ -31,6 +31,10 @@
 
 @theme {
   --color-brand: #7C3AED;
+  /* Hover for the filled brand buttons. Darker rather than lighter: white
+     text keeps its contrast, and a step of opacity — what these buttons used
+     to do — is barely visible on this background. */
+  --color-brand-dark: #6D28D9;
   --color-brand-light: #A78BFA;
   --color-surface-page: #0F0E13;
   --color-surface-card: #1C1B20;

@@ -36,7 +36,7 @@
       Sign in to follow people. Everyone you follow is listed here.
     </p>
     <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}"
-       class="flex items-center justify-center gap-[9px] py-[9px] rounded-xl bg-brand text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
+       class="flex items-center justify-center gap-[9px] py-[9px] rounded-xl bg-brand text-[14px] font-medium text-white hover:bg-brand-dark transition-colors">
       <i class="ti ti-login text-[15px]"></i>
       Sign in
     </a>
