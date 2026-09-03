@@ -76,6 +76,13 @@ def image_create(request):
 
 
 def image_detail(request, id, slug):
+    """One picture with everything shown beside it.
+
+    The only public page of the site, so half of what follows depends on who is
+    looking. A guest gets the picture, its counters and the author; what belongs
+    to members — the faces that liked it, his own like and follow, the sidebar —
+    is gathered in one branch below and left empty for him.
+    """
     image = get_object_or_404(
         Image.objects.select_related("user", "user__profile").annotate(
             author_followers=followers_count("user")
@@ -100,38 +107,33 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    # Who liked it is for members only: this page is public, while the people
-    # list and every profile are not, so handing a guest the faces — names and
-    # all — would walk around that. The count by the button stays visible.
     if request.user.is_authenticated:
         likers = public_users().filter(images_liked=image).select_related("profile")
         # Counted over the same filtered set the faces come from, so the "and N
         # more" cannot disagree with what is on screen.
         likes_count = likers.count()
         users_like = likers[:LIKED_BY_LIMIT]
+        # Both asked of the database rather than searched for in the lists
+        # above: the answer is one row either way, and the list of faces is
+        # only its first page anyway.
+        liked_by_viewer = image.users_like.filter(pk=request.user.pk).exists()
+        following_author = follows(request.user, image.user_id)
+        following_users = sidebar_following(request.user)
     else:
+        # Who liked it is for members only: this page is public, while the
+        # people list and every profile are not, so handing a guest the faces —
+        # names and all — would walk around that. The count by the button, and
+        # the buttons themselves, stay where they are.
         likes_count = 0
         users_like = []
-
-    # Asked of the database rather than searched for in the list above: the
-    # answer is one row either way, and the list is now only its first page.
-    liked_by_viewer = (
-        request.user.is_authenticated
-        and image.users_like.filter(pk=request.user.pk).exists()
-    )
-
-    following_author = request.user.is_authenticated and follows(
-        request.user, image.user_id
-    )
+        liked_by_viewer = False
+        following_author = False
+        following_users = []
 
     # The picture being looked at is not "more from this author".
     more_from_author = Image.objects.filter(user_id=image.user_id).exclude(pk=image.pk)[
         :MORE_FROM_AUTHOR
     ]
-
-    following_users = (
-        sidebar_following(request.user) if request.user.is_authenticated else []
-    )
 
     return render(
         request,

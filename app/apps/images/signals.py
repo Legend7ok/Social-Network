@@ -35,11 +35,9 @@ def take_back_the_likes_of_a_leaver(sender, instance, **kwargs):
     Before the delete, not after: once it has run, there is nothing left to
     tell us what this person liked.
     """
-    liked = list(instance.images_liked.values_list("pk", flat=True))
-    if liked:
-        Image.objects.filter(pk__in=liked, total_likes__gt=0).update(
-            total_likes=F("total_likes") - 1
-        )
+    Image.objects.filter(users_like=instance).update(
+        total_likes=Greatest(F("total_likes") - 1, Value(0))
+    )
 
 
 @receiver(

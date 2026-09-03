@@ -70,32 +70,50 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('likeButton', (url, liked, count) => ({
     liked,
     count,
+    // A press while the last one is still in the air would send a second
+    // opposite action and land on whichever answer came back last.
+    busy: false,
 
     async toggle() {
+      if (this.busy) return;
       if (!this.$store.signedIn) {
         this.$dispatch('auth-required', {
           message: 'Sign in to like this picture and keep it in your account.',
         });
         return;
       }
-      if (!(await send(url, this.liked ? 'unlike' : 'like'))) return;
-      this.liked = !this.liked;
-      this.count += this.liked ? 1 : -1;
+
+      this.busy = true;
+      try {
+        if (!(await send(url, this.liked ? 'unlike' : 'like'))) return;
+        this.liked = !this.liked;
+        this.count += this.liked ? 1 : -1;
+      } finally {
+        this.busy = false;
+      }
     },
   }));
 
   Alpine.data('followButton', (url, following) => ({
     following,
+    busy: false,
 
     async toggle() {
+      if (this.busy) return;
       if (!this.$store.signedIn) {
         this.$dispatch('auth-required', {
           message: 'Sign in to follow people and see their new pictures.',
         });
         return;
       }
-      if (!(await send(url, this.following ? 'unfollow' : 'follow'))) return;
-      this.following = !this.following;
+
+      this.busy = true;
+      try {
+        if (!(await send(url, this.following ? 'unfollow' : 'follow'))) return;
+        this.following = !this.following;
+      } finally {
+        this.busy = false;
+      }
     },
   }));
 

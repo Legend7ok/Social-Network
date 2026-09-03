@@ -1,5 +1,9 @@
 {% load thumbnail user_display %}
 {% if users_like %}
+{% comment %}The rule above the faces belongs to them: on its own it was a line
+across the page with nothing under it — every picture without likes, and every
+page a guest opened.{% endcomment %}
+<div class="h-px bg-white/[0.08] mb-[22px]"></div>
 <div class="mb-[18px]">
   <p class="text-[13px] text-[#5E5C6A] mb-[11px] uppercase tracking-widest">Liked by</p>
   <div class="flex flex-wrap gap-[9px]">
