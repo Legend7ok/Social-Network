@@ -1,0 +1,143 @@
+{% load thumbnail user_display %}
+{% comment %}
+  The left menu: a slide-in drawer on phones, a plain column on desktop.
+  Opened through navOpen, which is declared on <body>.
+
+  A guest sees the same menu. Every entry leads somewhere that asks him to
+  sign in first and returns him there afterwards, so the menu costs nothing
+  and shows what the site is made of — which is the argument for joining.
+{% endcomment %}
+
+<!-- Dark backdrop behind the drawer (phones only) -->
+<div x-show="navOpen" x-cloak
+     x-transition:enter="transition-opacity ease-out duration-200"
+     x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="transition-opacity ease-in duration-150"
+     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     @click="navOpen = false"
+     class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+<!-- Sidebar: fixed slide-in drawer on phones, normal column on desktop.
+     Hidden-by-default in static class (avoids drawer flashing before Alpine boots);
+     Alpine only forces it open via the important translate-x-0! -->
+<aside @click="navOpen = false"
+       :class="{ 'translate-x-0!': navOpen }"
+       class="fixed inset-y-0 left-0 z-40 w-[286px] bg-surface-page transition-transform duration-200 ease-out
+              -translate-x-full lg:static lg:z-auto lg:translate-x-0
+              shrink-0 border-r border-white/[0.08] flex flex-col px-[11px] py-[9px] overflow-y-auto">
+
+  <!-- Close button (phones only) -->
+  <button @click="navOpen = false"
+          class="lg:hidden self-end w-[35px] h-[35px] flex items-center justify-center text-[#9896A4] hover:text-white mb-1">
+    <i class="ti ti-x text-[20px]"></i>
+  </button>
+
+  <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-1 mb-1 tracking-widest uppercase">Navigation</p>
+  <a href="{% url 'home' %}"
+     class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'home' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-home text-[19px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">Home</span>
+  </a>
+  <a href="{% url 'images:ranking' %}"
+     class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'ranking' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-trophy text-[19px] {% if request.resolver_match.url_name == 'ranking' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">Top Ranking</span>
+  </a>
+  <!-- These two live in the top navbar on desktop; shown here only on phones -->
+  <a href="{% url 'images:list' %}"
+     class="lg:hidden flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name == 'list' and not request.GET.mine %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-photo text-[19px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name == 'list' and not request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">New Images</span>
+  </a>
+  <a href="{% url 'user_list' %}"
+     class="lg:hidden flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'user_list' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-users text-[19px] {% if request.resolver_match.url_name == 'user_list' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">People</span>
+  </a>
+
+  <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-[13px] mb-1 tracking-widest uppercase">Account</p>
+  <a href="{% url 'my_profile' %}"
+     class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'my_profile' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-user-circle text-[19px] {% if request.resolver_match.url_name == 'my_profile' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">My Profile</span>
+  </a>
+  <a href="{% url 'images:upload' %}"
+     class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'upload' %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-cloud-upload text-[19px] {% if request.resolver_match.url_name == 'upload' %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">Add Image</span>
+  </a>
+  <a href="{% url 'images:list' %}?mine=1"
+     class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg transition-colors
+            {% if request.resolver_match.url_name == 'list' and request.GET.mine %}bg-brand/15 text-white font-medium{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-bookmark text-[19px] {% if request.resolver_match.url_name == 'list' and request.GET.mine %}text-brand-light{% else %}text-[#9896A4]{% endif %}"></i>
+    <span class="text-[15px]">My Bookmarks</span>
+    <span class="ml-auto text-[12px] bg-surface-input text-[#9896A4] px-[7px] py-0.5 rounded-full">{% if request.user.is_authenticated %}{{ request.user.images.count }}{% else %}0{% endif %}</span>
+  </a>
+
+  <p class="text-[13px] text-[#5E5C6A] px-[9px] mt-[13px] mb-1 tracking-widest uppercase">Bookmarks</p>
+  <div class="bg-brand/10 border border-brand/30 rounded-xl p-[13px] mx-0">
+    <div class="flex items-center gap-[9px] mb-[7px]">
+      <i class="ti ti-bookmark-plus text-[17px] text-brand-light"></i>
+      <span class="text-[14px] font-medium text-white">Bookmark it</span>
+    </div>
+    <p class="text-[11px] text-[#5E5C6A] leading-snug mb-[9px]">Drag the button to your bookmarks toolbar</p>
+    {% if request.user.is_authenticated %}
+    <a href="javascript:{% include 'bookmarklet_launcher.js' %}"
+       class="block bg-brand hover:bg-brand-dark transition-colors rounded-md py-[7px] text-[12px] font-medium text-white text-center cursor-grab select-none">
+      ⊕ Bookmark it
+    </a>
+    {% else %}
+    {% comment %}The bookmarklet saves a picture to an account, so without one
+    there is nothing for it to drag to. It leads to signing in instead.
+    {% endcomment %}
+    <a href="{% url 'login' %}"
+       class="block bg-brand hover:bg-brand-dark transition-colors rounded-md py-[7px] text-[12px] font-medium text-white text-center">
+      ⊕ Bookmark it
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="mt-auto pt-[13px] border-t border-white/[0.08]">
+    {% if request.user.is_authenticated %}
+    <a href="{% url 'my_profile' %}"
+       class="flex items-center gap-[11px] px-[11px] py-[9px] rounded-lg hover:bg-surface-input transition-colors">
+      <div class="w-[44px] h-[44px] rounded-full bg-brand flex items-center justify-center text-[13px] font-medium text-white shrink-0 overflow-hidden">
+        {% if request.user.profile.photo %}
+          {% thumbnail request.user.profile.photo THUMBS.avatar_md crop="center" as av %}
+          <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ request.user.username }}" />
+          {% endthumbnail %}
+        {% else %}
+          {{ request.user|initials }}
+        {% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-[14px] font-medium text-white truncate">{{ request.user|display_name }}</p>
+        <p class="text-[12px] text-[#5E5C6A]">@{{ request.user.username }}</p>
+      </div>
+    </a>
+    {% else %}
+    {% comment %}Where the signed-in person's own name sits. A guest has no
+    name to show there, and the foot of the menu is the last thing read on the
+    way down it.{% endcomment %}
+    <div class="flex flex-col gap-[7px] px-[11px] py-[9px]">
+      <a href="{% url 'login' %}"
+         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg border border-white/[0.15] text-[14px] font-medium text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+        <i class="ti ti-login text-[15px]"></i>
+        Sign in
+      </a>
+      <a href="{% url 'login' %}?register=1"
+         class="flex items-center justify-center gap-[9px] py-[9px] rounded-lg bg-brand text-[14px] font-medium text-white hover:bg-brand-dark transition-colors">
+        <i class="ti ti-user-plus text-[15px]"></i>
+        Register
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</aside>

@@ -36,9 +36,34 @@ def is_followed_by(viewer):
     )
 
 
+def follows(viewer, person_id):
+    """Whether the viewer already follows one particular person.
+
+    The page used to answer this by pulling every follower of that person into
+    memory and looking for itself among them.
+    """
+    return Contact.objects.filter(
+        user_from=viewer.profile, user_to__user=person_id
+    ).exists()
+
+
 def _first_number(subquery):
     """A grouped subquery returns one row or none; none means zero."""
     return Coalesce(Subquery(subquery, output_field=IntegerField()), 0)
+
+
+def followers_count(user_field="pk"):
+    """How many people follow the person a row points at.
+
+    A subquery rather than a join, so it can be annotated onto rows that
+    already carry counts of their own without the two multiplying each other.
+    `user_field` names the column holding that person — "pk" on a row that is
+    the person, "user" on a row that merely belongs to them.
+    """
+    followers = Contact.objects.filter(user_to__user=OuterRef(user_field)).values(
+        "user_to"
+    )
+    return _first_number(followers.annotate(n=Count("id")).values("n"))
 
 
 def with_profile_counters(people, viewer):
@@ -50,14 +75,13 @@ def with_profile_counters(people, viewer):
     number would come out wrong.
     """
     images = Image.objects.filter(user=OuterRef("pk")).values("user")
-    followers = Contact.objects.filter(user_to__user=OuterRef("pk")).values("user_to")
     following = Contact.objects.filter(user_from__user=OuterRef("pk")).values(
         "user_from"
     )
     return people.annotate(
         images_count=_first_number(images.annotate(n=Count("id")).values("n")),
         total_likes=_first_number(images.annotate(n=Sum("total_likes")).values("n")),
-        followers_count=_first_number(followers.annotate(n=Count("id")).values("n")),
+        followers_count=followers_count(),
         following_count=_first_number(following.annotate(n=Count("id")).values("n")),
         followed_by_viewer=is_followed_by(viewer),
     )

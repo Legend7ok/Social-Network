@@ -14,7 +14,7 @@
     <form method="post" action="{% url 'images:retry' image.id %}">
       {% csrf_token %}
       <button type="submit"
-              class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl bg-brand text-white text-[14px] font-medium hover:opacity-90 transition-opacity cursor-pointer">
+              class="flex items-center gap-[7px] px-[22px] py-[9px] rounded-xl bg-brand text-white text-[14px] font-medium hover:bg-brand-dark transition-colors cursor-pointer">
         <i class="ti ti-refresh text-[16px]"></i>
         Try again
       </button>

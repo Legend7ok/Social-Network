@@ -2,6 +2,12 @@
 {% load thumbnail user_display %}
 {% block title %}{{ image.title }} · socnet{% endblock %}
 
+{% comment %}
+  The public page, so a guest gets the menu here too: it is what tells him the
+  site has a feed, a ranking and people in it.
+{% endcomment %}
+{% block sidebar_left %}{% include 'partials/sidebar_left.html' %}{% endblock %}
+
 {% block content %}
 <div class="px-[16px] lg:px-[26px] py-[22px]">
 
@@ -26,35 +32,17 @@
         {% include 'images/partials/image_status.html' %}
       </div>
 
-      <!-- Actions row -->
+      {% comment %}
+        Actions row. One look for every button here — same border, same white
+        hover — so colour is left to mean something: brand for a picture you
+        have liked, red for the one action that destroys anything.
+      {% endcomment %}
       <div class="flex flex-wrap items-center gap-[9px] mt-[13px]"
-           x-data="{
-             liked: {% if request.user in users_like %}true{% else %}false{% endif %},
-             count: {{ image.total_likes }},
-             async toggle() {
-               const res = await fetch('{% url 'image-like' image.id %}', {
-                 method: 'POST',
-                 headers: {
-                   'X-CSRFToken': Alpine.store('csrf'),
-                   'Content-Type': 'application/json',
-                 },
-                 body: JSON.stringify({ action: this.liked ? 'unlike' : 'like' }),
-               });
-               if (res.status === 429) {
-                 Alpine.store('messages').push('Too many requests. Please slow down.');
-                 return;
-               }
-               const data = await res.json();
-               if (data.status === 'ok') {
-                 this.liked = !this.liked;
-                 this.count += this.liked ? 1 : -1;
-               }
-             },
-           }">
+           x-data="likeButton('{% url 'image-like' image.id %}', {% if liked_by_viewer %}true{% else %}false{% endif %}, {{ image.total_likes }})">
         <button @click="toggle()"
                 :class="liked
                   ? 'bg-brand/15 border-brand/50 text-white'
-                  : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-brand/40 hover:text-white'"
+                  : 'bg-transparent border-white/[0.15] text-[#9896A4] hover:border-white/[0.3] hover:text-white'"
                 class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
           <i class="ti text-[17px]" :class="liked ? 'ti-heart-filled heart-gradient' : 'ti-heart'"></i>
           <span x-text="liked ? 'Unlike' : 'Like'"></span>
@@ -64,20 +52,20 @@
           <i class="ti ti-eye text-[17px]"></i>
           <span>{{ total_views|floatformat:"-1" }}</span>
         </div>
-        <button @click="navigator.clipboard.writeText(window.location.href); Alpine.store('messages').push('Link copied!')"
-                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+        <button x-data="shareButton('{{ image.title|escapejs }}')" @click="share()"
+                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
           <i class="ti ti-share text-[17px]"></i> Share
         </button>
 
         {% if request.user == image.user %}
         <a href="{% url 'images:edit' image.id %}"
-           class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.15] transition-all">
+           class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
           <i class="ti ti-pencil text-[17px]"></i> Edit
         </a>
 
         <button type="button"
                 @click="$dispatch('confirm-delete', { url: '{% url 'images:delete' image.id %}', title: '{{ image.title|escapejs }}' })"
-                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.08] text-[14px] text-[#9896A4] hover:text-red-400 hover:border-red-700/50 transition-all">
+                class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-red-400 hover:border-red-700/50 transition-all">
           <i class="ti ti-trash text-[17px]"></i> Delete
         </button>
         {% endif %}
@@ -86,27 +74,7 @@
 
     <!-- Right column: description + author + more from (single card) -->
     <div class="rounded-xl border border-white/[0.08] bg-surface-card w-full xl:flex-[3] min-w-0"
-         x-data="{
-           following: {% if request.user.profile in image.user.profile.followers.all %}true{% else %}false{% endif %},
-           async toggle() {
-             const res = await fetch('{% url 'user-follow' image.user.id %}', {
-               method: 'POST',
-               headers: {
-                 'X-CSRFToken': Alpine.store('csrf'),
-                 'Content-Type': 'application/json',
-               },
-               body: JSON.stringify({ action: this.following ? 'unfollow' : 'follow' }),
-             });
-             if (res.status === 429) {
-               Alpine.store('messages').push('Too many requests. Please slow down.');
-               return;
-             }
-             const data = await res.json();
-             if (data.status === 'ok') {
-               this.following = !this.following;
-             }
-           },
-         }">
+         x-data="followButton('{% url 'user-follow' image.user.id %}', {% if following_author %}true{% else %}false{% endif %})">
 
       <!-- Description -->
       <div class="px-[18px] pt-[18px] pb-[18px]">
@@ -136,14 +104,14 @@
           </div>
           <div class="min-w-0">
             <p class="text-[14px] font-medium text-white truncate">{{ image.user|display_name }}</p>
-            <p class="text-[12px] text-[#5E5C6A]">{{ image.user.profile.followers.count }} followers</p>
+            <p class="text-[12px] text-[#5E5C6A]">{{ image.author_followers }} followers</p>
           </div>
         </a>
         {% if request.user != image.user %}
         <button @click="toggle()"
                 :class="following
-                  ? 'bg-surface-input border-white/[0.15] text-white'
-                  : 'bg-brand border-brand text-white'"
+                  ? 'bg-surface-input border-white/[0.15] text-white hover:border-white/[0.3]'
+                  : 'bg-brand border-brand text-white hover:bg-brand-dark hover:border-brand-dark'"
                 class="w-full flex items-center justify-center gap-[9px] py-[9px] rounded-xl border text-[14px] font-medium transition-all">
           <i class="ti ti-user-plus text-[15px]" x-show="!following"></i>
           <i class="ti ti-user-check text-[15px]" x-show="following"></i>
@@ -152,15 +120,19 @@
         {% endif %}
       </div>
 
-      {% with recent=image.user.images.all|slice:":4" %}
-      {% if recent %}
+      {% if more_from_author %}
       <div class="h-px bg-white/[0.08] mx-[18px]"></div>
       <div class="px-[18px] pt-[13px] pb-[18px]">
         <p class="text-[12px] text-[#5E5C6A] tracking-widest uppercase mb-[11px]">More from this author</p>
         <div class="grid grid-cols-2 gap-[7px]">
-          {% for img in recent %}
+          {% for img in more_from_author %}
+          {% comment %}
+            The highlight is a ring rather than a border: a border sits inside
+            the tile, where the picture is clipped to the same rounded corners
+            and covers it — on a light picture it all but disappeared.
+          {% endcomment %}
           <a href="{{ img.get_absolute_url }}"
-             class="relative rounded-lg overflow-hidden aspect-square block bg-surface-input border border-white/[0.08] hover:border-brand/40 transition-colors">
+             class="relative rounded-lg overflow-hidden aspect-square block bg-surface-input border border-white/[0.08] hover:ring-2 hover:ring-brand transition-all">
             {% if img.image %}
               {% thumbnail img.image THUMBS.content_square crop="center" as th %}
               <img src="{{ th.url }}" class="w-full h-full object-cover" alt="{{ img.title }}" />
@@ -175,15 +147,10 @@
         </div>
       </div>
       {% endif %}
-      {% endwith %}
 
     </div>
   </div>
 
-  <!-- Divider -->
-  <div class="h-px bg-white/[0.08] mb-[22px]"></div>
-
-  <!-- Liked by -->
   {% include 'images/partials/liked_by.html' %}
 
   {% if request.user == image.user %}

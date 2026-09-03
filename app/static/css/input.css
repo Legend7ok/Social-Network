@@ -31,10 +31,25 @@
 
 @theme {
   --color-brand: #7C3AED;
+  /* Hover for the filled brand buttons. Darker rather than lighter: white
+     text keeps its contrast, and a step of opacity — what these buttons used
+     to do — is barely visible on this background. */
+  --color-brand-dark: #6D28D9;
   --color-brand-light: #A78BFA;
   --color-surface-page: #0F0E13;
   --color-surface-card: #1C1B20;
   --color-surface-input: #26242D;
+}
+
+/* Tailwind 4 dropped the pointer cursor buttons used to get from its reset, so
+   every button in the project had to ask for it by hand — and most never did.
+   Put back here rather than as a class thirty times over, and one less thing
+   to remember for the next button written. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 .overlay-panel {
