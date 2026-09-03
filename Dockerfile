@@ -50,6 +50,8 @@ ENTRYPOINT ["./entrypoint.sh"]
 # generated files from inside the container.
 FROM runtime AS dev
 
+RUN uv pip install --system --no-cache .[dev]
+
 
 FROM runtime AS web
 

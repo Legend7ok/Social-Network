@@ -1042,7 +1042,6 @@ dependencies = [
     { name = "celery" },
     { name = "django" },
     { name = "django-axes" },
-    { name = "django-debug-toolbar" },
     { name = "django-environ" },
     { name = "django-ratelimit" },
     { name = "django-storages", extra = ["s3"] },
@@ -1051,8 +1050,6 @@ dependencies = [
     { name = "gunicorn" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
-    { name = "pytest" },
-    { name = "pytest-django" },
     { name = "redis" },
     { name = "requests" },
     { name = "social-auth-app-django" },
@@ -1061,8 +1058,11 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "django-debug-toolbar" },
     { name = "fakeredis" },
+    { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-django" },
     { name = "ruff" },
 ]
 
@@ -1072,7 +1072,7 @@ requires-dist = [
     { name = "celery", specifier = ">=5.6.3" },
     { name = "django", specifier = ">=6.0.2" },
     { name = "django-axes", specifier = ">=8.3.1" },
-    { name = "django-debug-toolbar", specifier = ">=6.3.0" },
+    { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = ">=6.3.0" },
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-ratelimit", specifier = ">=4.1.0" },
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
@@ -1082,9 +1082,9 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.3.0" },
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.1.0" },
-    { name = "pytest-django", specifier = ">=4.12.0" },
+    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.12.0" },
     { name = "redis", specifier = ">=7.4.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
