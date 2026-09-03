@@ -19,7 +19,11 @@ FROM python:3.13-slim AS base
 
 WORKDIR /app
 
-ENV PYTHONPATH=/app:/app/app
+# Only the inner directory: it is the root every import in the project is
+# written against (settings, config, apps, core). Adding /app as well made the
+# same package reachable under a second name, and a module imported twice under
+# two names is two separate objects with two separate copies of its state.
+ENV PYTHONPATH=/app/app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
