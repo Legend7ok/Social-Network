@@ -35,7 +35,7 @@ COPY --from=frontend /build/app/static/css/dist ./app/static/css/dist
 COPY --from=frontend /build/app/static/css/vendor ./app/static/css/vendor
 COPY --from=frontend /build/app/static/js/vendor ./app/static/js/vendor
 
-RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 
 FROM base AS runtime
