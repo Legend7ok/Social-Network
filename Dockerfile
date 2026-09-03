@@ -35,25 +35,18 @@ COPY --from=frontend /build/app/static/css/dist ./app/static/css/dist
 COPY --from=frontend /build/app/static/css/vendor ./app/static/css/vendor
 COPY --from=frontend /build/app/static/js/vendor ./app/static/js/vendor
 
-RUN chmod +x entrypoint.sh
-
-
-FROM base AS runtime
-
 EXPOSE 8000
-
-ENTRYPOINT ["./entrypoint.sh"]
 
 
 # Development keeps root on purpose: the project is mounted from the host over
 # /app, and an unprivileged user could not write into it — no migrations, no
 # generated files from inside the container.
-FROM runtime AS dev
+FROM base AS dev
 
 RUN uv pip install --system --no-cache .[dev]
 
 
-FROM runtime AS web
+FROM base AS web
 
 # The code stays owned by root and is only readable to the account that runs
 # it, so a break-in cannot rewrite the application. Everything the processes
