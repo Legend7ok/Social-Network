@@ -1,4 +1,7 @@
-name: social-network
+# Set PROJECT_NAME in .env to give a second checkout its own containers,
+# volumes and network. Without it two checkouts share one database, and tests
+# started in both at once wipe each other's data.
+name: ${PROJECT_NAME:-social-network}
 
 services:
   db:
