@@ -52,7 +52,7 @@ services:
     build:
       context: .
       target: web
-    command: celery -A app.config worker -l info --uid nobody --gid nogroup
+    command: celery -A app.config worker -l info
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.prod
     env_file: .env

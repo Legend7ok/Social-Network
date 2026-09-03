@@ -18,7 +18,7 @@ services:
   web:
     build:
       context: .
-      target: web
+      target: dev
     command: python app/manage.py runserver 0.0.0.0:8000
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.dev
@@ -51,7 +51,7 @@ services:
   worker:
     build:
       context: .
-      target: web
+      target: dev
     command: celery -A app.config worker -l info
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.dev
@@ -68,7 +68,7 @@ services:
   beat:
     build:
       context: .
-      target: web
+      target: dev
     command: celery -A app.config beat -l info
     environment:
       DJANGO_SETTINGS_MODULE: app.settings.dev

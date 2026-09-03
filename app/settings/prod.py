@@ -59,6 +59,11 @@ LOGGING = {
     },
 }
 
+# beat keeps the time of the last run in a file, by default next to the code —
+# which the account running it cannot write to. The directory below is created
+# for that account in the image.
+CELERY_BEAT_SCHEDULE_FILENAME = "/var/lib/celery/celerybeat-schedule"
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.resend.com"
 EMAIL_PORT = 587
