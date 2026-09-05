@@ -68,6 +68,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Only starts when asked for: --profile ngrok. This is how the production
+  # stack is shown to someone who is not on this machine — the tunnel ends at
+  # nginx, so the request takes the same path a real visitor would.
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http nginx:80
+    profiles:
+      - ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - nginx
+
   worker:
     build:
       context: .

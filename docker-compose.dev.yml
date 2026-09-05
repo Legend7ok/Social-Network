@@ -114,9 +114,13 @@ services:
     volumes:
       - redis_data:/data
 
+  # Only starts when asked for: --profile ngrok. It needs a token, and without
+  # one it used to die on every single start, leaving a failed container behind.
   ngrok:
     image: ngrok/ngrok:latest
     command: http web:8000
+    profiles:
+      - ngrok
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:
