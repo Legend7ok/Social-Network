@@ -10,7 +10,11 @@ MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware"] + MIDDLEWARE
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-THUMBNAIL_STORAGE = "django.core.files.storage.FileSystemStorage"
+# Uploads land on disk unless the bucket is asked for explicitly, so a fresh
+# clone runs with no credentials at all. Set USE_R2=true to develop against the
+# real bucket — worth doing before a release, since signed URLs, public
+# addresses and overwrite behaviour differ from the local filesystem.
+USE_R2 = env.bool("USE_R2", default=False)
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
@@ -29,6 +33,13 @@ STORAGES = {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+
+# Thumbnails follow: sorl cuts them into the default storage unless told
+# otherwise, and nothing here tells it otherwise any more.
+if not USE_R2:
+    STORAGES["default"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    }
 
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips]
