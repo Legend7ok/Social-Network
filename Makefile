@@ -6,7 +6,7 @@ PROD_NGROK := $(PROD) --profile ngrok
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
         worker-logs ngrok ngrok-down prod-up prod-up-build prod-down prod-restart prod-logs prod-ps \
-        prod-collectstatic prod-ngrok prod-ngrok-down vendor
+        prod-collectstatic prod-ngrok prod-ngrok-down vendor watch-css build-css
 
 help:
 	@echo "Dev:"
@@ -34,6 +34,8 @@ help:
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make vendor          Install npm deps and copy vendor assets"
+	@echo "  make watch-css       Rebuild styles on every change (runs on the host)"
+	@echo "  make build-css       Build the styles once, minified"
 	@echo ""
 	@echo "Django:"
 	@echo "  make migrate         Apply migrations"
@@ -98,6 +100,15 @@ build-test:
 vendor:
 	npm install
 	npm run copy:vendor
+
+# On the host, not in a container: a watcher inside one never learns that a
+# file changed, because change notifications do not cross the boundary between
+# Windows and the Linux virtual machine docker runs in.
+watch-css:
+	npm run watch:css
+
+build-css:
+	npm run build:css
 
 prod-up:
 	$(PROD) up
