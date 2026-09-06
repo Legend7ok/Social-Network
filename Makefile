@@ -1,9 +1,12 @@
 DEV := docker compose -f docker-compose.dev.yml
 PROD := docker compose -f docker-compose.prod.yml
 DEV_TEST := $(DEV) --profile test
+DEV_NGROK := $(DEV) --profile ngrok
+PROD_NGROK := $(PROD) --profile ngrok
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
-        worker-logs prod-up prod-up-build prod-down prod-restart prod-logs prod-ps prod-collectstatic vendor
+        worker-logs ngrok ngrok-down prod-up prod-up-build prod-down prod-restart prod-logs prod-ps \
+        prod-collectstatic prod-ngrok prod-ngrok-down vendor
 
 help:
 	@echo "Dev:"
@@ -15,6 +18,8 @@ help:
 	@echo "  make logs            Show dev logs (follow)"
 	@echo "  make ps              Show running dev services"
 	@echo "  make shell           Open shell in web container"
+	@echo "  make ngrok           Expose the dev site over https, print the URL"
+	@echo "  make ngrok-down      Close the dev tunnel"
 	@echo ""
 	@echo "Prod:"
 	@echo "  make prod-up         Start prod containers"
@@ -24,6 +29,8 @@ help:
 	@echo "  make prod-logs       Show prod logs (follow)"
 	@echo "  make prod-ps             Show running prod services"
 	@echo "  make prod-collectstatic  Upload static files to R2 (run once on deploy)"
+	@echo "  make prod-ngrok          Expose the prod site over https, print the URL"
+	@echo "  make prod-ngrok-down     Close the prod tunnel"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make vendor          Install npm deps and copy vendor assets"
@@ -71,6 +78,17 @@ superuser:
 worker-logs:
 	$(DEV) logs -f worker
 
+# The public address is only reachable through the tunnel's own dashboard, so
+# it is fished out of there rather than printed by the container.
+ngrok:
+	$(DEV_NGROK) up -d ngrok
+	@sleep 4
+	@echo "Dashboard: http://localhost:4040"
+	@curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*ngrok[^"]*' | head -1
+
+ngrok-down:
+	$(DEV_NGROK) rm -sf ngrok
+
 test:
 	$(DEV_TEST) run --rm test
 
@@ -100,3 +118,12 @@ prod-ps:
 
 prod-collectstatic:
 	$(PROD) run --rm web python app/manage.py collectstatic --noinput
+
+prod-ngrok:
+	$(PROD_NGROK) up -d ngrok
+	@sleep 4
+	@echo "Dashboard: http://localhost:4040"
+	@curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*ngrok[^"]*' | head -1
+
+prod-ngrok-down:
+	$(PROD_NGROK) rm -sf ngrok
