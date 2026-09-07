@@ -117,9 +117,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # volatile-lru evicts only keys that carry an expiry — that is the cache and
+  # nothing else. The Celery queue and the view counters have no expiry, so
+  # under memory pressure the cache is sacrificed and they stay intact; once
+  # there is nothing left to evict Redis refuses writes rather than dropping a
+  # queued task. The limit sits below the container's own ceiling, leaving room
+  # for the copy Redis makes while saving to disk.
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      --maxmemory 384mb
+      --maxmemory-policy volatile-lru
+      --appendonly yes
+      --appendfsync everysec
+    environment:
+      # Read by redis-cli on its own, so the password stays out of the command
+      # line the health check would otherwise expose in the process list.
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     restart: unless-stopped
     volumes:
       - redis_data:/data

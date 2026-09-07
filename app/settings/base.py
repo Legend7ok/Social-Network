@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote
+
 from django.urls import reverse_lazy
 
 import environ
@@ -175,6 +177,17 @@ ABSOLUTE_URL_OVERRIDES = {
 REDIS_HOST = env("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
 REDIS_DB = env.int("REDIS_DB", default=0)
+REDIS_PASSWORD = env("REDIS_PASSWORD", default="")
+
+# Quoted, because a password is allowed characters that mean something inside a
+# URL. Everything that talks to Redis goes through here, so the credentials
+# cannot be forgotten in one place and set in another.
+_redis_auth = f":{quote(REDIS_PASSWORD, safe='')}@" if REDIS_PASSWORD else ""
+
+
+def redis_url(db):
+    return f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{db}"
+
 
 # django-redis rather than Django's own backend for one reason: it can swallow
 # a broken connection instead of raising. Nothing here depends on the cache for
@@ -185,7 +198,7 @@ REDIS_DB = env.int("REDIS_DB", default=0)
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/2",
+        "LOCATION": redis_url(2),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "IGNORE_EXCEPTIONS": True,
@@ -197,8 +210,8 @@ CACHES = {
 
 DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
 
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
-CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
+CELERY_BROKER_URL = redis_url(1)
+CELERY_RESULT_BACKEND = redis_url(1)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Views are buffered in Redis and flushed here; the interval is the worst-case

@@ -108,8 +108,17 @@ services:
       redis:
         condition: service_started
 
+  # Same password and same eviction rules as production, so behaviour does not
+  # differ between the two. See the production file for what volatile-lru buys.
   redis:
     image: redis:7-alpine
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      --maxmemory 384mb
+      --maxmemory-policy volatile-lru
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     restart: unless-stopped
     volumes:
       - redis_data:/data
