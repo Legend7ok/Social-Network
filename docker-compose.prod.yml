@@ -84,8 +84,12 @@ services:
     image: nginx:alpine
     ports:
       - "80:80"
+      # Uncomment together with the https block in nginx.conf.
+      # - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Certificate and key, named fullchain.pem and privkey.pem.
+      # - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       web:
         condition: service_healthy
