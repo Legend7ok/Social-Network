@@ -13,6 +13,7 @@ from sorl.thumbnail import delete as delete_thumbnails
 from sorl.thumbnail import get_thumbnail
 
 from apps.actions.models import Action
+from core.exceptions import RedisUnavailableError
 from core.url_safety import validate_public_url
 from core.validators import (
     IMAGE_FORMAT_EXTENSIONS,
@@ -41,7 +42,11 @@ GAVE_UP = "The image could not be downloaded."
 USER_AGENT = "socnet/1.0"
 
 
-@shared_task
+@shared_task(
+    autoretry_for=(RedisUnavailableError,),
+    max_retries=3,
+    retry_backoff=True,
+)
 def flush_image_views():
     """
     Move buffered view counts from Redis into Image.total_views.
@@ -49,6 +54,10 @@ def flush_image_views():
     The database is written first and Redis is only drained afterwards: a crash
     in between replays a batch on the next run, which is far better than the
     reverse order, where it would silently drop the views instead.
+
+    A dead Redis is retried with a growing pause rather than reported once a
+    minute: the schedule would otherwise fill the log with the same complaint
+    for as long as the outage lasts.
     """
     image_ids = get_dirty_image_ids()
     flushed = 0

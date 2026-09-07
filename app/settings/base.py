@@ -176,16 +176,26 @@ REDIS_HOST = env("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
 REDIS_DB = env.int("REDIS_DB", default=0)
 
+# django-redis rather than Django's own backend for one reason: it can swallow
+# a broken connection instead of raising. Nothing here depends on the cache for
+# correctness — thumbnails, rate limits and API throttling all survive without
+# it — so a dead Redis must not turn every page into an error. Every swallowed
+# failure is written to the log, otherwise the site would quietly run uncached
+# and nobody would know.
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/2",
         "OPTIONS": {
-            "socket_connect_timeout": 2,
-            "socket_timeout": 2,
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+            "SOCKET_CONNECT_TIMEOUT": 2,
+            "SOCKET_TIMEOUT": 2,
         },
     }
 }
+
+DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
 
 CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
@@ -227,6 +237,12 @@ THUMBNAILS = {
 }
 
 RATELIMIT_IP_META_KEY = "HTTP_X_FORWARDED_FOR"
+
+# With the cache swallowing failures the limiter gets no count back, and its
+# default reaction is to refuse everyone — a dead Redis would lock the whole
+# site out of posting. Let requests through instead: sign-in stays protected
+# either way, because axes counts attempts in the database.
+RATELIMIT_FAIL_OPEN = True
 
 AXES_DISABLE_ACCESS_LOG = True
 AXES_FAILURE_LIMIT = 3
