@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 
 import environ
 
-from .storages import STORAGES
+from .storages import build_storages
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -13,6 +13,9 @@ env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"), overwrite=False)
 
 SECRET_KEY = env("SECRET_KEY")
+
+# Keys stay optional here; production demands them, see prod.py.
+STORAGES = build_storages(required=False)
 
 INSTALLED_APPS = [
     "apps.account",

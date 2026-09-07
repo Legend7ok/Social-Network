@@ -4,6 +4,11 @@ DEBUG = False
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 
+# Every picture and every static file lives in the bucket, so a missing key is
+# not a degraded mode — it is a broken site. Fail on startup, naming the
+# variable, instead of on the first upload.
+STORAGES = build_storages(required=True)
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
