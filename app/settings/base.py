@@ -223,6 +223,11 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# Write the schedule file after every task sent instead of every few minutes.
+# That file's timestamp is what the container's health check reads, and on the
+# default interval a beat that died a minute ago still looks alive.
+CELERY_BEAT_SYNC_EVERY = 1
+
 FEED_ACTIONS_PER_PAGE = 10
 IMAGES_PER_PAGE = 6
 USERS_PER_PAGE = 10

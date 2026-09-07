@@ -49,10 +49,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Asks the application, not the socket: a listening port only proves
+    # gunicorn started, not that Django can answer or reach the database.
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); s.connect((\"localhost\", 8000)); s.close()'"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=5)\""]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       start_period: 30s
     restart: unless-stopped
@@ -98,6 +100,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Asks this worker to answer over the queue: proves it is connected and
+    # still picking work up, which a running process alone does not.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   beat:
@@ -115,6 +125,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # beat has nothing to answer with, so its liveness is read off the schedule
+    # file it rewrites after every task it sends — once a minute here. The
+    # companion files carry the fresh timestamp: the store is an sqlite database
+    # in write-ahead mode, and that is where recent writes land.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,sys,time; b='/var/lib/celery/celerybeat-schedule'; t=[os.path.getmtime(p) for p in (b, b+'-shm', b+'-wal') if os.path.exists(p)]; sys.exit(0 if t and time.time()-max(t) < 180 else 1)\""]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
     restart: unless-stopped
 
   # volatile-lru evicts only keys that carry an expiry — that is the cache and

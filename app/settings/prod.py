@@ -1,7 +1,10 @@
 from .base import *
 
 DEBUG = False
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+# localhost is always allowed: the container's own health check asks for the
+# health endpoint over the loopback address, and a name it may not use makes
+# the container look dead while the site serves everyone else fine.
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS") + ["localhost"]
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 
 # Every picture and every static file lives in the bucket, so a missing key is
@@ -17,6 +20,11 @@ USE_X_FORWARDED_PORT = True
 # Keeping them here means they are versioned, reviewed and validated by
 # `manage.py check --deploy`; the duplicate add_header lines were removed from nginx.
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+
+# The health check speaks plain http from inside the container; without this it
+# would get a redirect to https and read it as a failure. Matched against the
+# path with the leading slash stripped.
+SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
