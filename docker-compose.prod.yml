@@ -19,10 +19,13 @@ x-logging: &logging
 services:
   db:
     image: postgres:17-alpine
+    # Required, with the reason spelled out: an unset variable here would create
+    # a database under a different name than DATABASE_URL points at, and the
+    # failure would surface much later as "database does not exist".
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

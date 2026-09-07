@@ -12,6 +12,11 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 # variable, instead of on the first upload.
 STORAGES = build_storages(required=True)
 
+# No fallback here. The shared default is a file-based sqlite database, which
+# production would take up silently: the site starts, serves an empty world and
+# loses everything with the container.
+DATABASES = {"default": env.db("DATABASE_URL")}
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
@@ -19,19 +24,29 @@ USE_X_FORWARDED_PORT = True
 # Security: Django owns these (nginx is a pure reverse proxy, static/media on R2).
 # Keeping them here means they are versioned, reviewed and validated by
 # `manage.py check --deploy`; the duplicate add_header lines were removed from nginx.
-SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+#
+# One switch for running the production stack on this machine over plain http —
+# no certificate, no tunnel. It turns off three things at once, because turning
+# off fewer leaves a site that looks up but cannot be used: the redirect to
+# https, the year-long instruction to browsers never to speak http to this host
+# again, and the flag that stops cookies from travelling over http, without
+# which nobody can sign in. Named to say what it is: this must never be set on
+# a server.
+INSECURE_LOCAL_HTTP = env.bool("INSECURE_LOCAL_HTTP", default=False)
+
+SECURE_SSL_REDIRECT = not INSECURE_LOCAL_HTTP
 
 # The health check speaks plain http from inside the container; without this it
 # would get a redirect to https and read it as a failure. Matched against the
 # path with the leading slash stripped.
 SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not INSECURE_LOCAL_HTTP
+CSRF_COOKIE_SECURE = not INSECURE_LOCAL_HTTP
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
-SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)  # 1 year
+SECURE_HSTS_SECONDS = 0 if INSECURE_LOCAL_HTTP else 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
