@@ -29,7 +29,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv pip install --system --no-cache .
+# Installed from the lock file, not from the version ranges in pyproject.toml.
+# Installing from the ranges takes whatever is newest on the index at build
+# time, so two images built from the same commit a month apart hold different
+# libraries — and the versions the tests ran against are not the ones that
+# reach production.
+RUN uv export --frozen --no-emit-project --format requirements-txt -o /tmp/requirements.txt \
+    && uv pip install --system --no-cache -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 COPY . .
 
@@ -47,7 +54,9 @@ EXPOSE 8000
 # generated files from inside the container.
 FROM base AS dev
 
-RUN uv pip install --system --no-cache .[dev]
+RUN uv export --frozen --extra dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt \
+    && uv pip install --system --no-cache -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 
 FROM base AS web
@@ -64,7 +73,9 @@ USER app
 
 FROM base AS test
 
-RUN uv pip install --system --no-cache .[dev]
+RUN uv export --frozen --extra dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt \
+    && uv pip install --system --no-cache -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 RUN printf '#!/bin/sh\nset -e\npytest -v --cov --cov-report=term-missing\n' > /usr/local/bin/run-tests \
     && chmod +x /usr/local/bin/run-tests

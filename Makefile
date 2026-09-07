@@ -4,8 +4,13 @@ DEV_TEST := $(DEV) --profile test
 DEV_NGROK := $(DEV) --profile ngrok
 PROD_NGROK := $(PROD) --profile ngrok
 
+# Which checkout to copy development data between; see clone-dev-data.
+FROM_PROJECT ?= social-network
+TO_PROJECT ?= social-network-w2
+
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
-        worker-logs ngrok ngrok-down prod-up prod-up-build prod-down prod-restart prod-logs prod-ps \
+        worker-logs ngrok ngrok-down clone-dev-data lint format check-deploy \
+        prod-up prod-up-build prod-down prod-restart prod-logs prod-ps prod-shell prod-migrate \
         prod-collectstatic prod-ngrok prod-ngrok-down vendor watch-css build-css
 
 help:
@@ -20,6 +25,7 @@ help:
 	@echo "  make shell           Open shell in web container"
 	@echo "  make ngrok           Expose the dev site over https, print the URL"
 	@echo "  make ngrok-down      Close the dev tunnel"
+	@echo "  make clone-dev-data  Copy database and uploads to a second checkout"
 	@echo ""
 	@echo "Prod:"
 	@echo "  make prod-up         Start prod containers"
@@ -28,6 +34,8 @@ help:
 	@echo "  make prod-restart    Restart prod containers"
 	@echo "  make prod-logs       Show prod logs (follow)"
 	@echo "  make prod-ps             Show running prod services"
+	@echo "  make prod-shell          Open shell in prod web container"
+	@echo "  make prod-migrate        Apply migrations against the prod database"
 	@echo "  make prod-collectstatic  Upload static files to R2 (run once on deploy)"
 	@echo "  make prod-ngrok          Expose the prod site over https, print the URL"
 	@echo "  make prod-ngrok-down     Close the prod tunnel"
@@ -41,9 +49,14 @@ help:
 	@echo "  make migrate         Apply migrations"
 	@echo "  make makemigrations  Create migrations"
 	@echo "  make superuser       Create Django superuser"
-	@echo "  make test            Run tests"
 	@echo "  make worker-logs     Show Celery worker logs"
+	@echo ""
+	@echo "Quality:"
+	@echo "  make test            Run tests"
 	@echo "  make build-test      Rebuild test image"
+	@echo "  make lint            Check formatting and lint rules"
+	@echo "  make format          Reformat the code"
+	@echo "  make check-deploy    Run Django's production checklist"
 
 up:
 	$(DEV) up
@@ -57,7 +70,10 @@ build:
 down:
 	$(DEV) down
 
-restart: down up
+# Restarts the processes; down + up would throw the containers away and build
+# new ones, which is a different thing and much slower.
+restart:
+	$(DEV) restart
 
 logs:
 	$(DEV) logs -f
@@ -91,11 +107,35 @@ ngrok:
 ngrok-down:
 	$(DEV_NGROK) rm -sf ngrok
 
+# Two checkouts that set PROJECT_NAME get separate databases; this fills the
+# second one from the first instead of doing it by hand. Both stacks have to be
+# up. Override FROM_PROJECT and TO_PROJECT to copy the other way.
+clone-dev-data:
+	docker compose -p $(FROM_PROJECT) -f docker-compose.dev.yml exec -T db \
+		sh -c 'pg_dump -U $$POSTGRES_USER -c $$POSTGRES_DB' \
+		| docker compose -p $(TO_PROJECT) -f docker-compose.dev.yml exec -T db \
+		sh -c 'psql -q -U $$POSTGRES_USER $$POSTGRES_DB'
+	docker run --rm \
+		-v $(FROM_PROJECT)_media:/from -v $(TO_PROJECT)_media:/to \
+		alpine sh -c 'cp -a /from/. /to/'
+
 test:
 	$(DEV_TEST) run --rm test
 
 build-test:
 	$(DEV_TEST) build test
+
+# --no-deps: linting needs no database and no queue, only the image.
+lint:
+	$(DEV_TEST) run --rm --no-deps test sh -c 'ruff check . && ruff format --check .'
+
+format:
+	$(DEV_TEST) run --rm --no-deps test ruff format .
+
+# Django's own audit of production settings. Reads the production settings, so
+# it wants the same variables a real start does.
+check-deploy:
+	$(PROD) run --rm --no-deps web python app/manage.py check --deploy
 
 vendor:
 	npm install
@@ -119,13 +159,20 @@ prod-up-build:
 prod-down:
 	$(PROD) down
 
-prod-restart: prod-down prod-up
+prod-restart:
+	$(PROD) restart
 
 prod-logs:
 	$(PROD) logs -f
 
 prod-ps:
 	$(PROD) ps
+
+prod-shell:
+	$(PROD) exec web sh
+
+prod-migrate:
+	$(PROD) run --rm web python app/manage.py migrate --noinput
 
 prod-collectstatic:
 	$(PROD) run --rm web python app/manage.py collectstatic --noinput
