@@ -1,13 +1,15 @@
-import multiprocessing
 import os
 
-
-def _default_workers() -> int:
-    return max(2, multiprocessing.cpu_count() * 2 + 1)
-
+# A fixed number, not the usual "cores × 2 + 1": with the app preloaded every
+# process carries its own copy of Django, and on a 16-thread machine that
+# formula asks for 33 of them — several gigabytes before a single visitor
+# arrives, well past the memory this container is allowed. Five processes of
+# two threads each serve far more than this site will ever see; raise
+# GUNICORN_WORKERS if a real load ever says otherwise.
+DEFAULT_WORKERS = 5
 
 bind = os.getenv("GUNICORN_BIND", "0.0.0.0:8000")
-workers = int(os.getenv("GUNICORN_WORKERS", _default_workers()))
+workers = int(os.getenv("GUNICORN_WORKERS", DEFAULT_WORKERS))
 threads = int(os.getenv("GUNICORN_THREADS", "2"))
 worker_class = os.getenv("GUNICORN_WORKER_CLASS", "gthread")
 
