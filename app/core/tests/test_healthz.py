@@ -6,7 +6,9 @@ from django.urls import reverse
 
 
 @pytest.mark.django_db
-def test_healthz_is_ok_when_everything_answers(client):
+def test_healthz_is_ok_when_everything_answers(client, fake_redis):
+    """fake_redis, so the verdict comes from our code and not from whether a
+    real Redis happens to answer within the timeout."""
     response = client.get(reverse("healthz"))
 
     assert response.status_code == 200
@@ -24,7 +26,7 @@ def test_healthz_stays_ok_without_redis(client, monkeypatch):
     def refuse():
         raise redis.ConnectionError("down")
 
-    monkeypatch.setattr("core.views.counters_redis.ping", refuse)
+    monkeypatch.setattr("apps.images.services.r.ping", refuse)
 
     response = client.get(reverse("healthz"))
 
@@ -52,7 +54,7 @@ def test_healthz_fails_without_the_database(client, monkeypatch):
 
 
 @pytest.mark.django_db
-def test_healthz_needs_no_account(client):
+def test_healthz_needs_no_account(client, fake_redis):
     """The container runtime has no session to sign in with."""
     response = client.get(reverse("healthz"))
 

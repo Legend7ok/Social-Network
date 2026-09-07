@@ -6,7 +6,10 @@ from django.shortcuts import render
 
 import redis as redis_lib
 
-from apps.images.services import r as counters_redis
+# Through the module, not "from ... import r": binding the client at import
+# time freezes whichever object existed then, so anything that replaces it
+# afterwards — the test suite does — would be ignored here.
+from apps.images import services
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,7 @@ def healthz(request):
         checks["database"] = "error"
 
     try:
-        counters_redis.ping()
+        services.r.ping()
     except (redis_lib.ConnectionError, redis_lib.TimeoutError):
         # Logged at info: this is a note in the body, not an incident.
         logger.info("healthz: redis unreachable")
