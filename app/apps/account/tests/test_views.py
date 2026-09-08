@@ -438,10 +438,10 @@ def test_feed_updates_without_a_cursor_announces_nothing(client, user, second_us
 @pytest.mark.django_db
 def test_register_get_redirects_to_the_login_page(client):
     """The sign-up form lives on the login page, so /register/ has nothing of
-    its own to show."""
+    its own to show — but it must land on the sign-up half of it."""
     response = client.get(reverse("register"))
     assert response.status_code == 302
-    assert response["Location"] == reverse("login")
+    assert response["Location"] == f"{reverse('login')}?register=1"
 
 
 @pytest.mark.django_db
@@ -496,7 +496,10 @@ def test_register_redirects_authenticated_user(client, user):
 def test_register_get_carries_next_to_the_login_page(client):
     response = client.get(reverse("register"), {"next": reverse("user_list")})
 
-    assert response["Location"] == f"{reverse('login')}?next={reverse('user_list')}"
+    assert (
+        response["Location"]
+        == f"{reverse('login')}?register=1&next={reverse('user_list')}"
+    )
 
 
 @pytest.mark.django_db
@@ -518,6 +521,60 @@ def test_login_page_carries_both_forms(client):
 
     assert "login_form" in response.context
     assert "register_form" in response.context
+
+
+@pytest.mark.django_db
+def test_login_page_opens_the_sign_in_panel_by_default(client):
+    response = client.get(reverse("login"))
+
+    assert response.context["show_register"] is False
+
+
+@pytest.mark.django_db
+def test_login_page_opens_the_sign_up_panel_on_request(client):
+    """What the Register link in the guest navbar points at: one page, two
+    panels, and the address says which one is in front."""
+    response = client.get(reverse("login"), {"register": "1"})
+
+    assert response.context["show_register"] is True
+
+
+@pytest.mark.django_db
+def test_login_page_has_no_navbar(client):
+    """The card is the whole screen here; a Sign in button above a sign-in form
+    would only repeat it."""
+    response = client.get(reverse("login"))
+
+    assert b"<header" not in response.content
+
+
+@pytest.mark.django_db
+def test_login_page_has_no_side_menu(client):
+    """Every entry in it would lead back to this very page."""
+    response = client.get(reverse("login"))
+
+    assert b"<aside" not in response.content
+
+
+@pytest.mark.django_db
+def test_signed_in_pages_keep_the_side_menu_everywhere(client, user):
+    """A signed-in person carries the menu through the whole site, service
+    pages included — that is how it was before guests were let near it."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("password_change"))
+
+    assert b"<aside" in response.content
+
+
+@pytest.mark.django_db
+def test_password_reset_page_has_no_side_menu(client):
+    """Same for the rest of the signed-out pages: the menu belongs to the site,
+    and a guest reaches it from the one public page there is."""
+    response = client.get(reverse("password_reset"))
+
+    assert b"<aside" not in response.content
 
 
 @pytest.mark.django_db
@@ -987,7 +1044,8 @@ def test_user_detail_renders_following_false_when_not_following(
     target, _ = second_user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[target.username]))
-    assert b"following: false" in response.content
+    follow_url = reverse("user-follow", args=[target.id])
+    assert f"followButton('{follow_url}', false)".encode() in response.content
 
 
 @pytest.mark.django_db
@@ -999,7 +1057,8 @@ def test_user_detail_renders_following_true_when_following(client, user, second_
     Contact.objects.create(user_from=user_obj.profile, user_to=target.profile)
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("user_detail", args=[target.username]))
-    assert b"following: true" in response.content
+    follow_url = reverse("user-follow", args=[target.id])
+    assert f"followButton('{follow_url}', true)".encode() in response.content
 
 
 @pytest.mark.django_db

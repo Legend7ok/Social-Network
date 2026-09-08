@@ -1,7 +1,11 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.account.models import Contact
+from apps.actions.models import Action
 
 
 # ─── UserFollowView ───────────────────────────────────────────────────────────
@@ -26,6 +30,40 @@ def test_user_follow_creates_contact(auth_client, user, second_user):
     assert Contact.objects.filter(
         user_from=requester.profile, user_to=target.profile
     ).exists()
+
+
+@pytest.mark.django_db
+def test_following_twice_keeps_one_contact(auth_client, user, second_user):
+    """A double click or a second tab sends the same follow again; the button
+    still reads Following afterwards, and the follower count stays right."""
+    requester, _ = user
+    target, _ = second_user
+    url = reverse("user-follow", args=[target.pk])
+
+    auth_client.post(url, {"action": "follow"}, format="json")
+    response = auth_client.post(url, {"action": "follow"}, format="json")
+
+    assert response.status_code == 200
+    assert (
+        Contact.objects.filter(
+            user_from=requester.profile, user_to=target.profile
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_following_twice_announces_it_once(auth_client, user, second_user):
+    """create_action only swallows repeats within the minute, so an old entry
+    is what a second follow would announce again."""
+    target, _ = second_user
+    url = reverse("user-follow", args=[target.pk])
+
+    auth_client.post(url, {"action": "follow"}, format="json")
+    Action.objects.update(created=timezone.now() - timedelta(minutes=2))
+    auth_client.post(url, {"action": "follow"}, format="json")
+
+    assert Action.objects.filter(verb=Action.Verb.FOLLOWED_USER).count() == 1
 
 
 @pytest.mark.django_db

@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 # Fits the profile grid exactly: three columns up to tablets, four from xl up.
 PROFILE_IMAGES_PER_PAGE = 12
 
+# Asking for the sign-up half of the login page. Its presence is the whole
+# message, so the value carries nothing.
+REGISTER_PARAM = "register"
+
 
 def lockout_view(request, credentials, *args, **kwargs):
     stored = request.session.get("lockout_until")
@@ -122,6 +126,10 @@ class LoginView(auth_views.LoginView):
         context = super().get_context_data(**kwargs)
         context["login_form"] = context["form"]
         context["register_form"] = UserRegistrationForm()
+        # Which of the two panels opens. A link can point at the sign-up half
+        # directly, and the page is one address either way, so there is nothing
+        # to keep in step and nothing to index twice.
+        context["show_register"] = REGISTER_PARAM in self.request.GET
         return context
 
 
@@ -145,14 +153,15 @@ class RegisterView(RedirectURLMixin, FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        # The form lives on the login page; nothing to show on its own. Carry
-        # the page they were sent from along, or it is lost on the way there.
+        # The form lives on the login page; nothing to show on its own. Ask for
+        # the sign-up panel on the way there, or this address lands on the
+        # sign-in one. Carry the page they were sent from along too, or it is
+        # lost in the redirect.
+        sign_up_page = f"{resolve_url('login')}?{REGISTER_PARAM}=1"
         redirect_to = self.get_redirect_url()
         if not redirect_to:
-            return redirect("login")
-        return redirect_to_login(
-            redirect_to, resolve_url("login"), self.redirect_field_name
-        )
+            return redirect(sign_up_page)
+        return redirect_to_login(redirect_to, sign_up_page, self.redirect_field_name)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

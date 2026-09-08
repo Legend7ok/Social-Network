@@ -1,0 +1,122 @@
+{% load thumbnail user_display %}
+{% comment %}
+  The signed-in navbar. Lives inside base.html's <header> and drives the
+  drawer through navOpen, which is declared on <body>.
+{% endcomment %}
+
+<!-- Burger: opens the side menu on phones only -->
+<button @click="navOpen = true"
+        class="lg:hidden w-[35px] h-[35px] flex items-center justify-center text-[#9896A4] hover:text-white transition-colors cursor-pointer -ml-[6px] mr-[8px]">
+  <i class="ti ti-menu-2 text-[22px]"></i>
+</button>
+
+<a href="{% url 'home' %}" class="text-[17px] font-medium text-white tracking-tight lg:mr-[31px]">
+  <span class="text-brand-light">●</span> socnet
+</a>
+
+<!-- Pushes the search/avatar to the right when the top nav is hidden (phones) -->
+<div class="flex-1 lg:hidden"></div>
+
+<nav class="hidden lg:flex gap-0.5 flex-1">
+  <a href="{% url 'home' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
+            {% if request.resolver_match.url_name == 'home' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-home text-[17px] {% if request.resolver_match.url_name == 'home' %}text-brand-light{% endif %}"></i> Home
+  </a>
+  <a href="{% url 'images:list' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
+            {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-photo text-[17px] {% if request.resolver_match.namespace == 'images' and request.resolver_match.url_name != 'ranking' and request.resolver_match.url_name != 'upload' and not request.GET.mine %}text-brand-light{% endif %}"></i> New Images
+  </a>
+  <a href="{% url 'user_list' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] transition-colors
+            {% if request.resolver_match.url_name == 'user_list' %}bg-surface-input text-white{% else %}text-[#9896A4] hover:text-white{% endif %}">
+    <i class="ti ti-users text-[17px] {% if request.resolver_match.url_name == 'user_list' %}text-brand-light{% endif %}"></i> People
+  </a>
+</nav>
+
+<div class="flex items-center gap-[11px]">
+
+  <!-- Search: a field on desktop, a button that unfolds it on phones -->
+  <div class="relative" x-data="{ searchOpen: false }"
+       @click.outside="searchOpen = false"
+       @keydown.escape="searchOpen = false">
+
+    <form action="{% url 'search:search' %}" method="get"
+          class="hidden lg:flex items-center gap-[7px] w-[211px] px-[11px] py-[7px] rounded-lg
+                 bg-surface-input border border-white/[0.08] focus-within:border-brand/40 transition-colors">
+      <button type="submit" aria-label="Search"
+              class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
+        <i class="ti ti-search text-[17px]"></i>
+      </button>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search"
+             class="w-full bg-transparent text-[14px] text-white placeholder-[#5E5C6A] outline-none" />
+    </form>
+
+    <button @click="searchOpen = !searchOpen; $nextTick(() => $refs.searchInput.focus())"
+            class="lg:hidden w-[35px] h-[35px] flex items-center justify-center text-[#9896A4] hover:text-white transition-colors cursor-pointer">
+      <i class="ti ti-search text-[20px]"></i>
+    </button>
+
+    <form x-show="searchOpen" x-cloak x-transition action="{% url 'search:search' %}" method="get"
+          class="lg:hidden absolute right-0 top-[44px] z-30 flex items-center gap-[7px] w-[75vw] max-w-[320px]
+                 px-[13px] py-[9px] rounded-xl bg-surface-card border border-white/[0.15]">
+      <button type="submit" aria-label="Search"
+              class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
+        <i class="ti ti-search text-[17px]"></i>
+      </button>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search" x-ref="searchInput"
+             class="w-full bg-transparent text-[15px] text-white placeholder-[#5E5C6A] outline-none" />
+    </form>
+
+  </div>
+
+  <!-- Avatar dropdown -->
+  <div class="relative" x-data="{ open: false }">
+    <button @click="open = !open" @keydown.escape="open = false"
+      class="w-[35px] h-[35px] rounded-full bg-brand flex items-center justify-center text-[13px] font-medium text-white select-none cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-offset-surface-card hover:ring-brand-light transition-all overflow-hidden">
+      {% if request.user.profile.photo %}
+        {% thumbnail request.user.profile.photo THUMBS.avatar_md crop="center" as av %}
+        <img src="{{ av.url }}" class="w-full h-full object-cover" alt="{{ request.user.username }}" />
+        {% endthumbnail %}
+      {% else %}
+        {{ request.user|initials }}
+      {% endif %}
+    </button>
+
+    <div
+      x-show="open"
+      @click.outside="open = false"
+      x-transition:enter="transition ease-out duration-100"
+      x-transition:enter-start="opacity-0 scale-95"
+      x-transition:enter-end="opacity-100 scale-100"
+      x-transition:leave="transition ease-in duration-75"
+      x-transition:leave-start="opacity-100 scale-100"
+      x-transition:leave-end="opacity-0 scale-95"
+      x-cloak
+      class="absolute right-0 top-12 w-[211px] bg-surface-card border border-white/[0.15] rounded-xl p-[7px] z-50"
+    >
+      <a href="{% url 'my_profile' %}"
+         class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+        <i class="ti ti-user text-[17px]"></i> My Profile
+      </a>
+      <a href="{% url 'edit' %}"
+         class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+        <i class="ti ti-edit text-[17px]"></i> Edit Profile
+      </a>
+      <a href="{% url 'password_change' %}"
+         class="flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#9896A4] hover:bg-surface-input hover:text-white transition-colors">
+        <i class="ti ti-lock text-[17px]"></i> Change Password
+      </a>
+      <div class="h-px bg-white/[0.08] my-1"></div>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit"
+          class="w-full flex items-center gap-[11px] px-[13px] py-[9px] rounded-lg text-[14px] text-[#F09595] hover:bg-red-900/20 transition-colors">
+          <i class="ti ti-logout text-[17px]"></i> Logout
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>

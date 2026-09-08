@@ -30,10 +30,15 @@ class UserFollowView(APIView):
 
         action = serializer.validated_data["action"]
         if action == "follow":
-            Contact.objects.get_or_create(
+            # get_or_create survives the unique constraint firing: the insert it
+            # loses is caught and answered with the row the winner wrote.
+            _, followed = Contact.objects.get_or_create(
                 user_from=request.user.profile, user_to=user.profile
             )
-            create_action(request.user, Action.Verb.FOLLOWED_USER, user)
+            # Only a new follow is news. Pressing an already-followed button
+            # again — a second tab, a retry — used to announce it once more.
+            if followed:
+                create_action(request.user, Action.Verb.FOLLOWED_USER, user)
         else:
             Contact.objects.filter(
                 user_from=request.user.profile, user_to=user.profile

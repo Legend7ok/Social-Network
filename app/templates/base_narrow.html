@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% comment %}
+  A page that is one narrow card and nothing else: resetting or changing a
+  password, a lockout, a rate limit. The card sits in the middle of whatever
+  room is left.
+
+  Auto margins rather than centred alignment: when the card grows taller than
+  the screen — a form carrying a list of errors — auto margins collapse to
+  nothing, while centring would push its top out of reach.
+{% endcomment %}
+
+{% block main_class %}flex{% endblock %}
+
+{% block content %}
+<div class="w-full my-auto px-[16px] lg:px-[31px] py-[31px] flex justify-center">
+  <div class="w-full max-w-[528px] flex flex-col gap-[22px]">
+    {% block panel %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

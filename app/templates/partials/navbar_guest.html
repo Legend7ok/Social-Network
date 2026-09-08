@@ -1,0 +1,48 @@
+{% comment %}
+  The navbar for signed-out visitors. Only the image page is public, and
+  someone arriving there from a shared link had no way back to the site
+  before this.
+
+  It carries the same links as the signed-in one: each leads to a page that
+  asks for a sign-in and returns here afterwards, so nothing is hidden and
+  nothing is opened up either.
+{% endcomment %}
+
+<!-- Burger: opens the side menu on phones only -->
+<button @click="navOpen = true"
+        class="lg:hidden w-[35px] h-[35px] flex items-center justify-center text-[#9896A4] hover:text-white transition-colors cursor-pointer -ml-[6px] mr-[8px]">
+  <i class="ti ti-menu-2 text-[22px]"></i>
+</button>
+
+<a href="{% url 'login' %}" class="text-[17px] font-medium text-white tracking-tight lg:mr-[31px]">
+  <span class="text-brand-light">●</span> socnet
+</a>
+
+<!-- Pushes the buttons to the right when the top nav is hidden (phones) -->
+<div class="flex-1 lg:hidden"></div>
+
+<nav class="hidden lg:flex gap-0.5 flex-1">
+  <a href="{% url 'home' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] text-[#9896A4] hover:text-white transition-colors">
+    <i class="ti ti-home text-[17px]"></i> Home
+  </a>
+  <a href="{% url 'images:list' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] text-[#9896A4] hover:text-white transition-colors">
+    <i class="ti ti-photo text-[17px]"></i> New Images
+  </a>
+  <a href="{% url 'user_list' %}"
+     class="flex items-center gap-[7px] px-[15px] py-[7px] rounded-lg text-[14px] text-[#9896A4] hover:text-white transition-colors">
+    <i class="ti ti-users text-[17px]"></i> People
+  </a>
+</nav>
+
+<div class="flex items-center gap-[9px]">
+  <a href="{% url 'login' %}"
+     class="px-[15px] sm:px-[18px] py-[7px] rounded-lg border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+    Sign in
+  </a>
+  <a href="{% url 'login' %}?register=1"
+     class="px-[15px] sm:px-[18px] py-[7px] rounded-lg bg-brand text-[14px] font-medium text-white hover:bg-brand-dark transition-colors">
+    Register
+  </a>
+</div>

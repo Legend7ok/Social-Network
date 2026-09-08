@@ -3,9 +3,14 @@ from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
+from apps.account.models import Contact
 from apps.images.forms import ImageBookmarkForm, ImageEditForm, ImageUploadForm
 from apps.images.models import Image
-from apps.images.views import STATUS_POLL_LIMIT, STATUS_POLL_SLOWDOWN
+from apps.images.views import (
+    LIKED_BY_LIMIT,
+    STATUS_POLL_LIMIT,
+    STATUS_POLL_SLOWDOWN,
+)
 from apps.images.services import record_image_view
 from conftest import MINIMAL_PNG, png_bytes
 
@@ -245,7 +250,8 @@ def test_image_detail_renders_liked_false_when_not_liked(client, user, image):
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
-    assert b"liked: false" in response.content
+    like_url = reverse("image-like", args=[image.id])
+    assert f"likeButton('{like_url}', false, 0)".encode() in response.content
 
 
 @pytest.mark.django_db
@@ -254,20 +260,134 @@ def test_image_detail_renders_liked_true_when_liked(client, user, image):
     image.users_like.add(user_obj)
     client.login(username=user_obj.username, password=password)
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
-    assert b"liked: true" in response.content
+    like_url = reverse("image-like", args=[image.id])
+    assert f"likeButton('{like_url}', true, 1)".encode() in response.content
 
 
 @pytest.mark.django_db
-def test_image_detail_hides_staff_from_liked_by(client, image, second_user, staff_user):
+def test_image_detail_hides_staff_from_liked_by(
+    client, user, image, second_user, staff_user
+):
+    viewer, password = user
     liker, _ = second_user
     staff, _ = staff_user
     image.users_like.add(liker, staff)
+    client.login(username=viewer.username, password=password)
 
     response = client.get(reverse("images:detail", args=[image.id, image.slug]))
 
     likers = list(response.context["users_like"])
     assert liker in likers
     assert staff not in likers
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_the_likers_it_does_not_show(
+    client, user, image, make_user
+):
+    """A picture with a thousand likes used to hand every one of them to the
+    template; past the limit the rest are a number."""
+    viewer, password = user
+    extra = 3
+    for index in range(LIKED_BY_LIMIT + extra):
+        liker, _ = make_user(f"liker{index}", f"liker{index}@example.com", "pass12345")
+        image.users_like.add(liker)
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert len(response.context["users_like"]) == LIKED_BY_LIMIT
+    assert response.context["hidden_likers"] == extra
+    assert f"+{extra}".encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_nothing_extra_when_everyone_fits(
+    client, user, image, second_user
+):
+    viewer, password = user
+    liker, _ = second_user
+    image.users_like.add(liker)
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["hidden_likers"] == 0
+
+
+@pytest.mark.django_db
+def test_image_detail_keeps_the_likers_from_anonymous(client, image, second_user):
+    """The page is public, the people list and the profiles are not. Showing a
+    guest who liked it — with names — would be a way around that; the number by
+    the button says the picture was liked without saying by whom."""
+    liker, _ = second_user
+    image.users_like.add(liker)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert list(response.context["users_like"]) == []
+    assert b"Liked by" not in response.content
+    assert liker.username.encode() not in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_marks_nothing_liked_for_anonymous(client, image, second_user):
+    """Whether the viewer liked it is now a question to the database, and there
+    is nobody to ask it about."""
+    liker, _ = second_user
+    image.users_like.add(liker)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["liked_by_viewer"] is False
+
+
+@pytest.mark.django_db
+def test_image_detail_keeps_the_open_picture_out_of_more_from_author(
+    client, user, image
+):
+    """It used to be the first tile of "More from this author" — a link back to
+    the page you are already on."""
+    user_obj, _ = user
+    other = Image.objects.create(
+        user=user_obj, title="Another", url="https://example.com/other.png"
+    )
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    shown = list(response.context["more_from_author"])
+    assert other in shown
+    assert image not in shown
+
+
+@pytest.mark.django_db
+def test_image_detail_answers_whether_the_viewer_follows_the_author(
+    client, image, second_user
+):
+    """Asked of the database now; the template used to pull every follower of
+    the author into memory to look for one of them."""
+    viewer, password = second_user
+    client.login(username=viewer.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.context["following_author"] is False
+
+    Contact.objects.create(user_from=viewer.profile, user_to=image.user.profile)
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert response.context["following_author"] is True
+
+
+@pytest.mark.django_db
+def test_image_detail_counts_the_authors_followers_in_the_query(
+    client, image, second_user
+):
+    """The template used to ask the database for this number itself."""
+    follower, _ = second_user
+    Contact.objects.create(user_from=follower.profile, user_to=image.user.profile)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert response.context["image"].author_followers == 1
 
 
 @pytest.mark.django_db
@@ -463,6 +583,81 @@ def test_image_detail_hides_owner_controls_from_anonymous(client, image):
 
     assert reverse("images:edit", args=[image.id]).encode() not in response.content
     assert reverse("images:delete", args=[image.id]).encode() not in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_gives_anonymous_a_way_into_the_site(client, image):
+    """This page is the one public page, so it is where a shared link lands
+    someone with no account; without a navbar there was no way on from it."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"<header" in response.content
+    assert f"{reverse('login')}?register=1".encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_shows_anonymous_the_left_menu(client, image):
+    """The menu is what tells a visitor the site has a feed, a ranking and
+    people in it — the argument for joining. Every entry asks for a sign-in
+    when followed, so showing it opens nothing."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert reverse("images:ranking").encode() in response.content
+    assert reverse("user_list").encode() in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_ends_the_left_menu_with_a_way_in(client, user, image):
+    """The foot of the menu holds the signed-in person's own name. A guest has
+    no name to put there, so it holds the two buttons instead."""
+    owner, password = user
+
+    guest_page = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert f"@{owner.username}".encode() not in guest_page.content
+
+    client.login(username=owner.username, password=password)
+    signed_in_page = client.get(reverse("images:detail", args=[image.id, image.slug]))
+    assert f"@{owner.username}".encode() in signed_in_page.content
+
+
+@pytest.mark.django_db
+def test_image_detail_invites_anonymous_from_the_right_sidebar(client, image):
+    """The column has nothing to list for a guest, and left empty it reads as a
+    page that failed to load."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"Sign in to follow people" in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_carries_the_sign_in_dialog_for_anonymous(client, image):
+    """The like and follow buttons stay in place for a guest, so pressing one
+    has to answer with something; the server would only say 403."""
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"auth-required.window" in response.content
+    assert b"Alpine.store('signedIn', false)" in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_leaves_the_dialog_out_for_signed_in_people(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"auth-required.window" not in response.content
+    assert b"Alpine.store('signedIn', true)" in response.content
+
+
+@pytest.mark.django_db
+def test_image_detail_keeps_the_sidebar_list_for_signed_in_people(client, user, image):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("images:detail", args=[image.id, image.slug]))
+
+    assert b"Sign in to follow people" not in response.content
 
 
 # ─── View Tests: image_edit ──────────────────────────────────────────────────

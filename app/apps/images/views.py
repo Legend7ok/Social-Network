@@ -19,7 +19,12 @@ from .services import (
     is_first_view,
 )
 from .tasks import download_image, generate_image_thumbnails
-from apps.account.selectors import public_users, sidebar_following
+from apps.account.selectors import (
+    followers_count,
+    follows,
+    public_users,
+    sidebar_following,
+)
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.pagination import cursor_page
@@ -35,6 +40,13 @@ RANKING_SORTS = {
 # Roughly four minutes of asking, which outlives the download and its retries.
 STATUS_POLL_SLOWDOWN = 15
 STATUS_POLL_LIMIT = 60
+
+# Faces shown under a picture before the rest become a number. A popular
+# picture used to hand every one of its likers to the template.
+LIKED_BY_LIMIT = 10
+
+# Fills the two-column grid beside the picture exactly.
+MORE_FROM_AUTHOR = 4
 
 
 def bookmarklet_launcher(request):
@@ -64,8 +76,18 @@ def image_create(request):
 
 
 def image_detail(request, id, slug):
+    """One picture with everything shown beside it.
+
+    The only public page of the site, so half of what follows depends on who is
+    looking. A guest gets the picture, its counters and the author; what belongs
+    to members — the faces that liked it, his own like and follow, the sidebar —
+    is gathered in one branch below and left empty for him.
+    """
     image = get_object_or_404(
-        Image.objects.select_related("user", "user__profile"), id=id
+        Image.objects.select_related("user", "user__profile").annotate(
+            author_followers=followers_count("user")
+        ),
+        id=id,
     )
     # Stale links redirect instead of 404. Temporary: a cached permanent one
     # would loop if a title is ever renamed back.
@@ -85,11 +107,33 @@ def image_detail(request, id, slug):
     else:
         total_views = 0
 
-    users_like = public_users().filter(images_liked=image).select_related("profile")
+    if request.user.is_authenticated:
+        likers = public_users().filter(images_liked=image).select_related("profile")
+        # Counted over the same filtered set the faces come from, so the "and N
+        # more" cannot disagree with what is on screen.
+        likes_count = likers.count()
+        users_like = likers[:LIKED_BY_LIMIT]
+        # Both asked of the database rather than searched for in the lists
+        # above: the answer is one row either way, and the list of faces is
+        # only its first page anyway.
+        liked_by_viewer = image.users_like.filter(pk=request.user.pk).exists()
+        following_author = follows(request.user, image.user_id)
+        following_users = sidebar_following(request.user)
+    else:
+        # Who liked it is for members only: this page is public, while the
+        # people list and every profile are not, so handing a guest the faces —
+        # names and all — would walk around that. The count by the button, and
+        # the buttons themselves, stay where they are.
+        likes_count = 0
+        users_like = []
+        liked_by_viewer = False
+        following_author = False
+        following_users = []
 
-    following_users = (
-        sidebar_following(request.user) if request.user.is_authenticated else []
-    )
+    # The picture being looked at is not "more from this author".
+    more_from_author = Image.objects.filter(user_id=image.user_id).exclude(pk=image.pk)[
+        :MORE_FROM_AUTHOR
+    ]
 
     return render(
         request,
@@ -98,6 +142,10 @@ def image_detail(request, id, slug):
             "image": image,
             "total_views": total_views,
             "users_like": users_like,
+            "hidden_likers": max(likes_count - LIKED_BY_LIMIT, 0),
+            "liked_by_viewer": liked_by_viewer,
+            "following_author": following_author,
+            "more_from_author": more_from_author,
             "following_users": following_users,
         },
     )
