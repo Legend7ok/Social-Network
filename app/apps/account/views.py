@@ -19,6 +19,7 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
 from core.pagination import count_newer, cursor_page
+from core.queue import ensure_queue_available
 
 from .selectors import (
     public_users,
@@ -174,6 +175,10 @@ class RegisterView(RedirectURLMixin, FormView):
         return context
 
     def form_valid(self, form):
+        # Before the row exists: the welcome email is queued after the commit,
+        # and refusing then would leave an account behind whose owner is told
+        # to try again.
+        ensure_queue_available()
         try:
             with transaction.atomic():
                 new_user = form.save()

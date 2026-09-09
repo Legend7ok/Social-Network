@@ -28,6 +28,7 @@ from apps.account.selectors import (
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.pagination import cursor_page
+from core.queue import ensure_queue_available
 
 # The podium is rendered separately from the list below it.
 RANKING_TOP = 3
@@ -60,6 +61,10 @@ def image_create(request):
     if request.method == "POST":
         form = ImageBookmarkForm(request.POST)
         if form.is_valid():
+            # Asked before the row is written: without the queue nobody would
+            # ever fetch the picture, and the page would wait for a file that
+            # is not coming.
+            ensure_queue_available()
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
@@ -186,6 +191,7 @@ def image_upload(request):
     if request.method == "POST":
         form = ImageUploadForm(request.POST, request.FILES)
         if form.is_valid():
+            ensure_queue_available()
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
@@ -259,6 +265,7 @@ def image_retry_download(request, id):
     image = get_object_or_404(Image, id=id, user=request.user)
 
     if not image.image:
+        ensure_queue_available()
         # Clearing the reason is what puts the page back into waiting; the
         # column is written on its own so a stale copy cannot undo an edit.
         Image.objects.filter(id=image.id).update(download_error="")
