@@ -10,7 +10,7 @@ TO_PROJECT ?= social-network-w2
 
 .PHONY: help up up-build build down restart logs ps shell migrate makemigrations test build-test superuser \
         worker-logs ngrok ngrok-down clone-dev-data lint format check-deploy \
-        prod-up prod-up-build prod-down prod-restart prod-logs prod-ps prod-shell prod-migrate \
+        prod-up prod-up-build prod-deploy prod-down prod-restart prod-logs prod-ps prod-shell prod-migrate \
         prod-collectstatic prod-ngrok prod-ngrok-down vendor watch-css build-css
 
 help:
@@ -30,6 +30,7 @@ help:
 	@echo "Prod:"
 	@echo "  make prod-up         Start prod containers"
 	@echo "  make prod-up-build   Start prod containers with image build"
+	@echo "  make prod-deploy     Build, start and restart nginx (use this to deploy)"
 	@echo "  make prod-down       Stop and remove prod containers"
 	@echo "  make prod-restart    Restart prod containers"
 	@echo "  make prod-logs       Show prod logs (follow)"
@@ -155,6 +156,15 @@ prod-up:
 
 prod-up-build:
 	$(PROD) up --build
+
+# The whole deploy in one command. nginx is restarted last on purpose: it looks
+# up the web container's address once, at its own start, and a rebuilt web
+# container may come back on a different one - after which nginx answers 502
+# until it is restarted. See the comment in nginx/nginx.conf.
+prod-deploy:
+	$(PROD) up -d --build
+	$(PROD) restart nginx
+	$(PROD) ps
 
 prod-down:
 	$(PROD) down
