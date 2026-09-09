@@ -4,18 +4,25 @@ import redis
 from django.conf import settings
 
 from core.exceptions import RedisUnavailableError
+from core.redis_guard import GuardedConnection
 
 from .models import Image
 
 logger = logging.getLogger(__name__)
 
+# Built from a pool rather than plain arguments, because that is where the
+# guarded connection plugs in - the same one the cache uses, so both stop
+# dialling a dead Redis together instead of each waiting on its own.
 r = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=settings.REDIS_DB,
-    password=settings.REDIS_PASSWORD or None,
-    socket_connect_timeout=2,
-    socket_timeout=2,
+    connection_pool=redis.ConnectionPool(
+        connection_class=GuardedConnection,
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD or None,
+        socket_connect_timeout=settings.REDIS_TIMEOUT,
+        socket_timeout=settings.REDIS_TIMEOUT,
+    )
 )
 
 # A rejected password raises AuthenticationError, which inherits from

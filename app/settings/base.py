@@ -7,6 +7,8 @@ from django.urls import reverse_lazy
 
 import environ
 
+from core.redis_guard import GuardedConnection
+
 from .storages import build_storages
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -188,10 +190,17 @@ def redis_url(db):
     return f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{db}"
 
 
+# Redis answers in fractions of a millisecond, so a quarter of a second is
+# already far more patience than a healthy one ever needs. The old two seconds
+# only ever mattered when Redis was down - and then every one of the dozens of
+# lookups a page makes paid them, which is what pushed those pages past the
+# proxy's limit instead of quietly serving them uncached.
+REDIS_TIMEOUT = 0.25
+
 # django-redis rather than Django's own backend for one reason: it can swallow
 # a broken connection instead of raising. Nothing here depends on the cache for
-# correctness — thumbnails, rate limits and API throttling all survive without
-# it — so a dead Redis must not turn every page into an error. Every swallowed
+# correctness - thumbnails, rate limits and API throttling all survive without
+# it - so a dead Redis must not turn every page into an error. Every swallowed
 # failure is written to the log, otherwise the site would quietly run uncached
 # and nobody would know.
 CACHES = {
@@ -201,8 +210,10 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "IGNORE_EXCEPTIONS": True,
-            "SOCKET_CONNECT_TIMEOUT": 2,
-            "SOCKET_TIMEOUT": 2,
+            "SOCKET_CONNECT_TIMEOUT": REDIS_TIMEOUT,
+            "SOCKET_TIMEOUT": REDIS_TIMEOUT,
+            # Stops dialling once Redis is known to be down; see core.redis_guard.
+            "CONNECTION_POOL_KWARGS": {"connection_class": GuardedConnection},
         },
     }
 }
@@ -256,7 +267,7 @@ THUMBNAILS = {
 RATELIMIT_IP_META_KEY = "HTTP_X_FORWARDED_FOR"
 
 # With the cache swallowing failures the limiter gets no count back, and its
-# default reaction is to refuse everyone — a dead Redis would lock the whole
+# default reaction is to refuse everyone - a dead Redis would lock the whole
 # site out of posting. Let requests through instead: sign-in stays protected
 # either way, because axes counts attempts in the database.
 RATELIMIT_FAIL_OPEN = True

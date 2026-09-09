@@ -10,9 +10,17 @@ x-logging: &logging
     max-size: "10m"
     max-file: "3"
 
+# Name lookups inside the network answer instantly while a container is up, and
+# hang for four seconds once it is not - that wait happens before any connect
+# timeout applies, so it is the slowest part of talking to a service that died.
+# One try, one second.
+x-dns: &dns
+  - timeout:1
+  - attempts:1
+
 # Every service below also carries oom_score_adj: who the kernel kills first
 # when the machine runs out of memory, higher meaning earlier. The order is
-# deliberate — beat (700), worker (500), nginx (300), web (200), redis (100),
+# deliberate - beat (700), worker (500), nginx (300), web (200), redis (100),
 # database (0). beat only sends a message once a minute and is missed least;
 # the database goes last, because everything else can be restarted while it
 # holds the only copy of the data.
@@ -49,6 +57,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
       db:
         condition: service_healthy
@@ -63,6 +72,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -102,7 +112,7 @@ services:
     restart: unless-stopped
 
   # Only starts when asked for: --profile ngrok. This is how the production
-  # stack is shown to someone who is not on this machine — the tunnel ends at
+  # stack is shown to someone who is not on this machine - the tunnel ends at
   # nginx, so the request takes the same path a real visitor would.
   ngrok:
     image: ngrok/ngrok:latest
@@ -128,6 +138,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -156,6 +167,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -164,7 +176,7 @@ services:
       redis:
         condition: service_healthy
     # beat has nothing to answer with, so its liveness is read off the schedule
-    # file it rewrites after every task it sends — once a minute here. The
+    # file it rewrites after every task it sends - once a minute here. The
     # companion files carry the fresh timestamp: the store is an sqlite database
     # in write-ahead mode, and that is where recent writes land.
     healthcheck:
@@ -178,7 +190,7 @@ services:
     logging: *logging
     restart: unless-stopped
 
-  # volatile-lru evicts only keys that carry an expiry — that is the cache and
+  # volatile-lru evicts only keys that carry an expiry - that is the cache and
   # nothing else. The Celery queue and the view counters have no expiry, so
   # under memory pressure the cache is sacrificed and they stay intact; once
   # there is nothing left to evict Redis refuses writes rather than dropping a
