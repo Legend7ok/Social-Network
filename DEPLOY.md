@@ -53,14 +53,14 @@ the bucket, not by nginx, so the site renders unstyled until this has run.
 ## 4. Create the first account
 
 ```
-docker compose -f docker-compose.prod.yml run --rm web python app/manage.py createsuperuser
+make prod-superuser
 ```
 
 ## 5. Verify
 
 ```
 curl -s localhost/healthz/
-docker compose -f docker-compose.prod.yml ps
+make prod-ps
 ```
 
 The health endpoint answers `{"status": "ok", "checks": {"database": "ok",
