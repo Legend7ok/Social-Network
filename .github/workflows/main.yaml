@@ -115,7 +115,7 @@ jobs:
           files: ./coverage.xml
 
   # Builds what production actually runs. Nothing above touches the image, so
-  # without this a broken Dockerfile — or a frontend that no longer builds —
+  # without this a broken Dockerfile - or a frontend that no longer builds -
   # only shows up when the stack is started.
   image:
     name: Production image

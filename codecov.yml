@@ -1,8 +1,8 @@
 coverage:
   status:
     # The whole project. Without it only changed lines were measured, so
-    # coverage could fall for years — by deleting tests, or by moving code out
-    # of a tested file — and nothing would say a word.
+    # coverage could fall for years - by deleting tests, or by moving code out
+    # of a tested file - and nothing would say a word.
     project:
       default:
         target: 95%

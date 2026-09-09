@@ -8,7 +8,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS") + ["localhost"]
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 
 # Every picture and every static file lives in the bucket, so a missing key is
-# not a degraded mode — it is a broken site. Fail on startup, naming the
+# not a degraded mode - it is a broken site. Fail on startup, naming the
 # variable, instead of on the first upload.
 STORAGES = build_storages(required=True)
 
@@ -25,7 +25,7 @@ USE_X_FORWARDED_PORT = True
 # Keeping them here means they are versioned, reviewed and validated by
 # `manage.py check --deploy`; the duplicate add_header lines were removed from nginx.
 #
-# One switch for running the production stack on this machine over plain http —
+# One switch for running the production stack on this machine over plain http -
 # no certificate, no tunnel. It turns off three things at once, because turning
 # off fewer leaves a site that looks up but cannot be used: the redirect to
 # https, the year-long instruction to browsers never to speak http to this host
@@ -87,7 +87,7 @@ LOGGING = {
     },
 }
 
-# beat keeps the time of the last run in a file, by default next to the code —
+# beat keeps the time of the last run in a file, by default next to the code -
 # which the account running it cannot write to. The directory below is created
 # for that account in the image.
 CELERY_BEAT_SCHEDULE_FILENAME = "/var/lib/celery/celerybeat-schedule"

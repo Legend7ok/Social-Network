@@ -21,7 +21,7 @@ def test_healthz_is_ok_when_everything_answers(client, fake_redis):
 @pytest.mark.django_db
 def test_healthz_stays_ok_without_redis(client, monkeypatch):
     """The site outlives a dead Redis, so the container must not be killed for
-    it — the loss is reported in the body instead."""
+    it - the loss is reported in the body instead."""
 
     def refuse():
         raise redis.ConnectionError("down")

@@ -8,7 +8,7 @@ import redis as redis_lib
 
 # Through the module, not "from ... import r": binding the client at import
 # time freezes whichever object existed then, so anything that replaces it
-# afterwards — the test suite does — would be ignored here.
+# afterwards - the test suite does - would be ignored here.
 from apps.images import services
 
 logger = logging.getLogger(__name__)
@@ -19,8 +19,8 @@ def healthz(request):
 
     Only the database decides the verdict. Without it the site cannot answer a
     single page, so a failure here has to be fatal. Redis is reported but never
-    fatal: the site outlives its loss — pages render, uploads work, sign-in is
-    guarded by the database — and killing a healthy web container over a cache
+    fatal: the site outlives its loss - pages render, uploads work, sign-in is
+    guarded by the database - and killing a healthy web container over a cache
     would be a lie in the other direction. Redis reports on itself through its
     own health check.
     """

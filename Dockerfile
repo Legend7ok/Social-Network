@@ -1,6 +1,6 @@
 # Styles and vendor assets are built here, not committed: they are generated
 # files. Tailwind 4 works out which classes to keep by scanning the project
-# itself, so the whole source tree has to be present — a stage with only the
+# itself, so the whole source tree has to be present - a stage with only the
 # stylesheet would silently produce a much smaller file.
 FROM node:24-alpine AS frontend
 
@@ -32,7 +32,7 @@ COPY pyproject.toml uv.lock ./
 # Installed from the lock file, not from the version ranges in pyproject.toml.
 # Installing from the ranges takes whatever is newest on the index at build
 # time, so two images built from the same commit a month apart hold different
-# libraries — and the versions the tests ran against are not the ones that
+# libraries - and the versions the tests ran against are not the ones that
 # reach production.
 RUN uv export --frozen --no-emit-project --format requirements-txt -o /tmp/requirements.txt \
     && uv pip install --system --no-cache -r /tmp/requirements.txt \
@@ -50,7 +50,7 @@ EXPOSE 8000
 
 
 # Development keeps root on purpose: the project is mounted from the host over
-# /app, and an unprivileged user could not write into it — no migrations, no
+# /app, and an unprivileged user could not write into it - no migrations, no
 # generated files from inside the container.
 FROM base AS dev
 

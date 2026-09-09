@@ -2,7 +2,7 @@ import os
 
 # A fixed number, not the usual "cores × 2 + 1": with the app preloaded every
 # process carries its own copy of Django, and on a 16-thread machine that
-# formula asks for 33 of them — several gigabytes before a single visitor
+# formula asks for 33 of them - several gigabytes before a single visitor
 # arrives, well past the memory this container is allowed. Five processes of
 # two threads each serve far more than this site will ever see; raise
 # GUNICORN_WORKERS if a real load ever says otherwise.

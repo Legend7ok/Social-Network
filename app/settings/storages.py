@@ -7,7 +7,7 @@ def build_storages(*, required):
     """Storage configuration for the Cloudflare R2 bucket.
 
     Built by a call rather than at import time, so the variables are read only
-    after the .env file has been loaded — importing this module happens before
+    after the .env file has been loaded - importing this module happens before
     that.
 
     With required=True a missing key stops the process at startup, naming the

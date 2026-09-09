@@ -12,7 +12,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Uploads land on disk unless the bucket is asked for explicitly, so a fresh
 # clone runs with no credentials at all. Set USE_R2=true to develop against the
-# real bucket — worth doing before a release, since signed URLs, public
+# real bucket - worth doing before a release, since signed URLs, public
 # addresses and overwrite behaviour differ from the local filesystem.
 USE_R2 = env.bool("USE_R2", default=False)
 
