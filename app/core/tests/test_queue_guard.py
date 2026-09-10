@@ -80,9 +80,10 @@ def _refuse():
 
 
 @pytest.fixture
-def registration_finds_no_queue(monkeypatch):
-    """Puts the refusal where the view reads it, since the view bound the check
-    by name at import time."""
+def account_views_find_no_queue(monkeypatch):
+    """Puts the refusal where the views read it, since each bound the check by
+    name at import time. One patch covers registration, the avatar and the
+    profile form - they all live in the same module."""
     monkeypatch.setattr("apps.account.views.ensure_queue_available", _refuse)
 
 
@@ -93,7 +94,7 @@ def image_views_find_no_queue(monkeypatch):
 
 @pytest.mark.django_db
 def test_registration_writes_nothing_when_the_queue_is_gone(
-    client, registration_finds_no_queue
+    client, account_views_find_no_queue
 ):
     """The whole point of checking first: the answer must be true. A refusal
     after the account exists would send the person back to a form that then
@@ -113,7 +114,7 @@ def test_registration_writes_nothing_when_the_queue_is_gone(
 
 @pytest.mark.django_db
 def test_a_new_avatar_is_refused_when_the_queue_is_gone(
-    client, user, registration_finds_no_queue
+    client, user, account_views_find_no_queue
 ):
     """A photo is stored and then cut into three sizes by a task. Letting it
     through without the task leaves an avatar nobody sized, and the person is
@@ -131,7 +132,7 @@ def test_a_new_avatar_is_refused_when_the_queue_is_gone(
 
 @pytest.mark.django_db
 def test_the_rest_of_the_profile_still_saves_when_the_queue_is_gone(
-    client, user, registration_finds_no_queue
+    client, user, account_views_find_no_queue
 ):
     """Only a photo brings background work with it. Refusing a change of name
     over a queue nothing was going to use would be a refusal for its own sake."""

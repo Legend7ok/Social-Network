@@ -133,7 +133,7 @@ prod-superuser: ## Create a Django superuser in prod
 # and the storage that rewrites those paths would look for them one directory
 # too high and refuse to collect anything at all.
 prod-collectstatic: ## Upload the static files to R2 (run once on deploy)
-	$(PROD) run --rm web python app/manage.py collectstatic --noinput --ignore=input.css
+	$(PROD) run --rm --no-deps web python app/manage.py collectstatic --noinput --ignore=input.css
 
 prod-ngrok: ## Expose the prod site over https, print the address
 	$(PROD_NGROK) up -d ngrok
