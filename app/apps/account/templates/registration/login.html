@@ -72,7 +72,7 @@
     <!-- Divider -->
     <div class="flex items-center gap-[9px] w-full my-[9px] text-[12px] text-[#5E5C6A]">
       <div class="flex-1 h-px bg-white/[0.15]"></div>
-      or use email
+      or use username or email
       <div class="flex-1 h-px bg-white/[0.15]"></div>
     </div>
 
@@ -80,7 +80,7 @@
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}" />
       <input
-        type="text" name="username" placeholder="Email or username" autocomplete="username"
+        type="text" name="username" placeholder="Username or email" autocomplete="username"
         required maxlength="{{ login_form.fields.username.max_length }}"
         value="{{ login_form.username.value|default:'' }}"
         class="w-full bg-surface-input border border-white/[0.15] rounded-lg text-white text-[14px] px-[15px] py-[11px] mb-[11px] outline-none placeholder-[#5E5C6A] focus:border-brand/60 transition-colors"
