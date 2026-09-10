@@ -54,6 +54,20 @@ def fake_redis(monkeypatch):
     return r
 
 
+@pytest.fixture(autouse=True)
+def queue_is_available(monkeypatch):
+    """Views that schedule work ask whether the broker is reachable before they
+    write anything. There is no broker here, and standing one up would only
+    test Redis; the tests that care about it refusing replace this themselves.
+
+    Replaced in the modules that import it, one per view module, rather than in
+    the Celery app underneath: tasks reach for a connection the same way, and
+    faking that far down breaks the tasks that run inline in these tests.
+    """
+    for module in ("apps.account.views", "apps.images.views"):
+        monkeypatch.setattr(f"{module}.ensure_queue_available", lambda: None)
+
+
 @pytest.fixture
 def make_user(db):
     def _make(username, email, password):

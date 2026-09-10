@@ -28,6 +28,7 @@ from apps.account.selectors import (
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from core.pagination import cursor_page
+from core.queue import ensure_queue_available
 
 # The podium is rendered separately from the list below it.
 RANKING_TOP = 3
@@ -60,6 +61,10 @@ def image_create(request):
     if request.method == "POST":
         form = ImageBookmarkForm(request.POST)
         if form.is_valid():
+            # Asked before the row is written: without the queue nobody would
+            # ever fetch the picture, and the page would wait for a file that
+            # is not coming.
+            ensure_queue_available()
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
@@ -186,6 +191,7 @@ def image_upload(request):
     if request.method == "POST":
         form = ImageUploadForm(request.POST, request.FILES)
         if form.is_valid():
+            ensure_queue_available()
             new_image = form.save(commit=False)
             new_image.user = request.user
             new_image.save()
@@ -230,6 +236,11 @@ def image_delete(request, id):
     # Filtering by author means someone else's image is a 404 rather than a
     # 403: there is nothing to say about images that are not yours.
     image = get_object_or_404(Image, id=id, user=request.user)
+    # Everything a deletion leaves behind - the file in the bucket, the entries
+    # in the feed, the view counters - is cleaned up by a task. Without a queue
+    # that task is never sent and the leftovers stay for good, so the request is
+    # refused while the row is still there to delete later.
+    ensure_queue_available()
     # The page it was deleted from is one of the places to send it back to, and
     # the image's own page is not: it no longer exists a line below.
     image_url = image.get_absolute_url()
@@ -259,6 +270,7 @@ def image_retry_download(request, id):
     image = get_object_or_404(Image, id=id, user=request.user)
 
     if not image.image:
+        ensure_queue_available()
         # Clearing the reason is what puts the page back into waiting; the
         # column is written on its own so a stale copy cannot undo an edit.
         Image.objects.filter(id=image.id).update(download_error="")

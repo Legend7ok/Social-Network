@@ -1,11 +1,15 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote
+
 from django.urls import reverse_lazy
 
 import environ
 
-from .storages import STORAGES
+from core.redis_guard import GuardedConnection
+
+from .storages import build_storages
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -13,6 +17,9 @@ env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"), overwrite=False)
 
 SECRET_KEY = env("SECRET_KEY")
+
+# Keys stay optional here; production demands them, see prod.py.
+STORAGES = build_storages(required=False)
 
 INSTALLED_APPS = [
     "apps.account",
@@ -35,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.ServiceUnavailableMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "axes.middleware.AxesMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -104,7 +112,8 @@ MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Weight alone does not bound the work: a few compressed megabytes can hold a
 # hundred megapixels, and decoding one costs about three bytes per pixel.
-MAX_IMAGE_PIXELS = 30_000_000  # 30 MP
+# Pillow refuses around 89 MP on its own, so the cap sits just under it.
+MAX_IMAGE_PIXELS = 80_000_000  # 80 MP
 
 # Bookmarked links are fetched by the worker from inside the network, so by
 # default it may only reach addresses the rest of the world can reach too.
@@ -171,20 +180,50 @@ ABSOLUTE_URL_OVERRIDES = {
 REDIS_HOST = env("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
 REDIS_DB = env.int("REDIS_DB", default=0)
+REDIS_PASSWORD = env("REDIS_PASSWORD", default="")
 
+# Quoted, because a password is allowed characters that mean something inside a
+# URL. Everything that talks to Redis goes through here, so the credentials
+# cannot be forgotten in one place and set in another.
+_redis_auth = f":{quote(REDIS_PASSWORD, safe='')}@" if REDIS_PASSWORD else ""
+
+
+def redis_url(db):
+    return f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{db}"
+
+
+# Redis answers in fractions of a millisecond, so a quarter of a second is
+# already far more patience than a healthy one ever needs. The old two seconds
+# only ever mattered when Redis was down - and then every one of the dozens of
+# lookups a page makes paid them, which is what pushed those pages past the
+# proxy's limit instead of quietly serving them uncached.
+REDIS_TIMEOUT = 0.25
+
+# django-redis rather than Django's own backend for one reason: it can swallow
+# a broken connection instead of raising. Nothing here depends on the cache for
+# correctness - thumbnails, rate limits and API throttling all survive without
+# it - so a dead Redis must not turn every page into an error. Every swallowed
+# failure is written to the log, otherwise the site would quietly run uncached
+# and nobody would know.
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/2",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": redis_url(2),
         "OPTIONS": {
-            "socket_connect_timeout": 2,
-            "socket_timeout": 2,
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+            "SOCKET_CONNECT_TIMEOUT": REDIS_TIMEOUT,
+            "SOCKET_TIMEOUT": REDIS_TIMEOUT,
+            # Stops dialling once Redis is known to be down; see core.redis_guard.
+            "CONNECTION_POOL_KWARGS": {"connection_class": GuardedConnection},
         },
     }
 }
 
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
-CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
+DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
+
+CELERY_BROKER_URL = redis_url(1)
+CELERY_RESULT_BACKEND = redis_url(1)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Views are buffered in Redis and flushed here; the interval is the worst-case
@@ -195,6 +234,11 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": timedelta(minutes=1),
     },
 }
+
+# Write the schedule file after every task sent instead of every few minutes.
+# That file's timestamp is what the container's health check reads, and on the
+# default interval a beat that died a minute ago still looks alive.
+CELERY_BEAT_SYNC_EVERY = 1
 
 FEED_ACTIONS_PER_PAGE = 10
 IMAGES_PER_PAGE = 6
@@ -224,12 +268,21 @@ THUMBNAILS = {
 
 RATELIMIT_IP_META_KEY = "HTTP_X_FORWARDED_FOR"
 
+# With the cache swallowing failures the limiter gets no count back, and its
+# default reaction is to refuse everyone - a dead Redis would lock the whole
+# site out of posting. Let requests through instead: sign-in stays protected
+# either way, because axes counts attempts in the database.
+RATELIMIT_FAIL_OPEN = True
+
 AXES_DISABLE_ACCESS_LOG = True
 AXES_FAILURE_LIMIT = 3
 AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_LOCKOUT_CALLABLE = "apps.account.views.lockout_view"
+# Without this axes reads REMOTE_ADDR, which behind the proxy is the proxy -
+# one address for every visitor, and a lockout parameter that says nothing.
+AXES_CLIENT_IP_CALLABLE = "core.ip.client_ip_address"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

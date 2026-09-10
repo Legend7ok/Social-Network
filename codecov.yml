@@ -1,6 +1,22 @@
 coverage:
   status:
+    # The whole project. Without it only changed lines were measured, so
+    # coverage could fall for years - by deleting tests, or by moving code out
+    # of a tested file - and nothing would say a word.
+    project:
+      default:
+        target: 95%
+        threshold: 1%
+    # Changed lines in this pull request, held to a higher bar than the project:
+    # new code arrives with its tests or it does not arrive.
     patch:
       default:
         target: 90%
         threshold: 2%
+
+# One comment per pull request, rewritten in place instead of a new one on
+# every push.
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: true

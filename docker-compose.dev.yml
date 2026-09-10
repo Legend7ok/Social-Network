@@ -1,4 +1,7 @@
-name: social-network
+# Set PROJECT_NAME in .env to give a second checkout its own containers,
+# volumes and network. Without it two checkouts share one database, and tests
+# started in both at once wipe each other's data.
+name: ${PROJECT_NAME:-social-network}
 
 services:
   db:
@@ -15,13 +18,31 @@ services:
       timeout: 5s
       retries: 5
 
+  # Runs once and exits; everything that talks to the database waits for it to
+  # finish. Migrating from each service instead would race three copies of the
+  # same schema change against each other on every start.
+  migrate:
+    build:
+      context: .
+      target: dev
+    command: python app/manage.py migrate --noinput
+    environment:
+      DJANGO_SETTINGS_MODULE: settings.dev
+    volumes:
+      - .:/app
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   web:
     build:
       context: .
-      target: web
+      target: dev
     command: python app/manage.py runserver 0.0.0.0:8000
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.dev
+      DJANGO_SETTINGS_MODULE: settings.dev
     volumes:
       - .:/app
       - media:/app/media
@@ -29,6 +50,8 @@ services:
       - "8000:8000"
     env_file: .env
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
@@ -51,15 +74,17 @@ services:
   worker:
     build:
       context: .
-      target: web
-    command: celery -A app.config worker -l info
+      target: dev
+    command: celery -A config worker -l info
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.dev
+      DJANGO_SETTINGS_MODULE: settings.dev
     env_file: .env
     volumes:
       - .:/app
       - media:/app/media
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
@@ -68,28 +93,43 @@ services:
   beat:
     build:
       context: .
-      target: web
-    command: celery -A app.config beat -l info
+      target: dev
+    command: celery -A config beat -l info
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.dev
+      DJANGO_SETTINGS_MODULE: settings.dev
     env_file: .env
     volumes:
       - .:/app
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
         condition: service_started
 
+  # Same password and same eviction rules as production, so behaviour does not
+  # differ between the two. See the production file for what volatile-lru buys.
   redis:
     image: redis:7-alpine
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      --maxmemory 384mb
+      --maxmemory-policy volatile-lru
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     restart: unless-stopped
     volumes:
       - redis_data:/data
 
+  # Only starts when asked for: --profile ngrok. It needs a token, and without
+  # one it used to die on every single start, leaving a failed container behind.
   ngrok:
     image: ngrok/ngrok:latest
     command: http web:8000
+    profiles:
+      - ngrok
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:

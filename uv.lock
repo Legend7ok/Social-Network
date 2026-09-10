@@ -432,6 +432,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-redis"
+version = "7.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "redis" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/78/203a0cdc0f1c083a5407d01f77b58099a120bb8a5a04562f56a9bb341314/django_redis-7.0.0.tar.gz", hash = "sha256:e48491c862f4350b0747ceb1016700686fb93c4f4e0fb9c490fe6c6658ffd933", size = 64601, upload-time = "2026-06-02T14:17:48.819Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/9f/09cdb9a1eebe8533b02a7694ca787acfc1e4d93b5b6175ff99366d4e6d64/django_redis-7.0.0-py3-none-any.whl", hash = "sha256:4b23aa6e0cd0937bb1242e9a463809e6004de3ca2150f34e986306bb6220d688", size = 38932, upload-time = "2026-06-02T14:17:47.281Z" },
+]
+
+[[package]]
 name = "django-storages"
 version = "1.14.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1042,17 +1055,15 @@ dependencies = [
     { name = "celery" },
     { name = "django" },
     { name = "django-axes" },
-    { name = "django-debug-toolbar" },
     { name = "django-environ" },
     { name = "django-ratelimit" },
+    { name = "django-redis" },
     { name = "django-storages", extra = ["s3"] },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "gunicorn" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
-    { name = "pytest" },
-    { name = "pytest-django" },
     { name = "redis" },
     { name = "requests" },
     { name = "social-auth-app-django" },
@@ -1061,8 +1072,11 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "django-debug-toolbar" },
     { name = "fakeredis" },
+    { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-django" },
     { name = "ruff" },
 ]
 
@@ -1072,9 +1086,10 @@ requires-dist = [
     { name = "celery", specifier = ">=5.6.3" },
     { name = "django", specifier = ">=6.0.2" },
     { name = "django-axes", specifier = ">=8.3.1" },
-    { name = "django-debug-toolbar", specifier = ">=6.3.0" },
+    { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = ">=6.3.0" },
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-ratelimit", specifier = ">=4.1.0" },
+    { name = "django-redis", specifier = ">=6.0.0" },
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
     { name = "djangorestframework", specifier = ">=3.17.1" },
     { name = "drf-spectacular", specifier = ">=0.29.0" },
@@ -1082,9 +1097,9 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.3.0" },
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.1.0" },
-    { name = "pytest-django", specifier = ">=4.12.0" },
+    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.12.0" },
     { name = "redis", specifier = ">=7.4.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },

@@ -6,9 +6,51 @@ on:
   pull_request:
     branches: [ main ]
 
+# A second push to the same branch makes the first run pointless; cancel it
+# instead of paying for both and waiting behind the stale one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Neither of these needs a database or a queue, so this job starts instantly
+  # instead of waiting for containers to become healthy.
+  checks:
+    name: Lint and migrations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        # Pinned to the full version on purpose: since v8 this action stopped
+        # publishing a moving @v10 tag, and a bare major would not resolve.
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Check code style
+        run: uv run ruff check . && uv run ruff format --check .
+
+      # Catches a model changed without its migration written: the branch would
+      # pass every test and then fail on deploy, where the schema no longer
+      # matches the code.
+      - name: Check for missing migrations
+        env:
+          SECRET_KEY: "ci-test-key-only"
+          PYTHONPATH: app
+          DJANGO_SETTINGS_MODULE: settings.test
+        run: uv run python app/manage.py makemigrations --check --dry-run
+
   test:
-    name: Run Tests and Linters
+    name: Tests
     runs-on: ubuntu-latest
 
     services:
@@ -37,24 +79,23 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: 1. Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v7
 
-      - name: 2. Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Install uv
+        # Pinned to the full version on purpose: since v8 this action stopped
+        # publishing a moving @v10 tag, and a bare major would not resolve.
+        uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
 
-      - name: 3. Set up Python
+      - name: Set up Python
         run: uv python install 3.13
 
-      - name: 4. Install dependencies
+      - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: 5. Check code style (Ruff)
-        run: uv run ruff check . && uv run ruff format --check .
-
-      - name: 6. Run Django tests
+      - name: Run Django tests
         env:
           SECRET_KEY: "ci-test-key-only"
           DEBUG: "True"
@@ -67,8 +108,40 @@ jobs:
           DJANGO_SETTINGS_MODULE: settings.test
         run: uv run pytest --cov --cov-report=xml
 
-      - name: 7. Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+
+  # Builds what production actually runs. Nothing above touches the image, so
+  # without this a broken Dockerfile - or a frontend that no longer builds -
+  # only shows up when the stack is started.
+  image:
+    name: Production image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build the production image
+        run: docker build --target web -t socnet:ci .
+
+      - name: Check it starts and sees its settings
+        run: |
+          docker run --rm \
+            -e SECRET_KEY=ci-test-key-only \
+            -e ALLOWED_HOSTS=localhost \
+            -e CSRF_TRUSTED_ORIGINS=http://localhost \
+            -e DATABASE_URL=postgresql://u:p@db:5432/x \
+            -e REDIS_PASSWORD=ci \
+            -e RESEND_API_KEY=ci \
+            -e DEFAULT_FROM_EMAIL=ci@example.com \
+            -e SERVER_EMAIL=ci@example.com \
+            -e R2_ACCOUNT_ID=ci \
+            -e R2_BUCKET_NAME=ci \
+            -e R2_ACCESS_KEY_ID=ci \
+            -e R2_SECRET_ACCESS_KEY=ci \
+            -e DJANGO_SETTINGS_MODULE=settings.prod \
+            socnet:ci python app/manage.py check

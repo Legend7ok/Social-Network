@@ -19,6 +19,7 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.images.services import apply_live_views
 from core.pagination import count_newer, cursor_page
+from core.queue import ensure_queue_available
 
 from .selectors import (
     public_users,
@@ -174,6 +175,10 @@ class RegisterView(RedirectURLMixin, FormView):
         return context
 
     def form_valid(self, form):
+        # Before the row exists: the welcome email is queued after the commit,
+        # and refusing then would leave an account behind whose owner is told
+        # to try again.
+        ensure_queue_available()
         try:
             with transaction.atomic():
                 new_user = form.save()
@@ -207,6 +212,12 @@ def edit(request):
         )
 
         if user_form.is_valid() and profile_form.is_valid():
+            # A new photo brings background work with it - cutting its sizes,
+            # dropping the one it replaces - so the queue is asked before
+            # anything is stored. The rest of the form schedules nothing and is
+            # saved whether the queue answers or not.
+            if "photo" in request.FILES:
+                ensure_queue_available()
             user_form.save()
             profile_form.save()
             messages.success(request, "Profile updated successfully")
@@ -234,6 +245,7 @@ def profile_photo_update(request):
         instance=request.user.profile, data=request.POST, files=request.FILES
     )
     if form.is_valid():
+        ensure_queue_available()
         form.save()
         messages.success(request, "Photo updated successfully")
     else:

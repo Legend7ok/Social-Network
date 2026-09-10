@@ -4,19 +4,31 @@ import redis
 from django.conf import settings
 
 from core.exceptions import RedisUnavailableError
+from core.redis_guard import GuardedConnection
 
 from .models import Image
 
 logger = logging.getLogger(__name__)
 
+# Built from a pool rather than plain arguments, because that is where the
+# guarded connection plugs in - the same one the cache uses, so both stop
+# dialling a dead Redis together instead of each waiting on its own.
 r = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=settings.REDIS_DB,
-    socket_connect_timeout=2,
-    socket_timeout=2,
+    connection_pool=redis.ConnectionPool(
+        connection_class=GuardedConnection,
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD or None,
+        socket_connect_timeout=settings.REDIS_TIMEOUT,
+        socket_timeout=settings.REDIS_TIMEOUT,
+    )
 )
 
+# A rejected password raises AuthenticationError, which inherits from
+# ConnectionError and is therefore caught here too. Hence "error" and not
+# "unavailable" in the messages below: the traceback names the real cause, and
+# a wrong password must not send anyone looking for a container that is up.
 _REDIS_ERRORS = (redis.ConnectionError, redis.TimeoutError)
 
 # Redis is a write buffer, not the source of truth: a counter holds only the
@@ -39,7 +51,7 @@ def record_image_view(image_id):
         return delta
     except _REDIS_ERRORS:
         logger.error(
-            "Redis unavailable: record_image_view failed for image %s",
+            "Redis error: record_image_view failed for image %s",
             image_id,
             exc_info=True,
         )
@@ -60,7 +72,7 @@ def forget_image_views(image_id):
             pipe.execute()
     except _REDIS_ERRORS:
         logger.error(
-            "Redis unavailable: forget_image_views failed for image %s",
+            "Redis error: forget_image_views failed for image %s",
             image_id,
             exc_info=True,
         )
@@ -118,7 +130,7 @@ def get_image_views(image_id):
         return stored + int(r.get(_delta_key(image_id)) or 0)
     except _REDIS_ERRORS:
         logger.error(
-            "Redis unavailable: serving stored views for image %s",
+            "Redis error: serving stored views for image %s",
             image_id,
             exc_info=True,
         )
@@ -137,7 +149,7 @@ def get_images_views(image_ids):
         deltas = r.mget([_delta_key(image_id) for image_id in image_ids])
     except _REDIS_ERRORS:
         logger.error(
-            "Redis unavailable: serving stored views for %s images",
+            "Redis error: serving stored views for %s images",
             len(image_ids),
             exc_info=True,
         )
@@ -162,7 +174,7 @@ def is_first_view(image_id, viewer_key, ttl=3600):
         return bool(r.set(key, 1, ex=ttl, nx=True))
     except _REDIS_ERRORS:
         logger.error(
-            "Redis unavailable: is_first_view failed for image %s",
+            "Redis error: is_first_view failed for image %s",
             image_id,
             exc_info=True,
         )

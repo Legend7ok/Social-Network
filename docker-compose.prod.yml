@@ -1,12 +1,39 @@
-name: social-network-prod
+# The suffix is fixed so production never lands in the same project as
+# development, whatever PROJECT_NAME is set to.
+name: ${PROJECT_NAME:-social-network}-prod
 
+# Without a cap the log of a single container grows until the disk is full, and
+# a full disk takes the whole machine down, not just the noisy service.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Name lookups inside the network answer instantly while a container is up, and
+# hang for four seconds once it is not - that wait happens before any connect
+# timeout applies, so it is the slowest part of talking to a service that died.
+# One try, one second.
+x-dns: &dns
+  - timeout:1
+  - attempts:1
+
+# Every service below also carries oom_score_adj: who the kernel kills first
+# when the machine runs out of memory, higher meaning earlier. The order is
+# deliberate - beat (700), worker (500), nginx (300), web (200), redis (100),
+# database (0). beat only sends a message once a minute and is missed least;
+# the database goes last, because everything else can be restarted while it
+# holds the only copy of the data.
 services:
   db:
     image: postgres:17-alpine
+    # Required, with the reason spelled out: an unset variable here would create
+    # a database under a different name than DATABASE_URL points at, and the
+    # failure would surface much later as "database does not exist".
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -14,7 +41,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    mem_limit: 2g
+    oom_score_adj: 0
+    logging: *logging
     restart: unless-stopped
+
+  # Runs once and exits; everything that talks to the database waits for it to
+  # finish. Migrating from each service instead would race three copies of the
+  # same schema change against each other on every start.
+  migrate:
+    build:
+      context: .
+      target: web
+    command: python app/manage.py migrate --noinput
+    environment:
+      DJANGO_SETTINGS_MODULE: settings.prod
+    env_file: .env
+    dns_opt: *dns
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+    restart: "no"
 
   web:
     build:
@@ -22,65 +70,145 @@ services:
       target: web
     command: gunicorn -c /app/gunicorn.conf.py config.wsgi:application
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.prod
+      DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Asks the application, not the socket: a listening port only proves
+    # gunicorn started, not that Django can answer or reach the database.
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); s.connect((\"localhost\", 8000)); s.close()'"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=5)\""]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       start_period: 30s
+    mem_limit: 2g
+    oom_score_adj: 200
+    logging: *logging
     restart: unless-stopped
 
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
+      # Uncomment together with the https block in nginx.conf.
+      # - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Certificate and key, named fullchain.pem and privkey.pem.
+      # - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       web:
         condition: service_healthy
+    mem_limit: 128m
+    oom_score_adj: 300
+    logging: *logging
     restart: unless-stopped
+
+  # Only starts when asked for: --profile ngrok. This is how the production
+  # stack is shown to someone who is not on this machine - the tunnel ends at
+  # nginx, so the request takes the same path a real visitor would.
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http nginx:80
+    profiles:
+      - ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - nginx
+    logging: *logging
 
   worker:
     build:
       context: .
       target: web
-    command: celery -A app.config worker -l info --uid nobody --gid nogroup
+    # Four processes, not one per core: celery defaults to the core count, and
+    # each of them loads Django in full. The work here is fetching pictures and
+    # cutting thumbnails, so four run in parallel without filling the memory.
+    command: celery -A config worker -l info --concurrency=4
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.prod
+      DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Asks this worker to answer over the queue: proves it is connected and
+    # still picking work up, which a running process alone does not.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+    mem_limit: 1536m
+    oom_score_adj: 500
+    logging: *logging
     restart: unless-stopped
 
   beat:
     build:
       context: .
       target: web
-    command: celery -A app.config beat -l info
+    command: celery -A config beat -l info
     environment:
-      DJANGO_SETTINGS_MODULE: app.settings.prod
+      DJANGO_SETTINGS_MODULE: settings.prod
     env_file: .env
+    dns_opt: *dns
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # beat has nothing to answer with, so its liveness is read off the schedule
+    # file it rewrites after every task it sends - once a minute here. The
+    # companion files carry the fresh timestamp: the store is an sqlite database
+    # in write-ahead mode, and that is where recent writes land.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,sys,time; b='/var/lib/celery/celerybeat-schedule'; t=[os.path.getmtime(p) for p in (b, b+'-shm', b+'-wal') if os.path.exists(p)]; sys.exit(0 if t and time.time()-max(t) < 180 else 1)\""]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    mem_limit: 256m
+    oom_score_adj: 700
+    logging: *logging
     restart: unless-stopped
 
+  # volatile-lru evicts only keys that carry an expiry - that is the cache and
+  # nothing else. The Celery queue and the view counters have no expiry, so
+  # under memory pressure the cache is sacrificed and they stay intact; once
+  # there is nothing left to evict Redis refuses writes rather than dropping a
+  # queued task. The limit sits below the container's own ceiling, leaving room
+  # for the copy Redis makes while saving to disk.
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      --maxmemory 384mb
+      --maxmemory-policy volatile-lru
+      --appendonly yes
+      --appendfsync everysec
+    environment:
+      # Read by redis-cli on its own, so the password stays out of the command
+      # line the health check would otherwise expose in the process list.
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     restart: unless-stopped
     volumes:
       - redis_data:/data
@@ -89,6 +217,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    mem_limit: 512m
+    oom_score_adj: 100
+    logging: *logging
 
 volumes:
   postgres_data:

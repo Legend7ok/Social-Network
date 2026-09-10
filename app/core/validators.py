@@ -34,7 +34,7 @@ def validate_image_content(file):
     width, height = image.size
     if width * height > settings.MAX_IMAGE_PIXELS:
         raise ValidationError(
-            "Image is too large. Max size is %(mp)s megapixels.",
+            "Image resolution is too big. Max %(mp)s megapixels (width times height).",
             params={"mp": settings.MAX_IMAGE_PIXELS // 1_000_000},
         )
 
