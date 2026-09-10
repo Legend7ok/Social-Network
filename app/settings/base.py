@@ -112,7 +112,8 @@ MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Weight alone does not bound the work: a few compressed megabytes can hold a
 # hundred megapixels, and decoding one costs about three bytes per pixel.
-MAX_IMAGE_PIXELS = 30_000_000  # 30 MP
+# Pillow refuses around 89 MP on its own, so the cap sits just under it.
+MAX_IMAGE_PIXELS = 80_000_000  # 80 MP
 
 # Bookmarked links are fetched by the worker from inside the network, so by
 # default it may only reach addresses the rest of the world can reach too.
