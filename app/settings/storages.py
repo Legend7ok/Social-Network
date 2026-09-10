@@ -47,8 +47,14 @@ def build_storages(*, required):
                 "file_overwrite": False,
             },
         },
+        # Manifest, not plain: it stores every file under a name carrying the
+        # hash of its contents, so a new release is a new address and no
+        # browser can serve yesterday's stylesheet from its cache. With one
+        # fixed name there is nothing to tell the two apart, and a deploy
+        # leaves people on the old styles and the old scripts until their
+        # browser decides to ask again.
         "staticfiles": {
-            "BACKEND": "storages.backends.s3.S3Storage",
+            "BACKEND": "storages.backends.s3.S3ManifestStaticStorage",
             "OPTIONS": {
                 **options,
                 "bucket_name": bucket,

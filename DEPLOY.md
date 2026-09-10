@@ -36,27 +36,27 @@ Fill in every value. These stop the stack from starting if missing:
 make prod-deploy
 ```
 
-Builds the images, applies migrations in a one-shot job, starts everything, and
-restarts nginx last. The restart is required, not cosmetic: nginx resolves the
-site container's address once, at its own start, and a rebuilt container comes
-back on a different address.
+Builds the images, uploads the static files to the bucket, applies migrations
+in a one-shot job, starts everything, and restarts nginx last.
 
-## 3. Upload the static files
+The order matters. CSS, JavaScript and fonts are served from the bucket rather
+than by nginx, and each is stored under a name carrying the hash of its
+contents - which is what stops a browser from serving yesterday's stylesheet
+after a release. The pages ask for those names, so the upload has to happen
+before the new site starts. And nginx resolves the site container's address
+once, at its own start, while a rebuilt container may come back on a different
+one.
 
-```
-make prod-collectstatic
-```
+`make prod-collectstatic` does the upload on its own, for a change that
+touched nothing but static files.
 
-Once per deploy that changed CSS, JavaScript or fonts. The files are served from
-the bucket, not by nginx, so the site renders unstyled until this has run.
-
-## 4. Create the first account
+## 3. Create the first account
 
 ```
 make prod-superuser
 ```
 
-## 5. Verify
+## 4. Verify
 
 ```
 curl -s localhost/healthz/
@@ -75,7 +75,6 @@ Every service reports its own health, and `ps` should show all of them
 ```
 git pull
 make prod-deploy
-make prod-collectstatic   # only if the frontend changed
 ```
 
 Migrations run on their own, before the site starts. If one fails the site does

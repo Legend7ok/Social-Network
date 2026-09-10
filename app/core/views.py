@@ -35,7 +35,11 @@ def healthz(request):
 
     try:
         services.r.ping()
-    except (redis_lib.ConnectionError, redis_lib.TimeoutError):
+    # Every Redis failure, not only a refused connection: a rejected password
+    # or a server still loading its data answers with a different error, and
+    # letting one of those out of here would turn a cache problem into a dead
+    # container - the runtime kills what this endpoint calls unhealthy.
+    except redis_lib.RedisError:
         # Logged at info: this is a note in the body, not an incident.
         logger.info("healthz: redis unreachable")
         checks["redis"] = "error"

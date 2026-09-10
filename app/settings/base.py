@@ -280,6 +280,9 @@ AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_LOCKOUT_CALLABLE = "apps.account.views.lockout_view"
+# Without this axes reads REMOTE_ADDR, which behind the proxy is the proxy -
+# one address for every visitor, and a lockout parameter that says nothing.
+AXES_CLIENT_IP_CALLABLE = "core.ip.client_ip_address"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

@@ -90,12 +90,20 @@ prod-build: ## Build the prod images without touching what is running
 prod-build-up: ## Build the prod images, then start in the background
 	$(PROD) up -d --build
 
-# The whole deploy in one command. nginx is restarted last on purpose: it looks
-# up the web container's address once, at its own start, and a rebuilt web
-# container may come back on a different one - after which nginx answers 502
-# until it is restarted. See the comment in nginx/nginx.conf.
-prod-deploy: ## Build, start and restart nginx (use this to deploy)
-	$(PROD) up -d --build
+# The whole deploy in one command, in the order the steps depend on each other.
+#
+# Static files go up from the freshly built image before anything starts, not
+# after: they are served from the bucket, and the pages of the new release name
+# them by the hash of their contents. A site started ahead of that upload would
+# be asking for files nobody has put there yet.
+#
+# nginx is restarted last: it looks up the web container's address once, at its
+# own start, and a rebuilt web container may come back on a different one -
+# after which nginx answers 502 until it is restarted. See nginx/nginx.conf.
+prod-deploy: ## Build, upload the static files, start and restart nginx
+	$(PROD) build
+	$(PROD) run --rm --no-deps web python app/manage.py collectstatic --noinput --ignore=input.css
+	$(PROD) up -d
 	$(PROD) restart nginx
 	$(PROD) ps
 
@@ -120,8 +128,12 @@ prod-migrate: ## Apply migrations against the prod database
 prod-superuser: ## Create a Django superuser in prod
 	$(PROD) run --rm web python app/manage.py createsuperuser
 
+# input.css is the source Tailwind builds from, never served. It is skipped
+# because its font paths are written relative to the built file in css/dist,
+# and the storage that rewrites those paths would look for them one directory
+# too high and refuse to collect anything at all.
 prod-collectstatic: ## Upload the static files to R2 (run once on deploy)
-	$(PROD) run --rm web python app/manage.py collectstatic --noinput
+	$(PROD) run --rm web python app/manage.py collectstatic --noinput --ignore=input.css
 
 prod-ngrok: ## Expose the prod site over https, print the address
 	$(PROD_NGROK) up -d ngrok
