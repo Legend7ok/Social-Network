@@ -1180,6 +1180,38 @@ def test_profile_photo_delete_refuses_a_get(client, user):
 
 
 @pytest.mark.django_db
+def test_the_bin_appears_only_once_there_is_a_photo(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    assert b"Remove photo" not in client.get(reverse("my_profile")).content
+
+    attach_avatar(client, django_capture_on_commit_callbacks)
+
+    assert b"Remove photo" in client.get(reverse("my_profile")).content
+
+
+@pytest.mark.django_db
+def test_the_bin_is_not_offered_on_someone_elses_profile(
+    client, user, second_user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    other, _ = second_user
+    other.profile.photo = SimpleUploadedFile(
+        "theirs.png", MINIMAL_PNG, content_type="image/png"
+    )
+    with django_capture_on_commit_callbacks(execute=False):
+        other.profile.save()
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[other.username]))
+
+    assert b"Remove photo" not in response.content
+
+
+@pytest.mark.django_db
 def test_profile_photo_delete_needs_an_account(client):
     response = client.post(reverse("profile_photo_delete"))
 
