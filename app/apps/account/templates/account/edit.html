@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
-{% load thumbnail %}
 
 {% block title %}Edit Profile · socnet{% endblock %}
+
+{% comment %}
+  Names, address and date of birth, and nothing else. The photo is changed from
+  the avatar on the profile page, where it is already on screen; a second place
+  to do it meant two sets of buttons to keep in step and two behaviours - this
+  form waits for its Save button, while the avatar applies at once.
+{% endcomment %}
 
 {% block content %}
 <div class="px-[16px] lg:px-[31px] py-[31px] flex justify-start">
@@ -9,7 +15,7 @@
 
     <h1 class="text-[20px] font-medium text-white">Edit Profile</h1>
 
-    <form method="post" enctype="multipart/form-data" class="flex flex-col gap-[22px]">
+    <form method="post" class="flex flex-col gap-[22px]">
       {% csrf_token %}
 
       <!-- First name + Last name -->
@@ -64,42 +70,6 @@
                class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none transition-colors
                       {% if profile_form.date_of_birth.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">
         {% for error in profile_form.date_of_birth.errors %}
-          <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
-        {% endfor %}
-      </div>
-
-      <!-- Photo -->
-      <div x-data="{
-        hasFile: false,
-        fileName: '',
-        handleFile(file) {
-          if (!file) return;
-          this.hasFile = true;
-          this.fileName = file.name;
-        },
-      }">
-        <label class="block text-[13px] text-[#9896A4] mb-[7px]">Profile photo</label>
-
-        {% if request.user.profile.photo %}
-        <div class="flex items-center gap-[13px] mb-[13px]">
-          <div class="w-[53px] h-[53px] rounded-full overflow-hidden bg-brand/30 shrink-0">
-            {% thumbnail request.user.profile.photo THUMBS.avatar_md crop="center" as av %}
-            <img src="{{ av.url }}" class="w-full h-full object-cover" alt="current photo" />
-            {% endthumbnail %}
-          </div>
-          <span class="text-[13px] text-[#5E5C6A]">Current photo</span>
-        </div>
-        {% endif %}
-
-        <div class="flex items-center gap-[13px] px-[18px] py-[13px] bg-surface-input border border-white/[0.15] rounded-xl cursor-pointer hover:border-brand/40 transition-colors"
-             @click="$refs.photoInput.click()">
-          <i class="ti ti-upload text-[18px] text-[#9896A4]"></i>
-          <span class="text-[14px] text-[#9896A4]" x-text="hasFile ? fileName : 'Choose new photo'"></span>
-        </div>
-        <input type="file" name="photo" accept="image/*" class="hidden" x-ref="photoInput"
-               @change="handleFile($event.target.files[0])">
-
-        {% for error in profile_form.photo.errors %}
           <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
         {% endfor %}
       </div>

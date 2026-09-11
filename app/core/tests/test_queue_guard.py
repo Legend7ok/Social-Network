@@ -131,11 +131,12 @@ def test_a_new_avatar_is_refused_when_the_queue_is_gone(
 
 
 @pytest.mark.django_db
-def test_the_rest_of_the_profile_still_saves_when_the_queue_is_gone(
+def test_the_profile_form_still_saves_when_the_queue_is_gone(
     client, user, account_views_find_no_queue
 ):
-    """Only a photo brings background work with it. Refusing a change of name
-    over a queue nothing was going to use would be a refusal for its own sake."""
+    """The form holds names, an address and a date - nothing that schedules
+    background work. Refusing it over a queue it was never going to use would
+    be a refusal for its own sake."""
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
 

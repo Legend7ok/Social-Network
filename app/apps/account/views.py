@@ -207,17 +207,9 @@ class RegisterView(RedirectURLMixin, FormView):
 def edit(request):
     if request.method == "POST":
         user_form = UserEditForm(instance=request.user, data=request.POST)
-        profile_form = ProfileEditForm(
-            instance=request.user.profile, data=request.POST, files=request.FILES
-        )
+        profile_form = ProfileEditForm(instance=request.user.profile, data=request.POST)
 
         if user_form.is_valid() and profile_form.is_valid():
-            # A new photo brings background work with it - cutting its sizes,
-            # dropping the one it replaces - so the queue is asked before
-            # anything is stored. The rest of the form schedules nothing and is
-            # saved whether the queue answers or not.
-            if "photo" in request.FILES:
-                ensure_queue_available()
             user_form.save()
             profile_form.save()
             messages.success(request, "Profile updated successfully")
