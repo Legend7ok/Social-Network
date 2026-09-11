@@ -11,6 +11,7 @@ urlpatterns = [
     # One view behind both: the owner's page is the same page without a name.
     path("me/", views.profile, name="my_profile"),
     path("me/photo/", views.profile_photo_update, name="profile_photo"),
+    path("me/photo/delete/", views.profile_photo_delete, name="profile_photo_delete"),
     path("users/", views.user_list, name="user_list"),
     path("users/<username>/", views.profile, name="user_detail"),
 ]

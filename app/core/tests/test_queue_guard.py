@@ -151,6 +151,27 @@ def test_the_profile_form_still_saves_when_the_queue_is_gone(
 
 
 @pytest.mark.django_db
+def test_removing_an_avatar_is_refused_when_the_queue_is_gone(
+    client, user, account_views_find_no_queue, django_capture_on_commit_callbacks
+):
+    """The stored name lives in the row and nowhere else. Clearing it without
+    handing the file to a worker leaves a picture in the bucket that nothing
+    can name, so the photo stays until the queue is back."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
+    with django_capture_on_commit_callbacks(execute=False):
+        user_obj.profile.photo = photo
+        user_obj.profile.save()
+
+    response = client.post(reverse("profile_photo_delete"))
+
+    assert response.status_code == 503
+    user_obj.profile.refresh_from_db()
+    assert user_obj.profile.photo
+
+
+@pytest.mark.django_db
 def test_deleting_a_picture_is_refused_when_the_queue_is_gone(
     client, user, image, image_views_find_no_queue
 ):

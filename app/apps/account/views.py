@@ -246,6 +246,28 @@ def profile_photo_update(request):
 
 
 @login_required
+@require_POST
+def profile_photo_delete(request):
+    """Take the photo off and go back to the initials.
+
+    Clearing the field is the whole of it: the file in the bucket and its three
+    thumbnails are dropped by the same signal that handles a replacement, which
+    reads a change of stored name and does not care whether the new one is
+    another picture or nothing at all.
+    """
+    profile = request.user.profile
+    if profile.photo:
+        # Asked before the field is cleared: without the queue the file would
+        # stay in the bucket with nothing left to name it, since the row is the
+        # only place its name is written down.
+        ensure_queue_available()
+        profile.photo = ""
+        profile.save(update_fields=["photo"])
+        messages.success(request, "Photo removed")
+    return redirect("my_profile")
+
+
+@login_required
 def user_list(request):
     filter_type = request.GET.get("filter", "all")
     users_only = request.GET.get("users_only")
