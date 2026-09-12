@@ -232,6 +232,11 @@ def edit(request):
 
 @login_required
 @require_POST
+# The same rate as uploading a picture, because it is the same work: a file of
+# up to five megabytes stored in the bucket, three thumbnails cut from it, and
+# the one it replaces deleted with its own three. Thirty an hour is far more
+# than a person changing their avatar and far less than a loop.
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
 def profile_photo_update(request):
     form = ProfilePhotoForm(
         instance=request.user.profile, data=request.POST, files=request.FILES
