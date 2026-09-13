@@ -115,6 +115,16 @@ def feed_updates(request):
 # in extends Django's own LoginView — writing it as a function would mean
 # copying its handling of CSRF, caching, the next parameter and the axes hooks —
 # and the sign-up view stays a class to match the page it shares.
+#
+# axes locks an address out after three failures against one name, which stops
+# a password being guessed. It does not stop the same password being tried
+# against a thousand names: each pair keeps its own count and none reaches
+# three. This does - and it also bounds the cost, since every attempt at a name
+# nobody holds still computes a hash, on purpose, so the answer takes as long
+# as a wrong password would.
+@method_decorator(
+    ratelimit(key="ip", rate="20/m", method="POST", block=True), name="post"
+)
 class LoginView(auth_views.LoginView):
     """Signing in and signing up share one page, so each view renders the other
     side's blank form alongside its own."""
@@ -132,6 +142,17 @@ class LoginView(auth_views.LoginView):
         # to keep in step and nothing to index twice.
         context["show_register"] = REGISTER_PARAM in self.request.GET
         return context
+
+
+# Django's own view, reached through its own address; only the limit is ours.
+# Each request sends a message to whatever address it names, so without one
+# anybody can have this site fill a stranger's inbox and spend our mail
+# allowance doing it - no account required.
+@method_decorator(
+    ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
+)
+class PasswordResetView(auth_views.PasswordResetView):
+    pass
 
 
 # The same guards Django puts on its own LoginView: keep the password out of
