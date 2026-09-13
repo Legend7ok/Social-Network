@@ -111,10 +111,11 @@ def feed_updates(request):
     return JsonResponse({"count": count})
 
 
-# The views in this project are functions; these two are the exception. Signing
-# in extends Django's own LoginView — writing it as a function would mean
-# copying its handling of CSRF, caching, the next parameter and the axes hooks —
-# and the sign-up view stays a class to match the page it shares.
+# The views in this project are functions; the three classes below are the
+# exception. Signing in and resetting a password extend Django's own views -
+# writing either as a function would mean copying its handling of CSRF,
+# caching, the next parameter and the axes hooks - and the sign-up view stays a
+# class to match the page it shares with signing in.
 #
 # axes locks an address out after three failures against one name, which stops
 # a password being guessed. It does not stop the same password being tried
