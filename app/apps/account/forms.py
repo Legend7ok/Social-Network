@@ -20,7 +20,7 @@ class EmailOrUsernameAuthenticationForm(AuthenticationForm):
         field = self.fields["username"]
         field.max_length = EMAIL_MAX_LENGTH
         field.widget.attrs["maxlength"] = EMAIL_MAX_LENGTH
-        field.label = "Email or username"
+        field.label = "Username or email"
 
 
 class UserRegistrationForm(forms.ModelForm):

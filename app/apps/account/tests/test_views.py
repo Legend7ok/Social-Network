@@ -970,8 +970,8 @@ def test_failed_login_says_nothing_about_which_half_was_wrong(client, user):
         reverse("login"), {"username": "nobody@example.com", "password": "wrong"}
     )
 
-    assert b"Wrong email or password." in known.content
-    assert b"Wrong email or password." in unknown.content
+    assert b"Login failed. Check your credentials and try again." in known.content
+    assert b"Login failed. Check your credentials and try again." in unknown.content
 
 
 @pytest.mark.django_db
