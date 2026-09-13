@@ -39,10 +39,18 @@
         <i class="ti ti-camera text-[12px] text-white"></i>
       </button>
 
+      {% comment %}Shaped like the camera so the two read as a pair, coloured
+      like every other bin in the project: quiet until it is wanted, red under
+      the cursor. Filling it red would put the loudest thing on the page on the
+      action nobody came here to perform.
+
+      The hover fill is solid, not the see-through red the dialog uses: behind
+      that button is the card, behind this one is the photo, which would show
+      through it.{% endcomment %}
       {% if profile_user.profile.photo %}
       <button @click="photoOpen = false; $dispatch('confirm-photo-delete')" aria-label="Remove photo"
-              class="absolute top-0 right-0 w-[31px] h-[31px] bg-red-400 rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-red-500 transition-colors cursor-pointer">
-        <i class="ti ti-trash text-[12px] text-white"></i>
+              class="absolute top-0 right-0 w-[31px] h-[31px] bg-surface-card rounded-full border-2 border-surface-page flex items-center justify-center text-[#9896A4] hover:bg-red-500 hover:text-white transition-colors cursor-pointer">
+        <i class="ti ti-trash text-[12px]"></i>
       </button>
       {% endif %}
 
