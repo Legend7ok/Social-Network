@@ -970,8 +970,8 @@ def test_failed_login_says_nothing_about_which_half_was_wrong(client, user):
         reverse("login"), {"username": "nobody@example.com", "password": "wrong"}
     )
 
-    assert b"Wrong email or password." in known.content
-    assert b"Wrong email or password." in unknown.content
+    assert b"Login failed. Check your credentials and try again." in known.content
+    assert b"Login failed. Check your credentials and try again." in unknown.content
 
 
 @pytest.mark.django_db
@@ -1102,3 +1102,118 @@ def test_profile_photo_update_rejects_invalid_extension(client, user):
     client.post(reverse("profile_photo"), {"photo": gif_file})
     user_obj.profile.refresh_from_db()
     assert not user_obj.profile.photo
+
+
+def attach_avatar(client, callbacks):
+    photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
+    with callbacks(execute=False):
+        client.post(reverse("profile_photo"), {"photo": photo})
+
+
+@pytest.mark.django_db
+def test_profile_photo_delete_clears_the_photo(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    attach_avatar(client, django_capture_on_commit_callbacks)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(reverse("profile_photo_delete"))
+
+    assert response.status_code == 302
+    user_obj.profile.refresh_from_db()
+    assert not user_obj.profile.photo
+    # The row is the only place the stored name is written down, so the file
+    # has to be handed over for deletion in the same breath.
+    mock_delay.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_profile_photo_delete_does_nothing_without_a_photo(
+    client, user, django_capture_on_commit_callbacks
+):
+    """Pressing it twice, or reaching the address directly: there is nothing to
+    delete and nothing to hand to the worker."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    with patch("apps.account.signals.delete_avatar_file.delay") as mock_delay:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(reverse("profile_photo_delete"))
+
+    assert response.status_code == 302
+    mock_delay.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_profile_photo_delete_touches_nobody_else(
+    client, user, second_user, django_capture_on_commit_callbacks
+):
+    """The view takes no id: it can only ever reach the profile of whoever is
+    signed in, which is what keeps someone else's avatar out of reach."""
+    user_obj, password = user
+    other, _ = second_user
+    other.profile.photo = SimpleUploadedFile(
+        "theirs.png", MINIMAL_PNG, content_type="image/png"
+    )
+    with django_capture_on_commit_callbacks(execute=False):
+        other.profile.save()
+
+    client.login(username=user_obj.username, password=password)
+    with django_capture_on_commit_callbacks(execute=False):
+        client.post(reverse("profile_photo_delete"))
+
+    other.profile.refresh_from_db()
+    assert other.profile.photo
+
+
+@pytest.mark.django_db
+def test_profile_photo_delete_refuses_a_get(client, user):
+    """A deletion behind a plain address could be triggered by anything that
+    loads urls on the page, a prefetching browser included."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    assert client.get(reverse("profile_photo_delete")).status_code == 405
+
+
+@pytest.mark.django_db
+def test_the_bin_appears_only_once_there_is_a_photo(
+    client, user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+
+    assert b"Remove photo" not in client.get(reverse("my_profile")).content
+
+    attach_avatar(client, django_capture_on_commit_callbacks)
+
+    assert b"Remove photo" in client.get(reverse("my_profile")).content
+
+
+@pytest.mark.django_db
+def test_the_bin_is_not_offered_on_someone_elses_profile(
+    client, user, second_user, django_capture_on_commit_callbacks
+):
+    user_obj, password = user
+    other, _ = second_user
+    other.profile.photo = SimpleUploadedFile(
+        "theirs.png", MINIMAL_PNG, content_type="image/png"
+    )
+    with django_capture_on_commit_callbacks(execute=False):
+        other.profile.save()
+    client.login(username=user_obj.username, password=password)
+
+    response = client.get(reverse("user_detail", args=[other.username]))
+
+    assert b"Remove photo" not in response.content
+
+
+@pytest.mark.django_db
+def test_profile_photo_delete_needs_an_account(client):
+    response = client.post(reverse("profile_photo_delete"))
+
+    assert response.status_code == 302
+    assert reverse("login") in response["Location"]

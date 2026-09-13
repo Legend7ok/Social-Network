@@ -43,8 +43,9 @@
     {% if login_form.errors %}
       <p class="w-full text-[12px] text-red-400 bg-red-900/30 border border-red-700/30 rounded-lg px-[13px] py-[9px] mb-[13px] text-center">
         {% comment %}One message whatever went wrong, so the page never reveals
-        which addresses have an account here.{% endcomment %}
-        Wrong email or password.
+        which addresses have an account here. It names no field either, so it
+        cannot fall out of step with what the form accepts.{% endcomment %}
+        Login failed. Check your credentials and try again.
       </p>
     {% endif %}
 
@@ -69,12 +70,10 @@
       </a>
     </div>
 
-    <!-- Divider -->
-    <div class="flex items-center gap-[9px] w-full my-[9px] text-[12px] text-[#5E5C6A]">
-      <div class="flex-1 h-px bg-white/[0.15]"></div>
-      or use username or email
-      <div class="flex-1 h-px bg-white/[0.15]"></div>
-    </div>
+    {% comment %}A plain line, no wording: above are the services, below the
+    form. Naming the fields meant repeating them - and repeating them wrongly
+    every time the form changed.{% endcomment %}
+    <div class="w-full h-px my-[13px] bg-white/[0.15]"></div>
 
     <form method="post" action="{% url 'login' %}" class="w-full">
       {% csrf_token %}
@@ -151,12 +150,7 @@
       </a>
     </div>
 
-    <!-- Divider -->
-    <div class="flex items-center gap-[9px] w-full my-[9px] text-[12px] text-[#5E5C6A]">
-      <div class="flex-1 h-px bg-white/[0.15]"></div>
-      or use email
-      <div class="flex-1 h-px bg-white/[0.15]"></div>
-    </div>
+    <div class="w-full h-px my-[13px] bg-white/[0.15]"></div>
 
     <form method="post" action="{% url 'register' %}" class="w-full">
       {% csrf_token %}

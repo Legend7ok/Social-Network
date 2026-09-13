@@ -131,11 +131,12 @@ def test_a_new_avatar_is_refused_when_the_queue_is_gone(
 
 
 @pytest.mark.django_db
-def test_the_rest_of_the_profile_still_saves_when_the_queue_is_gone(
+def test_the_profile_form_still_saves_when_the_queue_is_gone(
     client, user, account_views_find_no_queue
 ):
-    """Only a photo brings background work with it. Refusing a change of name
-    over a queue nothing was going to use would be a refusal for its own sake."""
+    """The form holds names, an address and a date - nothing that schedules
+    background work. Refusing it over a queue it was never going to use would
+    be a refusal for its own sake."""
     user_obj, password = user
     client.login(username=user_obj.username, password=password)
 
@@ -147,6 +148,27 @@ def test_the_rest_of_the_profile_still_saves_when_the_queue_is_gone(
     assert response.status_code == 302
     user_obj.refresh_from_db()
     assert user_obj.first_name == "Renamed"
+
+
+@pytest.mark.django_db
+def test_removing_an_avatar_is_refused_when_the_queue_is_gone(
+    client, user, account_views_find_no_queue, django_capture_on_commit_callbacks
+):
+    """The stored name lives in the row and nowhere else. Clearing it without
+    handing the file to a worker leaves a picture in the bucket that nothing
+    can name, so the photo stays until the queue is back."""
+    user_obj, password = user
+    client.login(username=user_obj.username, password=password)
+    photo = SimpleUploadedFile("avatar.png", MINIMAL_PNG, content_type="image/png")
+    with django_capture_on_commit_callbacks(execute=False):
+        user_obj.profile.photo = photo
+        user_obj.profile.save()
+
+    response = client.post(reverse("profile_photo_delete"))
+
+    assert response.status_code == 503
+    user_obj.profile.refresh_from_db()
+    assert user_obj.profile.photo
 
 
 @pytest.mark.django_db

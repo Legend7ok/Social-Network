@@ -41,6 +41,18 @@ MINIMAL_PNG = png_bytes()
 
 
 @pytest.fixture(autouse=True)
+def media_root_of_its_own(settings, tmp_path):
+    """Every test uploads into a directory pytest made for it and throws away.
+
+    Without this the suite writes into the project's own media directory and
+    never cleans up - hundreds of files pile up there over time - and tests see
+    each other's uploads, which is a quiet way for one to pass on a file
+    another one left behind.
+    """
+    settings.MEDIA_ROOT = tmp_path
+
+
+@pytest.fixture(autouse=True)
 def clear_cache():
     cache.clear()
     yield

@@ -111,10 +111,21 @@ def feed_updates(request):
     return JsonResponse({"count": count})
 
 
-# The views in this project are functions; these two are the exception. Signing
-# in extends Django's own LoginView — writing it as a function would mean
-# copying its handling of CSRF, caching, the next parameter and the axes hooks —
-# and the sign-up view stays a class to match the page it shares.
+# The views in this project are functions; the three classes below are the
+# exception. Signing in and resetting a password extend Django's own views -
+# writing either as a function would mean copying its handling of CSRF,
+# caching, the next parameter and the axes hooks - and the sign-up view stays a
+# class to match the page it shares with signing in.
+#
+# axes locks an address out after three failures against one name, which stops
+# a password being guessed. It does not stop the same password being tried
+# against a thousand names: each pair keeps its own count and none reaches
+# three. This does - and it also bounds the cost, since every attempt at a name
+# nobody holds still computes a hash, on purpose, so the answer takes as long
+# as a wrong password would.
+@method_decorator(
+    ratelimit(key="ip", rate="20/m", method="POST", block=True), name="post"
+)
 class LoginView(auth_views.LoginView):
     """Signing in and signing up share one page, so each view renders the other
     side's blank form alongside its own."""
@@ -132,6 +143,17 @@ class LoginView(auth_views.LoginView):
         # to keep in step and nothing to index twice.
         context["show_register"] = REGISTER_PARAM in self.request.GET
         return context
+
+
+# Django's own view, reached through its own address; only the limit is ours.
+# Each request sends a message to whatever address it names, so without one
+# anybody can have this site fill a stranger's inbox and spend our mail
+# allowance doing it - no account required.
+@method_decorator(
+    ratelimit(key="ip", rate="10/h", method="POST", block=True), name="post"
+)
+class PasswordResetView(auth_views.PasswordResetView):
+    pass
 
 
 # The same guards Django puts on its own LoginView: keep the password out of
@@ -207,17 +229,9 @@ class RegisterView(RedirectURLMixin, FormView):
 def edit(request):
     if request.method == "POST":
         user_form = UserEditForm(instance=request.user, data=request.POST)
-        profile_form = ProfileEditForm(
-            instance=request.user.profile, data=request.POST, files=request.FILES
-        )
+        profile_form = ProfileEditForm(instance=request.user.profile, data=request.POST)
 
         if user_form.is_valid() and profile_form.is_valid():
-            # A new photo brings background work with it - cutting its sizes,
-            # dropping the one it replaces - so the queue is asked before
-            # anything is stored. The rest of the form schedules nothing and is
-            # saved whether the queue answers or not.
-            if "photo" in request.FILES:
-                ensure_queue_available()
             user_form.save()
             profile_form.save()
             messages.success(request, "Profile updated successfully")
@@ -240,6 +254,11 @@ def edit(request):
 
 @login_required
 @require_POST
+# The same rate as uploading a picture, because it is the same work: a file of
+# up to five megabytes stored in the bucket, three thumbnails cut from it, and
+# the one it replaces deleted with its own three. Thirty an hour is far more
+# than a person changing their avatar and far less than a loop.
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
 def profile_photo_update(request):
     form = ProfilePhotoForm(
         instance=request.user.profile, data=request.POST, files=request.FILES
@@ -250,6 +269,28 @@ def profile_photo_update(request):
         messages.success(request, "Photo updated successfully")
     else:
         messages.error(request, form.errors.get("photo", ["Invalid photo"])[0])
+    return redirect("my_profile")
+
+
+@login_required
+@require_POST
+def profile_photo_delete(request):
+    """Take the photo off and go back to the initials.
+
+    Clearing the field is the whole of it: the file in the bucket and its three
+    thumbnails are dropped by the same signal that handles a replacement, which
+    reads a change of stored name and does not care whether the new one is
+    another picture or nothing at all.
+    """
+    profile = request.user.profile
+    if profile.photo:
+        # Asked before the field is cleared: without the queue the file would
+        # stay in the bucket with nothing left to name it, since the row is the
+        # only place its name is written down.
+        ensure_queue_available()
+        profile.photo = ""
+        profile.save(update_fields=["photo"])
+        messages.success(request, "Photo removed")
     return redirect("my_profile")
 
 

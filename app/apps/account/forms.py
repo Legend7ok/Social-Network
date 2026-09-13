@@ -20,7 +20,7 @@ class EmailOrUsernameAuthenticationForm(AuthenticationForm):
         field = self.fields["username"]
         field.max_length = EMAIL_MAX_LENGTH
         field.widget.attrs["maxlength"] = EMAIL_MAX_LENGTH
-        field.label = "Email or username"
+        field.label = "Username or email"
 
 
 class UserRegistrationForm(forms.ModelForm):
@@ -91,17 +91,24 @@ class UserEditForm(forms.ModelForm):
 class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ["date_of_birth", "photo"]
+        fields = ["date_of_birth"]
+
+
+class ProfilePhotoForm(forms.ModelForm):
+    """The photo on its own, submitted from the avatar on the profile page.
+
+    Separate from the form above rather than a narrowing of it: the two are
+    submitted from different places, by different actions, and only this one
+    carries a file - with the validation, the storage and the background work
+    that come with one.
+    """
+
+    class Meta:
+        model = Profile
+        fields = ["photo"]
 
     def clean_photo(self):
         photo = self.cleaned_data.get("photo")
         if photo:
             validate_image_upload(photo)
         return photo
-
-
-class ProfilePhotoForm(ProfileEditForm):
-    """Photo-only submit (navbar/profile dropdown); inherits clean_photo."""
-
-    class Meta(ProfileEditForm.Meta):
-        fields = ["photo"]

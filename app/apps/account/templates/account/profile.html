@@ -9,7 +9,9 @@
   <!-- Profile header: avatar on top on phones, beside content from sm up -->
   <div class="flex flex-col sm:flex-row items-start gap-[22px] pb-[26px] border-b border-white/[0.08] mb-[26px]">
 
-    <!-- Avatar; the owner also gets the camera badge that opens the upload form -->
+    <!-- Avatar. The owner also gets the camera badge that opens the upload
+         form, and - while there is a photo to remove - a bin in the opposite
+         corner, kept apart from it so neither is pressed by mistake. -->
     <div class="relative shrink-0"
          {% if is_owner %}x-data="{ photoOpen: false, uploading: false }"{% endif %}>
       <div class="w-[92px] h-[92px] rounded-full bg-brand/30 flex items-center justify-center text-[29px] font-medium text-brand-light overflow-hidden"
@@ -32,10 +34,25 @@
         <div class="w-[31px] h-[31px] rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
       </div>
 
-      <button @click="photoOpen = !photoOpen"
-              class="absolute bottom-0 right-0 w-[31px] h-[31px] bg-brand rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-brand-dark transition-colors">
+      <button @click="photoOpen = !photoOpen" aria-label="Change photo"
+              class="absolute bottom-0 right-0 w-[31px] h-[31px] bg-brand rounded-full border-2 border-surface-page flex items-center justify-center hover:bg-brand-dark transition-colors cursor-pointer">
         <i class="ti ti-camera text-[12px] text-white"></i>
       </button>
+
+      {% comment %}Shaped like the camera so the two read as a pair, coloured
+      like every other bin in the project: quiet until it is wanted, red under
+      the cursor. Filling it red would put the loudest thing on the page on the
+      action nobody came here to perform.
+
+      The hover fill is solid, not the see-through red the dialog uses: behind
+      that button is the card, behind this one is the photo, which would show
+      through it.{% endcomment %}
+      {% if profile_user.profile.photo %}
+      <button @click="photoOpen = false; $dispatch('confirm-photo-delete')" aria-label="Remove photo"
+              class="absolute top-0 right-0 w-[31px] h-[31px] bg-surface-card rounded-full border-2 border-surface-page flex items-center justify-center text-[#9896A4] hover:bg-red-500 hover:text-white transition-colors cursor-pointer">
+        <i class="ti ti-trash text-[12px]"></i>
+      </button>
+      {% endif %}
 
       <div x-show="photoOpen" x-cloak x-transition
            @click.outside="photoOpen = false"
@@ -195,6 +212,9 @@
 
   {% if is_owner %}
     {% include 'images/partials/confirm_delete.html' %}
+    {% if profile_user.profile.photo %}
+      {% include 'account/partials/confirm_photo_delete.html' %}
+    {% endif %}
   {% endif %}
 
 </div>

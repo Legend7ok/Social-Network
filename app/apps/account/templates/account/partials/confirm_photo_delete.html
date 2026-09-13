@@ -1,0 +1,44 @@
+{% comment %}
+  Opened by a `confirm-photo-delete` event, like the dialog that guards
+  deleting a picture. One button opens it here rather than many, but the shape
+  is kept: the dialog sits outside the avatar, which is a small positioned
+  corner of the page, instead of growing inside it.
+{% endcomment %}
+<div x-data="{ confirming: false }"
+     @confirm-photo-delete.window="confirming = true"
+     @keydown.escape.window="confirming = false">
+  <div x-show="confirming" x-cloak
+       x-transition:enter="transition-opacity ease-out duration-200"
+       x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       x-transition:leave="transition-opacity ease-in duration-150"
+       x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+       @click.self="confirming = false"
+       class="fixed inset-0 z-50 flex items-center justify-center px-[16px] bg-black/60">
+    <div class="w-full max-w-[400px] rounded-2xl border border-white/[0.08] bg-surface-card p-[22px]">
+      <div class="flex items-start justify-between gap-[13px] mb-[9px]">
+        <h2 class="text-[17px] font-medium text-white">Remove your photo?</h2>
+        <button type="button" @click="confirming = false" aria-label="Close"
+                class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors cursor-pointer">
+          <i class="ti ti-x text-[18px]"></i>
+        </button>
+      </div>
+      <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]">
+        Your profile goes back to your initials. The picture is deleted along
+        with its thumbnails, and this cannot be undone.
+      </p>
+      <div class="flex items-center justify-end gap-[9px]">
+        <button type="button" @click="confirming = false"
+                class="px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white transition-all cursor-pointer">
+          Cancel
+        </button>
+        <form method="post" action="{% url 'profile_photo_delete' %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-red-700/50 bg-red-900/30 text-[14px] font-medium text-red-300 hover:bg-red-900/50 transition-all cursor-pointer">
+            <i class="ti ti-trash text-[15px]"></i> Remove
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
