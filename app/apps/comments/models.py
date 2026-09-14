@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.images.models import Image
@@ -61,3 +62,16 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user} on {self.image}"
+
+    def clean(self):
+        """The two things an answer may not do.
+
+        Neither can be a database constraint: both are answered by the row
+        above, and a check may only read the row being written.
+        """
+        if self.parent_id is None:
+            return
+        if self.parent.image_id != self.image_id:
+            raise ValidationError("A reply belongs under the picture it answers.")
+        if self.parent.parent_id is not None:
+            raise ValidationError("Answer the comment itself, not a reply to it.")

@@ -6,30 +6,84 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('images', '0010_recount_image_likes'),
+        ("images", "0010_recount_image_likes"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Comment',
+            name="Comment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('body', models.TextField(max_length=1000)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('removed_at', models.DateTimeField(blank=True, null=True)),
-                ('image', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='comments', to='images.image')),
-                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='replies', to='comments.comment')),
-                ('removed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='removed_comments', to=settings.AUTH_USER_MODEL)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='comments', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("body", models.TextField(max_length=1000)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("removed_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "image",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="comments",
+                        to="images.image",
+                    ),
+                ),
+                (
+                    "parent",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="replies",
+                        to="comments.comment",
+                    ),
+                ),
+                (
+                    "removed_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="removed_comments",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="comments",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(condition=models.Q(('parent__isnull', True)), fields=['image', '-created', '-id'], name='comment_roots_by_image'), models.Index(fields=['parent', 'created', 'id'], name='comment_replies_by_parent')],
-                'constraints': [models.CheckConstraint(condition=models.Q(('body', ''), _negated=True), name='comment_body_not_empty')],
+                "indexes": [
+                    models.Index(
+                        condition=models.Q(("parent__isnull", True)),
+                        fields=["image", "-created", "-id"],
+                        name="comment_roots_by_image",
+                    ),
+                    models.Index(
+                        fields=["parent", "created", "id"],
+                        name="comment_replies_by_parent",
+                    ),
+                ],
+                "constraints": [
+                    models.CheckConstraint(
+                        condition=models.Q(("body", ""), _negated=True),
+                        name="comment_body_not_empty",
+                    )
+                ],
             },
         ),
     ]
