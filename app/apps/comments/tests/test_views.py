@@ -12,6 +12,10 @@ def add_url(image):
     return reverse("comments:create", args=[image.id])
 
 
+def remove_url(comment):
+    return reverse("comments:remove", args=[comment.id])
+
+
 def write(image, author, body="Nice one", parent=None):
     return Comment.objects.create(image=image, user=author, body=body, parent=parent)
 
@@ -142,3 +146,104 @@ def test_a_comment_under_a_missing_picture_is_not_found(client, image, user):
     )
 
     assert response.status_code == 404
+
+
+def test_the_writer_takes_their_own_comment_down(client, image, second_user):
+    visitor, _ = second_user
+    comment = write(image, visitor)
+
+    response = signed_in(client, visitor).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    image.refresh_from_db()
+    assert response.status_code == 302
+    assert comment.removed_at is not None
+    assert comment.removed_by == visitor
+    assert image.total_comments == 0
+
+
+def test_the_owner_of_the_picture_takes_someone_down(client, image, user, second_user):
+    """Whoever the picture belongs to answers for what sits under it."""
+    owner, _ = user
+    visitor, _ = second_user
+    comment = write(image, visitor)
+
+    signed_in(client, owner).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert comment.removed_by == owner
+
+
+def test_a_bystander_is_not_allowed_near_it(client, image, second_user, make_user):
+    visitor, _ = second_user
+    bystander, _ = make_user("carol", "carol@example.com", "testpass321")
+    comment = write(image, visitor)
+
+    response = signed_in(client, bystander).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert response.status_code == 404
+    assert comment.removed_at is None
+
+
+def test_a_guest_cannot_take_anything_down(client, image, user):
+    author, _ = user
+    comment = write(image, author)
+
+    response = client.post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert reverse("login") in response.url
+    assert comment.removed_at is None
+
+
+def test_reading_the_removal_address_is_refused(client, image, user):
+    author, _ = user
+    comment = write(image, author)
+
+    response = signed_in(client, author).get(remove_url(comment))
+
+    assert response.status_code == 405
+
+
+def test_pressing_it_twice_keeps_the_first_record(client, image, user, second_user):
+    """A second tab or an impatient hand must not rewrite the hour, and the
+    owner of the picture must not take the blame for what its writer did."""
+    owner, _ = user
+    visitor, _ = second_user
+    comment = write(image, visitor)
+    signed_in(client, visitor).post(remove_url(comment))
+    comment.refresh_from_db()
+    first_time = comment.removed_at
+
+    signed_in(client, owner).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    image.refresh_from_db()
+    assert (comment.removed_at, comment.removed_by) == (first_time, visitor)
+    assert image.total_comments == 0
+
+
+def test_an_answer_can_be_taken_down_as_well(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    reply = write(image, answerer, body="Thanks", parent=write(image, author))
+
+    signed_in(client, answerer).post(remove_url(reply))
+
+    reply.refresh_from_db()
+    assert reply.removed_at is not None
+
+
+def test_taking_a_comment_down_leaves_its_answers_readable(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = write(image, author)
+    reply = write(image, answerer, body="Thanks", parent=root)
+
+    signed_in(client, author).post(remove_url(root))
+
+    reply.refresh_from_db()
+    assert reply.removed_at is None

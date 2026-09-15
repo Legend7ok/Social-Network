@@ -1,7 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -29,6 +31,29 @@ def comment_create(request, image_id):
         messages.error(request, form.errors.get("body", ["Nothing was posted"])[0])
 
     return redirect(image.get_absolute_url())
+
+
+@login_required
+@require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+def comment_remove(request, comment_id):
+    """Take a comment off the page - your own words, or someone else's under
+    your own picture. Anyone else's comment is a 404: there is nothing to say
+    about words that are not yours to take down."""
+    comment = get_object_or_404(
+        Comment.objects.select_related("image").filter(
+            Q(user=request.user) | Q(image__user=request.user)
+        ),
+        pk=comment_id,
+    )
+    # Pressing it twice - a second tab, a slow answer - must not move the hour
+    # it was taken down, and must not name a second person as the one who did.
+    if comment.removed_at is None:
+        comment.removed_at = timezone.now()
+        comment.removed_by = request.user
+        comment.save(update_fields=["removed_at", "removed_by"])
+
+    return redirect(comment.image.get_absolute_url())
 
 
 def _answered_comment(request, image):
