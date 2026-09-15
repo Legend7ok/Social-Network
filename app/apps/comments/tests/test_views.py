@@ -1,4 +1,5 @@
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,6 +11,10 @@ pytestmark = pytest.mark.django_db
 
 def add_url(image):
     return reverse("comments:create", args=[image.id])
+
+
+def list_url(image):
+    return reverse("comments:list", args=[image.id])
 
 
 def remove_url(comment):
@@ -247,3 +252,78 @@ def test_taking_a_comment_down_leaves_its_answers_readable(
 
     reply.refresh_from_db()
     assert reply.removed_at is None
+
+
+def test_a_guest_reads_the_conversation(client, image, user):
+    """The picture page is public and so is what people said under it."""
+    author, _ = user
+    write(image, author, body="Lovely light")
+
+    response = client.get(list_url(image))
+
+    assert response.status_code == 200
+    assert b"Lovely light" in response.content
+
+
+def test_a_page_holds_as_many_comments_as_the_setting_says(client, image, user):
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 3):
+        write(image, author, body=f"Comment {n}")
+
+    response = client.get(list_url(image))
+
+    assert response.content.count(b"<article") == settings.COMMENTS_PER_PAGE
+    assert b"hx-get" in response.content
+
+
+def test_the_cursor_carries_on_where_the_page_stopped(client, image, user):
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 1):
+        write(image, author, body=f"Comment {n}")
+
+    first = client.get(list_url(image))
+    after = first.context["next_cursor"]
+    second = client.get(list_url(image), {"after": after})
+
+    assert second.content.count(b"<article") == 1
+    # The oldest comment is the one left over: the newest came first.
+    assert b"Comment 0" in second.content
+    assert b"hx-get" not in second.content
+
+
+def test_the_end_of_the_conversation_answers_with_nothing(client, image, user):
+    """What is left can disappear between the page loading and the reader
+    reaching the bottom of it; htmx reads the empty answer as "that is all"."""
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 1):
+        write(image, author, body=f"Comment {n}")
+    after = client.get(list_url(image)).context["next_cursor"]
+    Comment.objects.filter(body="Comment 0").delete()
+
+    response = client.get(list_url(image), {"after": after})
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+def test_a_comment_taken_down_shows_a_tombstone_while_answers_remain(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = write(image, author, body="Taken down")
+    write(image, answerer, body="Still here", parent=root)
+    signed_in(client, author).post(remove_url(root))
+
+    response = client.get(list_url(image))
+
+    assert b"Taken down" not in response.content
+    assert b"Comment deleted" in response.content
+    assert b"Still here" in response.content
+
+
+def test_the_conversation_of_a_missing_picture_is_not_found(client, image):
+    missing = image.id
+    image.delete()
+
+    assert client.get(reverse("comments:list", args=[missing])).status_code == 404

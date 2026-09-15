@@ -1,0 +1,15 @@
+{% comment %}
+  Scaffolding: structure only, no design yet - steps 17-19 dress it.
+  The address is written out rather than built from the current one: this
+  partial is also rendered inside the picture's own page, where the current
+  address is the picture's.
+{% endcomment %}
+{% for comment in comments %}
+  {% include 'comments/partials/comment.html' %}
+{% endfor %}
+
+{% if next_cursor %}
+<div hx-get="{% url 'comments:list' image.id %}?after={{ next_cursor }}"
+     hx-trigger="intersect once"
+     hx-swap="outerHTML"></div>
+{% endif %}

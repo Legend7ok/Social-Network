@@ -1,5 +1,8 @@
+from django.conf import settings
 from django.db.models import Count, Exists, OuterRef, Q, Window
 from django.db.models.functions import RowNumber
+
+from core.pagination import cursor_page
 
 from .models import Comment
 
@@ -21,6 +24,17 @@ def image_comments(image):
         .select_related("user", "user__profile")
         .order_by("-created", "-id")
     )
+
+
+def comments_page(image, cursor=None):
+    """One page of the conversation, answers already hanging on it.
+
+    The page a picture opens with and every page fetched after it come from
+    here, so the two cannot drift apart.
+    """
+    page = cursor_page(image_comments(image), settings.COMMENTS_PER_PAGE, cursor=cursor)
+    attach_replies(page.rows)
+    return page
 
 
 def thread_replies(root):

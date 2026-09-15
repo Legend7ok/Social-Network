@@ -1,0 +1,20 @@
+{% load user_display %}
+<article id="comment-{{ comment.id }}">
+  {% if comment.removed_at %}
+    <p>Comment deleted</p>
+  {% else %}
+    <p>{{ comment.user|display_name }} · {{ comment.created|timesince }} ago</p>
+    <p>{{ comment.body|linebreaksbr }}</p>
+  {% endif %}
+
+  {% for reply in comment.preview_replies %}
+  <article id="comment-{{ reply.id }}">
+    <p>{{ reply.user|display_name }} · {{ reply.created|timesince }} ago</p>
+    <p>{{ reply.body|linebreaksbr }}</p>
+  </article>
+  {% endfor %}
+
+  {% if comment.more_replies %}
+  <p>{{ comment.more_replies }} more replies</p>
+  {% endif %}
+</article>

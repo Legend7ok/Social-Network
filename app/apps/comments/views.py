@@ -1,8 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -11,6 +11,26 @@ from apps.images.models import Image
 
 from .forms import CommentForm
 from .models import Comment
+from .selectors import comments_page
+
+
+def comment_list(request, image_id):
+    """The next page of the conversation under a picture.
+
+    Public, like the picture page it belongs to: a guest reads what people
+    said there, he only cannot answer.
+    """
+    image = get_object_or_404(Image, id=image_id)
+    page = comments_page(image, request.GET.get("after"))
+    # An empty answer tells htmx there is nothing more to hang on the page.
+    if not page.rows:
+        return HttpResponse("")
+
+    return render(
+        request,
+        "comments/partials/comment_rows.html",
+        {"image": image, "comments": page.rows, "next_cursor": page.next_cursor},
+    )
 
 
 @login_required
