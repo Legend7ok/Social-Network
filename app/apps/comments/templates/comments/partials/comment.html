@@ -8,13 +8,13 @@
   {% endif %}
 
   {% for reply in comment.preview_replies %}
-  <article id="comment-{{ reply.id }}">
-    <p>{{ reply.user|display_name }} · {{ reply.created|timesince }} ago</p>
-    <p>{{ reply.body|linebreaksbr }}</p>
-  </article>
+    {% include 'comments/partials/reply.html' %}
   {% endfor %}
 
   {% if comment.more_replies %}
-  <p>{{ comment.more_replies }} more replies</p>
+  <button type="button"
+          hx-get="{% url 'comments:thread' comment.id %}"
+          hx-trigger="click"
+          hx-swap="outerHTML">Show {{ comment.more_replies }} more replies</button>
   {% endif %}
 </article>

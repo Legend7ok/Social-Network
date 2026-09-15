@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.comments.models import Comment
+from apps.comments.selectors import PREVIEW_REPLIES
 from apps.images.models import Image
 
 pytestmark = pytest.mark.django_db
@@ -15,6 +16,10 @@ def add_url(image):
 
 def list_url(image):
     return reverse("comments:list", args=[image.id])
+
+
+def thread_url(comment):
+    return reverse("comments:thread", args=[comment.id])
 
 
 def remove_url(comment):
@@ -327,3 +332,101 @@ def test_the_conversation_of_a_missing_picture_is_not_found(client, image):
     image.delete()
 
     assert client.get(reverse("comments:list", args=[missing])).status_code == 404
+
+
+def thread_of(image, author, answerer, count):
+    root = write(image, author, body="Root")
+    for n in range(count):
+        write(image, answerer, body=f"Reply {n}", parent=root)
+    return root
+
+
+def test_the_thread_starts_where_the_page_stopped_showing_it(
+    client, image, user, second_user
+):
+    """The first answers are already under the comment; asking for the thread
+    must not repeat them."""
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+
+    response = client.get(thread_url(root))
+
+    assert b"Reply 0" not in response.content
+    assert b"Reply 2" in response.content
+    assert b"Reply 3" in response.content
+
+
+def test_the_thread_reads_oldest_first(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+
+    content = client.get(thread_url(root)).content
+
+    assert content.index(b"Reply 2") < content.index(b"Reply 3")
+
+
+def test_the_next_page_of_a_long_thread_is_asked_for_by_number(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(
+        image, author, answerer, PREVIEW_REPLIES + settings.REPLIES_PER_PAGE + 1
+    )
+
+    first = client.get(thread_url(root))
+    second = client.get(thread_url(root), {"page": 2})
+
+    assert first.context["has_next"] is True
+    assert second.content.count(b"<article") == 1
+    assert second.context["has_next"] is False
+
+
+def test_a_page_past_the_end_of_a_thread_answers_with_nothing(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 1)
+
+    response = client.get(thread_url(root), {"page": 5})
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+def test_answers_taken_down_stay_out_of_the_thread(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+    gone = Comment.objects.get(body="Reply 2")
+    signed_in(client, answerer).post(remove_url(gone))
+
+    response = client.get(thread_url(root))
+
+    assert b"Reply 2" not in response.content
+    assert b"Reply 3" in response.content
+
+
+def test_the_thread_of_a_comment_taken_down_is_still_readable(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 1)
+    signed_in(client, author).post(remove_url(root))
+
+    response = client.get(thread_url(root))
+
+    assert response.status_code == 200
+    assert b"Reply 2" in response.content
+
+
+def test_a_reply_has_no_thread_of_its_own(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    reply = write(image, answerer, body="Thanks", parent=write(image, author))
+
+    assert client.get(thread_url(reply)).status_code == 404

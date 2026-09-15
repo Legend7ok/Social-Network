@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +13,7 @@ from apps.images.models import Image
 
 from .forms import CommentForm
 from .models import Comment
-from .selectors import comments_page
+from .selectors import PREVIEW_REPLIES, comments_page, thread_replies
 
 
 def comment_list(request, image_id):
@@ -30,6 +32,39 @@ def comment_list(request, image_id):
         request,
         "comments/partials/comment_rows.html",
         {"image": image, "comments": page.rows, "next_cursor": page.next_cursor},
+    )
+
+
+def comment_thread(request, comment_id):
+    """The rest of a thread: everything past the answers already on the page.
+
+    Numbered pages rather than a cursor, unlike everywhere else on the site. A
+    cursor is there to keep a list that grows from the top from shifting under
+    the reader; a thread grows at the bottom, so page two stays page two.
+
+    A comment taken down keeps its thread - that is what the tombstone in its
+    place is for - so nothing here asks whether the root is still readable.
+    """
+    root = get_object_or_404(Comment, pk=comment_id, parent__isnull=True)
+    paginator = Paginator(
+        thread_replies(root)[PREVIEW_REPLIES:], settings.REPLIES_PER_PAGE
+    )
+    try:
+        page = paginator.page(request.GET.get("page"))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        return HttpResponse("")
+
+    return render(
+        request,
+        "comments/partials/reply_rows.html",
+        {
+            "root": root,
+            "replies": page.object_list,
+            "has_next": page.has_next(),
+            "next_page": page.number + 1,
+        },
     )
 
 

@@ -1,0 +1,5 @@
+{% load user_display %}
+<article id="comment-{{ reply.id }}">
+  <p>{{ reply.user|display_name }} · {{ reply.created|timesince }} ago</p>
+  <p>{{ reply.body|linebreaksbr }}</p>
+</article>
