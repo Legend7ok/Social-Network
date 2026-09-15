@@ -30,6 +30,7 @@ class Image(models.Model):
     # Views are counted in Redis and flushed here periodically; this column is
     # the durable source of truth and what the ranking page sorts by.
     total_views = models.PositiveIntegerField(default=0)
+    total_comments = models.PositiveIntegerField(default=0)
     # A generated column keeps the vector in sync even when rows are written
     # outside the model (bulk updates, data migrations, admin actions).
     search_vector = models.GeneratedField(
