@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from apps.images.models import Image
 
@@ -12,6 +13,7 @@ from .models import Comment
 
 @login_required
 @require_POST
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
 def comment_create(request, image_id):
     """Say something under a picture, or answer someone who already did."""
     image = get_object_or_404(Image, id=image_id)
