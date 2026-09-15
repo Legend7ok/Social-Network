@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
+from apps.actions.models import Action
+from apps.actions.utils import create_action
 from apps.images.models import Image
 
 from .forms import CommentForm
@@ -81,7 +83,13 @@ def comment_create(request, image_id):
     form.instance.image = image
     form.instance.parent = parent
     if form.is_valid():
-        form.save()
+        comment = form.save()
+        # Answers stay off the feed - they are the fabric of one conversation,
+        # and a busy thread would push everyone else off the page. Commenting
+        # on your own picture is not news either: an author answering twenty
+        # people would otherwise hold the whole feed to himself.
+        if parent is None and image.user_id != request.user.id:
+            create_action(request.user, Action.Verb.COMMENTED_IMAGE, comment)
     else:
         messages.error(request, form.errors.get("body", ["Nothing was posted"])[0])
 
