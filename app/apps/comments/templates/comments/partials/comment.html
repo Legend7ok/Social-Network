@@ -1,8 +1,8 @@
 {% load user_display %}
 {% comment %}
-  One comment with its thread and its answer box. Only a member answers, and
-  only a comment still on the page: under a tombstone the thread stays
-  readable but closed.
+  One comment with its thread and its answer box. Only a member answers - a
+  guest's Reply opens the sign-in dialog instead - and only a comment still
+  on the page: under a tombstone the thread stays readable but closed.
 {% endcomment %}
 <article id="comment-{{ comment.id }}" class="flex gap-[13px]"
          {% if request.user.is_authenticated and not comment.removed_at %}x-data="replyBox"{% endif %}>
@@ -38,6 +38,12 @@
         </button>
         {% endif %}
       </div>
+      {% else %}
+      <button type="button"
+              @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.' })"
+              class="mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+        Reply
+      </button>
       {% endif %}
     {% endif %}
 

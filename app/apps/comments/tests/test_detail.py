@@ -91,7 +91,22 @@ def test_a_member_can_answer_a_comment_and_its_replies(
     assert f'name="parent" value="{root.id}"' in content
 
 
-def test_a_guest_gets_no_reply_buttons(client, image, user, second_user):
+SIGN_IN_PROMPT = "$dispatch('auth-required'"
+
+
+def test_a_guest_is_invited_to_sign_in_where_the_form_would_be(client, image):
+    """The same dialog the like and follow buttons open for a guest: the
+    request is never sent, the press is answered instead."""
+    content = client.get(detail_url(image)).content.decode()
+
+    assert "Add a comment" in content
+    assert SIGN_IN_PROMPT in content
+    assert 'name="body"' not in content
+
+
+def test_a_guests_reply_buttons_open_the_sign_in_dialog(
+    client, image, user, second_user
+):
     author, _ = user
     answerer, _ = second_user
     root = Comment.objects.create(image=image, user=author, body="Root")
@@ -101,6 +116,33 @@ def test_a_guest_gets_no_reply_buttons(client, image, user, second_user):
 
     assert "Thanks" in content
     assert "open(" not in content
+    # One for the field, one for the comment, one for its answer.
+    assert content.count(SIGN_IN_PROMPT) == 3
+
+
+def test_a_member_is_never_sent_to_the_sign_in_dialog(client, image, user):
+    author, _ = user
+    Comment.objects.create(image=image, user=author, body="Root")
+    client.force_login(author)
+
+    content = client.get(detail_url(image)).content.decode()
+
+    assert SIGN_IN_PROMPT not in content
+
+
+def test_a_session_run_out_is_answered_with_401_rather_than_the_sign_in_page(
+    client, image, user
+):
+    """Without this the redirect was followed inside the htmx request, and the
+    whole sign-in page landed where the fresh form was meant to go."""
+    author, _ = user
+    comment = Comment.objects.create(image=image, user=author, body="Root")
+
+    posted = client.post(add_url(image), {"body": "Hello"}, **HTMX)
+    removed = client.post(reverse("comments:remove", args=[comment.id]), **HTMX)
+
+    assert (posted.status_code, removed.status_code) == (401, 401)
+    assert Comment.objects.count() == 1
 
 
 def test_a_tombstone_takes_no_answers(client, image, user, second_user):
@@ -118,6 +160,11 @@ def test_a_tombstone_takes_no_answers(client, image, user, second_user):
     assert "Thanks" in content
     assert "open(" not in content
     assert 'name="parent"' not in content
+
+    client.logout()
+    guest_content = client.get(detail_url(image)).content.decode()
+    # Only the field invites a guest in; nothing under the tombstone does.
+    assert guest_content.count(SIGN_IN_PROMPT) == 1
 
 
 def test_an_answer_sent_by_htmx_redraws_its_whole_thread(

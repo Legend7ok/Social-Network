@@ -16,6 +16,15 @@
   {% if request.user.is_authenticated %}
     {% include 'comments/partials/form.html' with form=comment_form %}
     {% include 'comments/partials/confirm_removal.html' %}
+  {% else %}
+    {% comment %}Looks like the field a member writes in, so a guest sees
+    where the conversation would start; pressing it answers with the same
+    sign-in dialog the like and follow buttons open.{% endcomment %}
+    <button type="button"
+            @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.' })"
+            class="w-full mb-[22px] text-left bg-surface-input border border-white/[0.15] rounded-xl text-[14px] text-[#5E5C6A] px-[18px] py-[11px] hover:border-white/[0.3] transition-colors">
+      Add a comment
+    </button>
   {% endif %}
 
   <div id="comments-list" class="flex flex-col gap-[18px]">

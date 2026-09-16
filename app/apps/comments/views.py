@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.http import Http404, HttpResponse
@@ -12,6 +11,7 @@ from django_ratelimit.decorators import ratelimit
 from apps.actions.models import Action
 from apps.actions.utils import create_action
 from apps.images.models import Image
+from core.decorators import login_required_for_htmx
 
 from .forms import CommentForm
 from .models import Comment
@@ -84,7 +84,7 @@ def comment_thread(request, comment_id):
     )
 
 
-@login_required
+@login_required_for_htmx
 @require_POST
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 def comment_create(request, image_id):
@@ -155,7 +155,7 @@ def comment_create(request, image_id):
     )
 
 
-@login_required
+@login_required_for_htmx
 @require_POST
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 def comment_remove(request, comment_id):
