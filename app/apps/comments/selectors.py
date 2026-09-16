@@ -48,6 +48,18 @@ def thread_replies(root):
     )
 
 
+def attach_whole_thread(root):
+    """The attributes `attach_replies` hangs on a comment, holding every
+    readable answer instead of the first few.
+
+    For redrawing a thread after something changed inside it: past the answers
+    the page shows, the rest is sliced off by number, and a change among the
+    first ones would shift an answer across that line and out of sight.
+    """
+    root.preview_replies = list(thread_replies(root))
+    root.more_replies = 0
+
+
 def attach_replies(roots):
     """Hang the first few answers on every comment of the page, with the
     number left unread behind them.

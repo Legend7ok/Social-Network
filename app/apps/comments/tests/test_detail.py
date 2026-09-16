@@ -165,6 +165,111 @@ def test_a_refused_answer_comes_back_as_the_answer_box(
     assert 'x-init="close()"' not in content
 
 
+def remove_url(comment):
+    return reverse("comments:remove", args=[comment.id])
+
+
+def delete_buttons(content):
+    return content.count("confirm-comment-removal', {")
+
+
+def test_delete_is_offered_to_the_writer_and_to_the_owner_of_the_picture(
+    client, image, user, second_user, make_user
+):
+    owner, _ = user
+    visitor, _ = second_user
+    bystander, _ = make_user("carol", "carol@example.com", "testpass321")
+    Comment.objects.create(image=image, user=visitor, body="Lovely light")
+
+    def page_seen_by(person):
+        client.logout()
+        if person:
+            client.force_login(person)
+        return client.get(detail_url(image)).content.decode()
+
+    owner_page = page_seen_by(owner)
+    visitor_page = page_seen_by(visitor)
+    bystander_page = page_seen_by(bystander)
+    guest_page = page_seen_by(None)
+
+    assert delete_buttons(owner_page) == 1
+    assert delete_buttons(visitor_page) == 1
+    assert delete_buttons(bystander_page) == 0
+    assert delete_buttons(guest_page) == 0
+
+
+def test_a_removed_comment_without_answers_comes_back_as_nothing(
+    client, image, second_user
+):
+    """The empty answer is what takes it off the page, and the count follows."""
+    visitor, _ = second_user
+    comment = Comment.objects.create(image=image, user=visitor, body="Lovely light")
+    client.force_login(visitor)
+
+    content = client.post(remove_url(comment), **HTMX).content.decode()
+
+    assert "<article" not in content
+    assert '<span id="comments-count" hx-swap-oob="true">0</span>' in content
+
+
+def test_a_removed_comment_with_answers_comes_back_as_a_tombstone(
+    client, image, user, second_user
+):
+    owner, _ = user
+    visitor, _ = second_user
+    root = Comment.objects.create(image=image, user=visitor, body="Taken down")
+    Comment.objects.create(image=image, user=owner, body="Still here", parent=root)
+    client.force_login(visitor)
+
+    content = client.post(remove_url(root), **HTMX).content.decode()
+
+    assert f'id="comment-{root.id}"' in content
+    assert "Comment deleted" in content
+    assert "Taken down" not in content
+    assert "Still here" in content
+
+
+def test_a_removed_answer_redraws_its_comment_with_the_whole_thread(
+    client, image, user, second_user
+):
+    """Answers past the first ones are sliced off by number. Take one of the
+    first away and the next would slip past that line unseen - unless the
+    thread comes back whole."""
+    owner, _ = user
+    visitor, _ = second_user
+    root = Comment.objects.create(image=image, user=owner, body="Root")
+    answers = [
+        Comment.objects.create(
+            image=image, user=visitor, body=f"Answer {n}", parent=root
+        )
+        for n in range(5)
+    ]
+    client.force_login(visitor)
+
+    content = client.post(remove_url(answers[0]), **HTMX).content.decode()
+
+    assert f'id="comment-{root.id}"' in content
+    assert "Answer 0" not in content
+    assert all(f"Answer {n}" in content for n in range(1, 5))
+    assert "more replies" not in content
+
+
+def test_the_last_answer_under_a_tombstone_takes_the_tombstone_along(
+    client, image, user, second_user
+):
+    owner, _ = user
+    visitor, _ = second_user
+    root = Comment.objects.create(image=image, user=visitor, body="Taken down")
+    answer = Comment.objects.create(image=image, user=owner, body="Last", parent=root)
+    client.force_login(visitor)
+    client.post(remove_url(root), **HTMX)
+    client.force_login(owner)
+
+    content = client.post(remove_url(answer), **HTMX).content.decode()
+
+    assert "<article" not in content
+
+
 def test_the_plain_form_still_goes_back_to_the_picture(client, image, second_user):
     """Without JavaScript the same address answers the way it always did."""
     visitor, _ = second_user

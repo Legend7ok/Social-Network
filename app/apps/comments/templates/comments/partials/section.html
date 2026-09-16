@@ -15,6 +15,7 @@
 
   {% if request.user.is_authenticated %}
     {% include 'comments/partials/form.html' with form=comment_form %}
+    {% include 'comments/partials/confirm_removal.html' %}
   {% endif %}
 
   <div id="comments-list" class="flex flex-col gap-[18px]">

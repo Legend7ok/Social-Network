@@ -11,11 +11,27 @@
       <span class="text-[12px] text-[#5E5C6A] shrink-0">{{ reply.created|timesince }} ago</span>
     </div>
     <p class="mt-[3px] text-[14px] text-[#9896A4] leading-relaxed break-words">{{ reply.body|linebreaksbr }}</p>
-    {% if request.user.is_authenticated and not root.removed_at %}
+    {% comment %}
+      Deleting an answer redraws the whole comment it sits under, not just
+      the answer: the thread is sliced by number past its first answers, and
+      one of those gone would push the next across the line and out of sight.
+    {% endcomment %}
+    {% if request.user.is_authenticated %}
+    <div class="mt-[5px] flex items-center gap-[13px]">
+      {% if not root.removed_at %}
       <button type="button" @click="open('{{ reply.user.username|escapejs }}')"
-              class="mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+              class="text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
         Reply
       </button>
+      {% endif %}
+      {% if request.user.id == reply.user_id or request.user.id == image.user_id %}
+      <button type="button"
+              @click="$dispatch('confirm-comment-removal', { url: '{% url 'comments:remove' reply.id %}', target: '#comment-{{ root.id }}' })"
+              class="text-[13px] text-[#5E5C6A] hover:text-red-400 transition-colors">
+        Delete
+      </button>
+      {% endif %}
+    </div>
     {% endif %}
   </div>
 </article>

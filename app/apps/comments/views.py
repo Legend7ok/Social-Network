@@ -18,6 +18,7 @@ from .models import Comment
 from .selectors import (
     PREVIEW_REPLIES,
     attach_replies,
+    attach_whole_thread,
     comments_page,
     thread_replies,
 )
@@ -57,7 +58,9 @@ def comment_thread(request, comment_id):
     A comment taken down keeps its thread - that is what the tombstone in its
     place is for - so nothing here asks whether the root is still readable.
     """
-    root = get_object_or_404(Comment, pk=comment_id, parent__isnull=True)
+    root = get_object_or_404(
+        Comment.objects.select_related("image"), pk=comment_id, parent__isnull=True
+    )
     paginator = Paginator(
         thread_replies(root)[PREVIEW_REPLIES:], settings.REPLIES_PER_PAGE
     )
@@ -72,6 +75,7 @@ def comment_thread(request, comment_id):
         request,
         "comments/partials/reply_rows.html",
         {
+            "image": root.image,
             "root": root,
             "replies": page.object_list,
             "has_next": page.has_next(),
@@ -157,13 +161,19 @@ def comment_create(request, image_id):
 def comment_remove(request, comment_id):
     """Take a comment off the page - your own words, or someone else's under
     your own picture. Anyone else's comment is a 404: there is nothing to say
-    about words that are not yours to take down."""
+    about words that are not yours to take down.
+
+    htmx gets the comment the removal happened in, redrawn: the comment itself
+    or the one an answer sat under. It comes back as a tombstone while answers
+    remain under it, and as nothing once none do.
+    """
     comment = get_object_or_404(
-        Comment.objects.select_related("image").filter(
+        Comment.objects.select_related("image", "parent").filter(
             Q(user=request.user) | Q(image__user=request.user)
         ),
         pk=comment_id,
     )
+    image = comment.image
     # Pressing it twice - a second tab, a slow answer - must not move the hour
     # it was taken down, and must not name a second person as the one who did.
     if comment.removed_at is None:
@@ -171,7 +181,27 @@ def comment_remove(request, comment_id):
         comment.removed_by = request.user
         comment.save(update_fields=["removed_at", "removed_by"])
 
-    return redirect(comment.image.get_absolute_url())
+    if request.headers.get("HX-Request") != "true":
+        return redirect(image.get_absolute_url())
+
+    if comment.parent_id is None:
+        root = comment
+        attach_replies([root])
+    else:
+        root = comment.parent
+        attach_whole_thread(root)
+    image.refresh_from_db(fields=["total_comments"])
+
+    return render(
+        request,
+        "comments/partials/removed.html",
+        {
+            "image": image,
+            "comment": root,
+            "show_root": root.removed_at is None or bool(root.preview_replies),
+            "comment_form": CommentForm(),
+        },
+    )
 
 
 def _answered_comment(request, image):

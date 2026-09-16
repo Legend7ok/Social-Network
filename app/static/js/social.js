@@ -127,16 +127,55 @@ document.addEventListener('alpine:init', () => {
   }));
 
   /**
-   * htmx swaps in only the answers that went through, so a refused comment
-   * would otherwise leave the form sitting there as if nothing happened.
+   * htmx swaps in only the answers that went through, so a refused request
+   * would otherwise leave the page sitting there as if nothing happened.
    */
-  Alpine.data('commentForm', () => ({
+  const htmxRefusals = {
     refused(status) {
       announce(explainRefusal(status) ?? 'Something went wrong. Please try again.');
     },
 
     offline() {
       announce('No connection. Please try again.');
+    },
+  };
+
+  Alpine.data('commentForm', () => ({ ...htmxRefusals }));
+
+  /**
+   * One dialog for every comment on the page, told what to take down by the
+   * `confirm-comment-removal` event its Delete button sends. The request goes
+   * out from the dialog's own button, so the refusals above bubble up to it.
+   */
+  Alpine.data('commentRemoval', () => ({
+    ...htmxRefusals,
+    confirming: false,
+    busy: false,
+    url: '',
+    target: '',
+
+    ask({ url, target }) {
+      this.url = url;
+      this.target = target;
+      this.confirming = true;
+    },
+
+    async confirm() {
+      if (this.busy) return;
+      this.busy = true;
+      try {
+        await htmx.ajax('POST', this.url, {
+          source: this.$refs.confirm,
+          target: this.target,
+          swap: 'outerHTML',
+          headers: { 'X-CSRFToken': Alpine.store('csrf') },
+        });
+      } catch {
+        // A request that never arrived was already announced by offline().
+      } finally {
+        this.busy = false;
+        this.confirming = false;
+      }
     },
   }));
 
