@@ -1,13 +1,14 @@
 {% comment %}
   The conversation under a picture. Narrower than the page on purpose: a line
-  of text across the whole width is hard to read, and the block keeps to the
-  edge of the picture column above it.
+  of text across the whole width is hard to read. 640px is the width of the
+  picture column above it on a wide screen, so the two share an edge, and it
+  holds about seventy characters to a line - the comfortable end for reading.
 
   The empty line sits inside the list and shows only while it is the list's
   one child, so it disappears the moment a comment arrives and comes back
   when the last one is taken down - without a word from the server.
 {% endcomment %}
-<section id="comments" class="max-w-[720px]">
+<section id="comments" class="max-w-[640px]">
   <div class="h-px bg-white/[0.08] mb-[22px]"></div>
   <p class="text-[13px] text-[#5E5C6A] mb-[13px] uppercase tracking-widest">
     Comments · <span data-comments-count>{{ image.total_comments }}</span>
@@ -22,7 +23,7 @@
     sign-in dialog the like and follow buttons open.{% endcomment %}
     <button type="button"
             @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.' })"
-            class="w-full mb-[22px] text-left bg-surface-input border border-white/[0.15] rounded-xl text-[14px] text-[#5E5C6A] px-[18px] py-[11px] hover:border-white/[0.3] transition-colors">
+            class="w-full mb-[22px] text-left bg-surface-input border border-white/[0.15] rounded-xl text-[16px] sm:text-[14px] text-[#5E5C6A] px-[18px] py-[11px] hover:border-white/[0.3] transition-colors">
       Add a comment
     </button>
   {% endif %}

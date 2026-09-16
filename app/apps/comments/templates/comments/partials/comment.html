@@ -27,13 +27,13 @@
       {% if request.user.is_authenticated %}
       <div class="mt-[5px] flex items-center gap-[13px]">
         <button type="button" @click="open('{{ comment.user.username|escapejs }}')"
-                class="text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+                class="tap-area text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
           Reply
         </button>
         {% if request.user.id == comment.user_id or request.user.id == image.user_id %}
         <button type="button"
                 @click="$dispatch('confirm-comment-removal', { url: '{% url 'comments:remove' comment.id %}', target: '#comment-{{ comment.id }}' })"
-                class="text-[13px] text-[#5E5C6A] hover:text-red-400 transition-colors">
+                class="tap-area text-[13px] text-[#5E5C6A] hover:text-red-400 transition-colors">
           Delete
         </button>
         {% endif %}
@@ -41,7 +41,7 @@
       {% else %}
       <button type="button"
               @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.' })"
-              class="mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+              class="tap-area mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
         Reply
       </button>
       {% endif %}

@@ -30,7 +30,9 @@
   {% else %}
     <i class="ti ti-photo text-[33px] text-[#5E5C6A]"></i>
   {% endif %}
-  <div class="absolute inset-0 bg-surface-page/65 flex items-center justify-center gap-[13px] opacity-0 group-hover:opacity-100 transition-opacity">
+  {% comment %}Three numbers do not fit side by side on a phone-sized tile,
+  so they wrap onto a second line there instead of running off its edges.{% endcomment %}
+  <div class="absolute inset-0 px-[7px] bg-surface-page/65 flex flex-wrap content-center items-center justify-center gap-x-[9px] gap-y-[5px] sm:gap-[13px] opacity-0 group-hover:opacity-100 transition-opacity">
     <span class="text-white text-[13px] flex items-center gap-[7px]">
       <i class="ti ti-heart"></i> {{ image.total_likes }}
     </span>

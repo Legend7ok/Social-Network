@@ -24,7 +24,7 @@
             aria-label="Reply"
             placeholder="Write a reply"
             x-model="draft"
-            class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors resize-none leading-relaxed
+            class="w-full bg-surface-input border rounded-xl text-white text-[16px] sm:text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors resize-none leading-relaxed
                    {% if form.body.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"></textarea>
   {% for error in form.body.errors %}
     <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>

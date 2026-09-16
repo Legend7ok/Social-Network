@@ -17,7 +17,7 @@
           hx-get="{% url 'comments:thread' root.id %}"
           hx-swap="outerHTML"
           hx-disabled-elt="this"
-          class="self-start text-[13px] text-brand-light hover:underline disabled:opacity-60">
+          class="tap-area self-start text-[13px] text-brand-light hover:underline disabled:opacity-60">
     Show {{ more_replies }} more {{ more_replies|pluralize:"reply,replies" }}
   </button>
   {% endif %}
