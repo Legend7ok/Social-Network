@@ -1,0 +1,32 @@
+{% comment %}
+  The conversation under a picture. Narrower than the page on purpose: a line
+  of text across the whole width is hard to read, and the block keeps to the
+  edge of the picture column above it.
+
+  The empty line sits inside the list and shows only while it is the list's
+  one child, so it disappears the moment a comment arrives and comes back
+  when the last one is taken down - without a word from the server.
+{% endcomment %}
+<section id="comments" class="max-w-[720px]">
+  <div class="h-px bg-white/[0.08] mb-[22px]"></div>
+  <p class="text-[13px] text-[#5E5C6A] mb-[13px] uppercase tracking-widest">
+    Comments · <span id="comments-count">{{ image.total_comments }}</span>
+  </p>
+
+  {% if request.user.is_authenticated %}
+    {% include 'comments/partials/form.html' with form=comment_form %}
+  {% endif %}
+
+  <div id="comments-list" class="flex flex-col gap-[18px]">
+    {% include 'comments/partials/comment_rows.html' %}
+    <p class="hidden only:block text-[14px] text-[#5E5C6A] italic">No comments yet.</p>
+  </div>
+
+  <div id="comments-loading" class="htmx-indicator flex justify-center py-[18px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
+</section>

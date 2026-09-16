@@ -153,6 +153,8 @@
 
   {% include 'images/partials/liked_by.html' %}
 
+  {% include 'comments/partials/section.html' %}
+
   {% if request.user == image.user %}
     {% include 'images/partials/confirm_delete.html' %}
   {% endif %}

@@ -1,0 +1,13 @@
+{% comment %}
+  The answer to a comment that went through. The form swaps itself for a
+  fresh one; the two pieces below are carried out of band - htmx places each
+  by its own id, the new comment on top of the list and the count over the
+  old one.
+{% endcomment %}
+{% include 'comments/partials/form.html' %}
+
+<div hx-swap-oob="afterbegin:#comments-list">
+  {% include 'comments/partials/comment.html' %}
+</div>
+
+<span id="comments-count" hx-swap-oob="true">{{ image.total_comments }}</span>

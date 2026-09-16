@@ -15,7 +15,12 @@ from apps.images.models import Image
 
 from .forms import CommentForm
 from .models import Comment
-from .selectors import PREVIEW_REPLIES, comments_page, thread_replies
+from .selectors import (
+    PREVIEW_REPLIES,
+    attach_replies,
+    comments_page,
+    thread_replies,
+)
 
 
 def comment_list(request, image_id):
@@ -74,26 +79,50 @@ def comment_thread(request, comment_id):
 @require_POST
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 def comment_create(request, image_id):
-    """Say something under a picture, or answer someone who already did."""
+    """Say something under a picture, or answer someone who already did.
+
+    One address for both kinds of form. A plain one goes back to the picture,
+    the way any form does. htmx gets a fresh form in place of the one it sent,
+    with the new comment and the new count carried alongside for the page to
+    put where they belong.
+    """
     image = get_object_or_404(Image, id=image_id)
     parent = _answered_comment(request, image)
+    from_htmx = request.headers.get("HX-Request") == "true"
 
     form = CommentForm(request.POST)
     form.instance.user = request.user
     form.instance.image = image
     form.instance.parent = parent
-    if form.is_valid():
-        comment = form.save()
-        # Answers stay off the feed - they are the fabric of one conversation,
-        # and a busy thread would push everyone else off the page. Commenting
-        # on your own picture is not news either: an author answering twenty
-        # people would otherwise hold the whole feed to himself.
-        if parent is None and image.user_id != request.user.id:
-            create_action(request.user, Action.Verb.COMMENTED_IMAGE, comment)
-    else:
+    if not form.is_valid():
+        if from_htmx:
+            return render(
+                request,
+                "comments/partials/form.html",
+                {"image": image, "form": form},
+            )
         messages.error(request, form.errors.get("body", ["Nothing was posted"])[0])
+        return redirect(image.get_absolute_url())
 
-    return redirect(image.get_absolute_url())
+    comment = form.save()
+    # Answers stay off the feed - they are the fabric of one conversation, and
+    # a busy thread would push everyone else off the page. Commenting on your
+    # own picture is not news either: an author answering twenty people would
+    # otherwise hold the whole feed to himself.
+    if parent is None and image.user_id != request.user.id:
+        create_action(request.user, Action.Verb.COMMENTED_IMAGE, comment)
+
+    if not from_htmx:
+        return redirect(image.get_absolute_url())
+
+    attach_replies([comment])
+    # The signal moved the counter in the database, not on this copy.
+    image.refresh_from_db(fields=["total_comments"])
+    return render(
+        request,
+        "comments/partials/posted.html",
+        {"image": image, "comment": comment, "form": CommentForm()},
+    )
 
 
 @login_required

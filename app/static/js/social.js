@@ -1,5 +1,6 @@
 /**
- * The buttons on a picture and on a person: like, follow, share.
+ * The buttons on a picture and on a person: like, follow, share - and the
+ * form a comment is written in.
  *
  * The first two live on several pages each — the image page, the feed cards,
  * the people cards, the profile header — and every one of them used to carry
@@ -13,6 +14,20 @@
 document.addEventListener('alpine:init', () => {
   function announce(text, tone = 'error') {
     Alpine.store('messages').push({ text, tone });
+  }
+
+  /**
+   * The words for a request the server turned away, shared by every button
+   * and form so the same refusal never reads two different ways.
+   */
+  function explainRefusal(status) {
+    if (status === 429) return 'Too many requests. Please slow down.';
+    // The session ran out while the page stayed open. Saying so beats a
+    // control that quietly stops working.
+    if (status === 401 || status === 403) {
+      return 'Your session has expired. Reload the page and try again.';
+    }
+    return null;
   }
 
   /**
@@ -37,15 +52,9 @@ document.addEventListener('alpine:init', () => {
       return false;
     }
 
-    if (res.status === 429) {
-      announce('Too many requests. Please slow down.');
-      return false;
-    }
-
-    // The session ran out while the page stayed open. Saying so beats a button
-    // that quietly stops working.
-    if (res.status === 401 || res.status === 403) {
-      announce('Your session has expired. Reload the page and try again.');
+    const refusal = explainRefusal(res.status);
+    if (refusal) {
+      announce(refusal);
       return false;
     }
 
@@ -114,6 +123,20 @@ document.addEventListener('alpine:init', () => {
       } finally {
         this.busy = false;
       }
+    },
+  }));
+
+  /**
+   * htmx swaps in only the answers that went through, so a refused comment
+   * would otherwise leave the form sitting there as if nothing happened.
+   */
+  Alpine.data('commentForm', () => ({
+    refused(status) {
+      announce(explainRefusal(status) ?? 'Something went wrong. Please try again.');
+    },
+
+    offline() {
+      announce('No connection. Please try again.');
     },
   }));
 

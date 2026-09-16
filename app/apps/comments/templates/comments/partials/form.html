@@ -1,0 +1,36 @@
+{% comment %}
+  Works as a plain form without JavaScript; with it, htmx sends it and puts
+  the answer - this same form, fresh or with its error - in its place.
+  A refusal (too many comments, an expired session) is not swapped in at all,
+  so commentForm says it in words instead.
+{% endcomment %}
+<form method="post"
+      action="{% url 'comments:create' image.id %}"
+      hx-post="{% url 'comments:create' image.id %}"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-disabled-elt="find button"
+      x-data="commentForm"
+      @htmx:response-error.camel="refused($event.detail.xhr.status)"
+      @htmx:send-error.camel="offline()"
+      class="mb-[22px]">
+  {% csrf_token %}
+  <textarea name="body" rows="3" required
+            maxlength="{{ form.body.field.max_length }}"
+            aria-label="Comment"
+            placeholder="Add a comment"
+            class="w-full bg-surface-input border rounded-xl text-white text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors resize-none leading-relaxed
+                   {% if form.body.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}">{{ form.body.value|default:'' }}</textarea>
+  {% for error in form.body.errors %}
+    <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
+  {% endfor %}
+
+  <div class="flex justify-end mt-[9px]">
+    <button type="submit"
+            class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl bg-brand text-[14px] font-medium text-white hover:bg-brand-dark disabled:opacity-60 transition-colors">
+      <i class="ti ti-send text-[15px] [.htmx-request_&]:hidden"></i>
+      <i class="ti ti-loader-2 animate-spin text-[15px] hidden [.htmx-request_&]:inline-block"></i>
+      Post
+    </button>
+  </div>
+</form>

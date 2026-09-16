@@ -1,20 +1,34 @@
 {% load user_display %}
-<article id="comment-{{ comment.id }}">
+<article id="comment-{{ comment.id }}" class="flex gap-[13px]">
   {% if comment.removed_at %}
-    <p>Comment deleted</p>
+    <div class="w-[35px] h-[35px] rounded-full bg-surface-input border border-white/[0.08] shrink-0"></div>
   {% else %}
-    <p>{{ comment.user|display_name }} · {{ comment.created|timesince }} ago</p>
-    <p>{{ comment.body|linebreaksbr }}</p>
+    {% include 'comments/partials/avatar.html' with person=comment.user %}
   {% endif %}
 
-  {% for reply in comment.preview_replies %}
-    {% include 'comments/partials/reply.html' %}
-  {% endfor %}
+  <div class="min-w-0 flex-1">
+    {% if comment.removed_at %}
+      <p class="text-[14px] text-[#5E5C6A] italic leading-[35px]">Comment deleted</p>
+    {% else %}
+      <div class="flex items-baseline gap-[9px] min-w-0">
+        <a href="{% url 'user_detail' comment.user.username %}"
+           class="text-[14px] font-medium text-white hover:text-brand-light transition-colors truncate">
+          {{ comment.user|display_name }}
+        </a>
+        <span class="text-[12px] text-[#5E5C6A] shrink-0">{{ comment.created|timesince }} ago</span>
+      </div>
+      <p class="mt-[3px] text-[15px] text-[#9896A4] leading-relaxed break-words">{{ comment.body|linebreaksbr }}</p>
+    {% endif %}
 
-  {% if comment.more_replies %}
-  <button type="button"
-          hx-get="{% url 'comments:thread' comment.id %}"
-          hx-trigger="click"
-          hx-swap="outerHTML">Show {{ comment.more_replies }} more replies</button>
-  {% endif %}
+    {% for reply in comment.preview_replies %}
+      {% include 'comments/partials/reply.html' %}
+    {% endfor %}
+
+    {% if comment.more_replies %}
+    <button type="button"
+            hx-get="{% url 'comments:thread' comment.id %}"
+            hx-trigger="click"
+            hx-swap="outerHTML">Show {{ comment.more_replies }} more replies</button>
+    {% endif %}
+  </div>
 </article>
