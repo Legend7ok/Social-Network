@@ -8,6 +8,11 @@ pytestmark = pytest.mark.django_db
 HTMX = {"HTTP_HX_REQUEST": "true"}
 
 
+def count_update(number):
+    """The count a response carries into every spot on the page marked for it."""
+    return f'<span hx-swap-oob="innerHTML:[data-comments-count]">{number}</span>'
+
+
 def detail_url(image):
     return reverse("images:detail", args=[image.id, image.slug])
 
@@ -23,7 +28,8 @@ def test_a_guest_reads_the_comments_but_gets_no_form(client, image, user):
     response = client.get(detail_url(image))
 
     assert b"Lovely light" in response.content
-    assert b'id="comments-count">1<' in response.content
+    # The button by the picture and the heading of the block.
+    assert response.content.count(b"<span data-comments-count>1</span>") == 2
     assert b'name="body"' not in response.content
 
 
@@ -56,7 +62,7 @@ def test_a_comment_sent_by_htmx_comes_back_ready_to_be_placed(
     assert response.status_code == 200
     assert 'hx-swap-oob="afterbegin:#comments-list"' in content
     assert "Lovely light" in content
-    assert '<span id="comments-count" hx-swap-oob="true">1</span>' in content
+    assert count_update(1) in content
     assert "<textarea" in content and "Lovely light</textarea>" not in content
 
 
@@ -193,7 +199,7 @@ def test_an_answer_sent_by_htmx_redraws_its_whole_thread(
     assert content.index("Earlier 3") < content.index("@alice agreed")
     assert "more replies" not in content
     assert 'x-init="close()"' in content
-    assert '<span id="comments-count" hx-swap-oob="true">6</span>' in content
+    assert count_update(6) in content
 
 
 def test_a_refused_answer_comes_back_as_the_answer_box(
@@ -256,7 +262,7 @@ def test_a_removed_comment_without_answers_comes_back_as_nothing(
     content = client.post(remove_url(comment), **HTMX).content.decode()
 
     assert "<article" not in content
-    assert '<span id="comments-count" hx-swap-oob="true">0</span>' in content
+    assert count_update(0) in content
 
 
 def test_a_removed_comment_with_answers_comes_back_as_a_tombstone(

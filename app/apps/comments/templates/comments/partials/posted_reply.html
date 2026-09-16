@@ -6,4 +6,4 @@
 
 {% include 'comments/partials/thread.html' with more_replies=0 oob=True %}
 
-<span id="comments-count" hx-swap-oob="true">{{ image.total_comments }}</span>
+<span hx-swap-oob="innerHTML:[data-comments-count]">{{ image.total_comments }}</span>

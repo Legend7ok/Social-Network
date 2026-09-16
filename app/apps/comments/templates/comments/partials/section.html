@@ -10,7 +10,7 @@
 <section id="comments" class="max-w-[720px]">
   <div class="h-px bg-white/[0.08] mb-[22px]"></div>
   <p class="text-[13px] text-[#5E5C6A] mb-[13px] uppercase tracking-widest">
-    Comments · <span id="comments-count">{{ image.total_comments }}</span>
+    Comments · <span data-comments-count>{{ image.total_comments }}</span>
   </p>
 
   {% if request.user.is_authenticated %}

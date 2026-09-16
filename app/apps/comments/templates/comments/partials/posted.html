@@ -1,8 +1,8 @@
 {% comment %}
   The answer to a comment that went through. The form swaps itself for a
-  fresh one; the two pieces below are carried out of band - htmx places each
-  by its own id, the new comment on top of the list and the count over the
-  old one.
+  fresh one; the two pieces below are carried out of band - htmx places the
+  new comment on top of the list, and the count into every spot on the page
+  marked to hold it: the button by the picture and the heading of this block.
 {% endcomment %}
 {% include 'comments/partials/form.html' %}
 
@@ -10,4 +10,4 @@
   {% include 'comments/partials/comment.html' %}
 </div>
 
-<span id="comments-count" hx-swap-oob="true">{{ image.total_comments }}</span>
+<span hx-swap-oob="innerHTML:[data-comments-count]">{{ image.total_comments }}</span>

@@ -52,6 +52,13 @@
           <i class="ti ti-eye text-[17px]"></i>
           <span>{{ total_views|floatformat:"-1" }}</span>
         </div>
+        {% comment %}Pressable, unlike the views beside it, so it wears the
+        button border: it takes the reader down to the conversation.{% endcomment %}
+        <a href="#comments"
+           class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+          <i class="ti ti-message-circle text-[17px]"></i>
+          <span data-comments-count>{{ image.total_comments }}</span>
+        </a>
         <button x-data="shareButton('{{ image.title|escapejs }}')" @click="share()"
                 class="flex items-center gap-[9px] px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
           <i class="ti ti-share text-[17px]"></i> Share
