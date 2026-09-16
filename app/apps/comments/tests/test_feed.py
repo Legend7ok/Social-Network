@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.actions.models import Action
 from apps.actions.selectors import feed
@@ -109,6 +110,74 @@ def test_a_comment_taken_down_leaves_the_feed(client, image, user, second_user):
     client.post(remove_url(Comment.objects.get()))
 
     assert read_feed(owner) == []
+
+
+def test_taking_a_comment_down_removes_its_entry_from_the_table(
+    client, image, second_user
+):
+    """The feed would hide it anyway; the row itself goes too, so entries
+    pointing at nothing readable do not pile up for ever."""
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Lovely light"})
+
+    client.post(remove_url(Comment.objects.get()))
+
+    assert comment_entries().count() == 0
+
+
+def test_taking_one_comment_down_leaves_the_others_announced(
+    client, image, second_user
+):
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Stays"})
+    client.post(add_url(image), {"body": "Goes"})
+
+    client.post(remove_url(Comment.objects.get(body="Goes")))
+
+    remaining = comment_entries().get()
+    assert remaining.target_id == Comment.objects.get(body="Stays").id
+
+
+def test_a_comment_deleted_for_good_takes_its_entry_along(client, image, second_user):
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Lovely light"})
+
+    Comment.objects.get().delete()
+
+    assert comment_entries().count() == 0
+
+
+def test_a_deleted_picture_takes_the_entries_about_its_comments(
+    client, image, second_user
+):
+    """The comments go by cascade, and every one of them reports its going:
+    otherwise the feed keeps cards for a conversation under nothing."""
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Lovely light"})
+
+    image.delete()
+
+    assert comment_entries().count() == 0
+
+
+def test_an_entry_missed_by_a_bulk_update_goes_with_the_comment(
+    client, image, second_user
+):
+    """A bulk update hides the comment without a word to any signal. The
+    entry survives it - and is still cleaned up once the row is deleted."""
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Lovely light"})
+    Comment.objects.update(removed_at=timezone.now())
+    assert comment_entries().count() == 1
+
+    Comment.objects.get().delete()
+
+    assert comment_entries().count() == 0
 
 
 def test_two_comments_in_a_row_are_two_entries(client, image, second_user):
