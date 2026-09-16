@@ -180,6 +180,26 @@ def test_an_entry_missed_by_a_bulk_update_goes_with_the_comment(
     assert comment_entries().count() == 0
 
 
+def test_the_card_names_the_picture_and_quotes_the_comment(
+    client, image, user, second_user
+):
+    """The entry points at the comment, but what a reader follows from the
+    card is the picture - the title in the header and the thumbnail both lead
+    there."""
+    owner, _ = user
+    visitor, _ = second_user
+    client.force_login(visitor)
+    client.post(add_url(image), {"body": "Lovely light"})
+    client.force_login(owner)
+
+    content = client.get(reverse("home")).content.decode()
+
+    assert "commented on" in content
+    assert image.title in content
+    assert "Lovely light" in content
+    assert content.count(f'href="{image.get_absolute_url()}"') >= 3
+
+
 def test_two_comments_in_a_row_are_two_entries(client, image, second_user):
     """Entries of the same kind within a minute are usually collapsed into
     one; pointing at the comment rather than the picture is what keeps two
