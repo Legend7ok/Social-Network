@@ -1,6 +1,6 @@
 {% comment %}
-  Scaffolding: structure only, no design yet - step 18 dresses it.
-  The line below swaps itself for the next batch when it is pressed.
+  The rest of a thread, a page at a time. The button swaps itself for the
+  next page when it is pressed.
 {% endcomment %}
 {% for reply in replies %}
   {% include 'comments/partials/reply.html' %}
@@ -9,6 +9,9 @@
 {% if has_next %}
 <button type="button"
         hx-get="{% url 'comments:thread' root.id %}?page={{ next_page }}"
-        hx-trigger="click"
-        hx-swap="outerHTML">Show more replies</button>
+        hx-swap="outerHTML"
+        hx-disabled-elt="this"
+        class="self-start text-[13px] text-brand-light hover:underline disabled:opacity-60">
+  Show more replies
+</button>
 {% endif %}

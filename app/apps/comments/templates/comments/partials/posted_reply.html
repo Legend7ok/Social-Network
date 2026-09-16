@@ -1,0 +1,9 @@
+{% comment %}
+  The answer to a reply that went through: a fresh box that closes itself,
+  the whole thread redrawn with the new answer at the bottom, and the count.
+{% endcomment %}
+{% include 'comments/partials/reply_form.html' %}
+
+{% include 'comments/partials/thread.html' with more_replies=0 oob=True %}
+
+<span id="comments-count" hx-swap-oob="true">{{ image.total_comments }}</span>

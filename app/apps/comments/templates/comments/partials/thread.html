@@ -1,0 +1,24 @@
+{% comment %}
+  The answers under one comment. The box itself is always on the page, empty
+  or not: a posted answer redraws the whole thread into it, found by its id.
+  Redrawing rather than adding one answer at the bottom is deliberate - the
+  middle of a long thread may still be unloaded behind its button, and that
+  button would later bring the new answer a second time.
+{% endcomment %}
+<div id="thread-{{ root.id }}"
+     class="flex flex-col gap-[13px] {% if replies or more_replies %}mt-[13px]{% endif %}"
+     {% if oob %}hx-swap-oob="true"{% endif %}>
+  {% for reply in replies %}
+    {% include 'comments/partials/reply.html' %}
+  {% endfor %}
+
+  {% if more_replies %}
+  <button type="button"
+          hx-get="{% url 'comments:thread' root.id %}"
+          hx-swap="outerHTML"
+          hx-disabled-elt="this"
+          class="self-start text-[13px] text-brand-light hover:underline disabled:opacity-60">
+    Show {{ more_replies }} more {{ more_replies|pluralize:"reply,replies" }}
+  </button>
+  {% endif %}
+</div>

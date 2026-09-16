@@ -38,7 +38,12 @@ def comment_list(request, image_id):
     return render(
         request,
         "comments/partials/comment_rows.html",
-        {"image": image, "comments": page.rows, "next_cursor": page.next_cursor},
+        {
+            "image": image,
+            "comments": page.rows,
+            "next_cursor": page.next_cursor,
+            "comment_form": CommentForm(),
+        },
     )
 
 
@@ -83,8 +88,8 @@ def comment_create(request, image_id):
 
     One address for both kinds of form. A plain one goes back to the picture,
     the way any form does. htmx gets a fresh form in place of the one it sent,
-    with the new comment and the new count carried alongside for the page to
-    put where they belong.
+    with the new comment - or, for an answer, its whole thread redrawn - and
+    the new count carried alongside for the page to put where they belong.
     """
     image = get_object_or_404(Image, id=image_id)
     parent = _answered_comment(request, image)
@@ -96,10 +101,11 @@ def comment_create(request, image_id):
     form.instance.parent = parent
     if not form.is_valid():
         if from_htmx:
+            template = "form.html" if parent is None else "reply_form.html"
             return render(
                 request,
-                "comments/partials/form.html",
-                {"image": image, "form": form},
+                f"comments/partials/{template}",
+                {"image": image, "root": parent, "form": form},
             )
         messages.error(request, form.errors.get("body", ["Nothing was posted"])[0])
         return redirect(image.get_absolute_url())
@@ -115,13 +121,33 @@ def comment_create(request, image_id):
     if not from_htmx:
         return redirect(image.get_absolute_url())
 
-    attach_replies([comment])
     # The signal moved the counter in the database, not on this copy.
     image.refresh_from_db(fields=["total_comments"])
+    fresh_form = CommentForm()
+
+    if parent is not None:
+        return render(
+            request,
+            "comments/partials/posted_reply.html",
+            {
+                "image": image,
+                "root": parent,
+                "replies": thread_replies(parent),
+                "form": fresh_form,
+                "posted": True,
+            },
+        )
+
+    attach_replies([comment])
     return render(
         request,
         "comments/partials/posted.html",
-        {"image": image, "comment": comment, "form": CommentForm()},
+        {
+            "image": image,
+            "comment": comment,
+            "form": fresh_form,
+            "comment_form": fresh_form,
+        },
     )
 
 

@@ -140,6 +140,32 @@ document.addEventListener('alpine:init', () => {
     },
   }));
 
+  /**
+   * The answer box of one comment, shared by every Reply button in its
+   * thread. The box names the person being answered: a thread is one level
+   * deep, so an answer to an answer lands under the same comment, and the
+   * name is what tells everyone who it was meant for.
+   */
+  Alpine.data('replyBox', () => ({
+    replying: false,
+    draft: '',
+
+    open(username) {
+      this.replying = true;
+      this.draft = `@${username} `;
+      this.$nextTick(() => {
+        const box = this.$root.querySelector('textarea[name="body"]');
+        box.focus();
+        box.setSelectionRange(box.value.length, box.value.length);
+      });
+    },
+
+    close() {
+      this.replying = false;
+      this.draft = '';
+    },
+  }));
+
   Alpine.data('shareButton', (title) => ({
     /**
      * The system's own share menu where there is one — every phone, and Chrome,

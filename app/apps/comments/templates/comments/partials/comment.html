@@ -1,5 +1,11 @@
 {% load user_display %}
-<article id="comment-{{ comment.id }}" class="flex gap-[13px]">
+{% comment %}
+  One comment with its thread and its answer box. Only a member answers, and
+  only a comment still on the page: under a tombstone the thread stays
+  readable but closed.
+{% endcomment %}
+<article id="comment-{{ comment.id }}" class="flex gap-[13px]"
+         {% if request.user.is_authenticated and not comment.removed_at %}x-data="replyBox"{% endif %}>
   {% if comment.removed_at %}
     <div class="w-[35px] h-[35px] rounded-full bg-surface-input border border-white/[0.08] shrink-0"></div>
   {% else %}
@@ -18,17 +24,18 @@
         <span class="text-[12px] text-[#5E5C6A] shrink-0">{{ comment.created|timesince }} ago</span>
       </div>
       <p class="mt-[3px] text-[15px] text-[#9896A4] leading-relaxed break-words">{{ comment.body|linebreaksbr }}</p>
+      {% if request.user.is_authenticated %}
+        <button type="button" @click="open('{{ comment.user.username|escapejs }}')"
+                class="mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+          Reply
+        </button>
+      {% endif %}
     {% endif %}
 
-    {% for reply in comment.preview_replies %}
-      {% include 'comments/partials/reply.html' %}
-    {% endfor %}
+    {% include 'comments/partials/thread.html' with root=comment replies=comment.preview_replies more_replies=comment.more_replies %}
 
-    {% if comment.more_replies %}
-    <button type="button"
-            hx-get="{% url 'comments:thread' comment.id %}"
-            hx-trigger="click"
-            hx-swap="outerHTML">Show {{ comment.more_replies }} more replies</button>
+    {% if request.user.is_authenticated and not comment.removed_at %}
+      {% include 'comments/partials/reply_form.html' with root=comment form=comment_form %}
     {% endif %}
   </div>
 </article>
