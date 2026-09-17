@@ -53,6 +53,11 @@ class Comment(models.Model):
             models.Index(
                 fields=["parent", "created", "id"], name="comment_replies_by_parent"
             ),
+            models.Index(
+                fields=["id"],
+                condition=models.Q(removed_at__isnull=False),
+                name="comment_hidden_ids",
+            ),
         ]
         constraints = [
             models.CheckConstraint(
