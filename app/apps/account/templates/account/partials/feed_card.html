@@ -28,6 +28,10 @@
             <a href="{% url 'user_detail' action.target.username %}"
                class="text-[13px] text-brand-light hover:underline">@{{ action.target.username }}</a>
           {% endif %}
+        {% elif action.verb == verbs.COMMENTED_IMAGE %}
+          {# The entry points at the comment; what the reader follows is its picture. #}
+          <a href="{{ action.target.image.get_absolute_url }}"
+             class="text-[13px] text-brand-light hover:underline">{{ action.target.image.title }}</a>
         {% else %}
           <a href="{{ action.target.get_absolute_url }}"
              class="text-[13px] text-brand-light hover:underline">{{ action.target.title }}</a>
@@ -119,6 +123,35 @@
             </span>
           </div>
         </div>
+
+      {% elif action.verb == verbs.COMMENTED_IMAGE %}
+        {% with picture=target.image %}
+        <div class="px-[18px] pb-[15px] flex gap-[13px] items-start">
+          <a href="{{ picture.get_absolute_url }}"
+             class="w-[75px] h-[75px] rounded-lg bg-surface-input overflow-hidden shrink-0 flex items-center justify-center">
+            {% if picture.image %}
+              {% thumbnail picture.image THUMBS.content_square crop="center" as im %}
+              <img src="{{ im.url }}" class="w-full h-full object-cover" alt="{{ picture.title }}">
+              {% endthumbnail %}
+            {% else %}
+              <i class="ti ti-photo text-[26px] text-[#5E5C6A]"></i>
+            {% endif %}
+          </a>
+          <div class="min-w-0 flex-1">
+            <a href="{{ picture.get_absolute_url }}"
+               class="text-[14px] font-medium text-white hover:text-brand-light transition-colors block mb-[7px] truncate">
+              {{ picture.title }}
+            </a>
+            {% comment %}The bubble and the clamp live on different elements on
+            purpose: a clamp cuts at the padding edge, so on the padded bubble
+            the fourth line showed through its bottom padding, half a line
+            high.{% endcomment %}
+            <div class="bg-surface-input rounded-xl px-[15px] py-[11px]">
+              <p class="text-[13px] text-[#9896A4] leading-relaxed break-words line-clamp-3">{{ target.body|linebreaksbr }}</p>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
       {% endif %}
 
     {% endwith %}

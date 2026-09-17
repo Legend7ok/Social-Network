@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "social_django",
     "apps.images",
     "apps.actions",
+    "apps.comments",
     "apps.search",
     "sorl.thumbnail",
     "axes",
@@ -243,6 +244,8 @@ CELERY_BEAT_SYNC_EVERY = 1
 FEED_ACTIONS_PER_PAGE = 10
 IMAGES_PER_PAGE = 6
 USERS_PER_PAGE = 10
+COMMENTS_PER_PAGE = 10
+REPLIES_PER_PAGE = 10
 
 SEARCH_MIN_QUERY_LENGTH = 2
 SEARCH_MAX_QUERY_LENGTH = 100

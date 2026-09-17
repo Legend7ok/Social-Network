@@ -1,0 +1,43 @@
+{% comment %}
+  Looks like the dialog that deletes a picture, and is its own on purpose:
+  that one sends a plain form and follows it to another page, this one takes
+  a comment off the page it is already on.
+{% endcomment %}
+<div x-data="commentRemoval"
+     @confirm-comment-removal.window="ask($event.detail)"
+     @keydown.escape.window="confirming = false"
+     @htmx:response-error.camel="refused($event.detail.xhr.status)"
+     @htmx:send-error.camel="offline()">
+  <div x-show="confirming" x-cloak
+       x-transition:enter="transition-opacity ease-out duration-200"
+       x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       x-transition:leave="transition-opacity ease-in duration-150"
+       x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+       @click.self="confirming = false"
+       class="fixed inset-0 z-50 flex items-center justify-center px-[16px] bg-black/60">
+    <div class="w-full max-w-[400px] rounded-2xl border border-white/[0.08] bg-surface-card p-[22px]">
+      <div class="flex items-start justify-between gap-[13px] mb-[9px]">
+        <h2 class="text-[17px] font-medium text-white">Delete this comment?</h2>
+        <button type="button" @click="confirming = false" aria-label="Close"
+                class="shrink-0 text-[#5E5C6A] hover:text-white transition-colors">
+          <i class="ti ti-x text-[18px]"></i>
+        </button>
+      </div>
+      <p class="text-[14px] text-[#9896A4] leading-relaxed mb-[18px]">
+        It disappears from the page for everyone. This cannot be undone.
+      </p>
+      <div class="flex items-center justify-end gap-[9px]">
+        <button type="button" @click="confirming = false"
+                class="px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white transition-all">
+          Cancel
+        </button>
+        <button type="button" x-ref="confirm" @click="confirm()" :disabled="busy"
+                class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl border border-red-700/50 bg-red-900/30 text-[14px] font-medium text-red-300 hover:bg-red-900/50 disabled:opacity-60 transition-all">
+          <i class="ti ti-trash text-[15px]" x-show="!busy"></i>
+          <i class="ti ti-loader-2 animate-spin text-[15px]" x-show="busy" x-cloak></i>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

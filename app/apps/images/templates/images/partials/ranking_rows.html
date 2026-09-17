@@ -1,7 +1,7 @@
 {% load thumbnail user_display %}
 {% for image in ranking_list %}
 <a href="{{ image.get_absolute_url }}"
-   class="flex items-center gap-[13px] px-[15px] py-[11px] rounded-xl border transition-colors
+   class="flex items-center gap-[9px] sm:gap-[13px] px-[15px] py-[11px] rounded-xl border transition-colors
           {% if image.user == request.user %}border-brand/50 bg-brand/[0.08] hover:bg-brand/[0.12]{% else %}border-white/[0.08] bg-surface-card hover:border-brand/30 hover:bg-surface-input{% endif %}">
   <span class="text-[15px] font-medium w-[26px] text-center shrink-0
                {% if image.user == request.user %}text-brand-light{% else %}text-[#5E5C6A]{% endif %}">
@@ -31,6 +31,9 @@
   </span>
   <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1 shrink-0">
     <i class="ti ti-heart text-[14px]"></i> {{ image.total_likes }}
+  </span>
+  <span class="text-[13px] text-[#5E5C6A] flex items-center gap-1 shrink-0">
+    <i class="ti ti-message-circle text-[14px]"></i> {{ image.total_comments }}
   </span>
 </a>
 {% endfor %}

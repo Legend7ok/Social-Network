@@ -6,10 +6,11 @@ site or any other path leaves the feed just as correct as the button does.
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import m2m_changed, post_delete
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
 from apps.account.models import Contact, Profile
+from apps.comments.models import Comment
 from apps.images.models import Image
 
 from .models import Action
@@ -64,3 +65,28 @@ def drop_entries_aimed_at_a_gone_person(sender, instance, **kwargs):
         target_ct=ContentType.objects.get_for_model(User),
         target_id=instance.pk,
     ).delete()
+
+
+@receiver(
+    post_save, sender=Comment, dispatch_uid="actions_drop_entry_of_a_hidden_comment"
+)
+def drop_entry_of_a_hidden_comment(sender, instance, raw=False, **kwargs):
+    if raw or instance.removed_at is None:
+        return
+    _entries_about_comment(instance.pk).delete()
+
+
+@receiver(
+    post_delete, sender=Comment, dispatch_uid="actions_drop_entry_of_a_gone_comment"
+)
+def drop_entry_of_a_gone_comment(sender, instance, **kwargs):
+    # Asked even when the comment was already hidden: the hiding may have come
+    # through a bulk update that no signal heard, and the entry is still there.
+    _entries_about_comment(instance.pk).delete()
+
+
+def _entries_about_comment(comment_id):
+    return Action.objects.filter(
+        target_ct=ContentType.objects.get_for_model(Comment),
+        target_id=comment_id,
+    )

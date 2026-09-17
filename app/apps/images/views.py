@@ -27,6 +27,8 @@ from apps.account.selectors import (
 )
 from apps.actions.models import Action
 from apps.actions.utils import create_action
+from apps.comments.forms import CommentForm
+from apps.comments.selectors import comments_page
 from core.pagination import cursor_page
 from core.queue import ensure_queue_available
 
@@ -140,6 +142,10 @@ def image_detail(request, id, slug):
         :MORE_FROM_AUTHOR
     ]
 
+    # Read by everyone, guests included: words said under a public picture are
+    # public too. Only the form waits for an account.
+    comments = comments_page(image)
+
     return render(
         request,
         "images/detail.html",
@@ -152,6 +158,9 @@ def image_detail(request, id, slug):
             "following_author": following_author,
             "more_from_author": more_from_author,
             "following_users": following_users,
+            "comments": comments.rows,
+            "next_cursor": comments.next_cursor,
+            "comment_form": CommentForm(),
         },
     )
 

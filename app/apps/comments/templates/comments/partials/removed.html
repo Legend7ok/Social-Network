@@ -1,0 +1,10 @@
+{% comment %}
+  The answer to a comment taken down, swapped in over the whole comment it
+  belongs to. Nothing at all when that comment is gone and has no readable
+  answers to keep a tombstone for - the empty answer takes it off the page.
+{% endcomment %}
+{% if show_root %}
+  {% include 'comments/partials/comment.html' %}
+{% endif %}
+
+<span hx-swap-oob="innerHTML:[data-comments-count]">{{ image.total_comments }}</span>

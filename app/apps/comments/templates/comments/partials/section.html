@@ -1,0 +1,46 @@
+{% comment %}
+  The conversation under a picture. Narrower than the page on purpose: a line
+  of text across the whole width is hard to read. 640px is the width of the
+  picture column above it on a wide screen, so the two share an edge, and it
+  holds about seventy characters to a line - the comfortable end for reading.
+
+  The empty line sits inside the list and shows only while it is the list's
+  one child, so it disappears the moment a comment arrives and comes back
+  when the last one is taken down - without a word from the server.
+{% endcomment %}
+<section id="comments" class="max-w-[640px]">
+  <div class="h-px bg-white/[0.08] mb-[22px]"></div>
+  <p class="text-[13px] text-[#5E5C6A] mb-[13px] uppercase tracking-widest">
+    Comments · <span data-comments-count>{{ image.total_comments }}</span>
+  </p>
+
+  {% if request.user.is_authenticated %}
+    {% include 'comments/partials/form.html' with form=comment_form %}
+    {% include 'comments/partials/confirm_removal.html' %}
+  {% else %}
+    {% comment %}The member's field itself, only read-only: the same element
+    with the same classes takes the same size at every width, which a button
+    dressed up to look like it never quite does. Pressing it opens the sign-in
+    modal the like and follow buttons open, and signing in brings the guest
+    back down to this block rather than to the top of the page.{% endcomment %}
+    <textarea rows="3" readonly
+              aria-label="Sign in to comment"
+              placeholder="Add a comment"
+              @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.', anchor: '#comments' })"
+              @keydown.enter.prevent="$el.click()"
+              class="block w-full mb-[22px] bg-surface-input border border-white/[0.15] rounded-xl text-white text-[16px] sm:text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] resize-none leading-relaxed cursor-pointer hover:border-white/[0.3] transition-colors"></textarea>
+  {% endif %}
+
+  <div id="comments-list" class="flex flex-col gap-[18px]">
+    {% include 'comments/partials/comment_rows.html' %}
+    <p class="hidden only:block text-[14px] text-[#5E5C6A] italic">No comments yet.</p>
+  </div>
+
+  <div id="comments-loading" class="htmx-indicator flex justify-center py-[18px]">
+    <div class="flex items-center gap-[9px]">
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:150ms]"></div>
+      <div class="w-[7px] h-[7px] rounded-full bg-brand animate-pulse [animation-delay:300ms]"></div>
+    </div>
+  </div>
+</section>

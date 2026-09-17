@@ -4,7 +4,14 @@ from .models import Image
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ["title", "user", "total_likes", "total_views", "created"]
+    list_display = [
+        "title",
+        "user",
+        "total_likes",
+        "total_views",
+        "total_comments",
+        "created",
+    ]
     list_filter = ["created"]
     list_select_related = ["user"]
     search_fields = ["title", "description", "user__username"]
@@ -17,6 +24,7 @@ class ImageAdmin(admin.ModelAdmin):
         "slug",
         "total_likes",
         "total_views",
+        "total_comments",
         "created",
         "edited_at",
     ]

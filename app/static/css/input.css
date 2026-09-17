@@ -71,6 +71,19 @@
     margin-top: 4px;
     display: block;
   }
+
+  /* A text button a line tall - Reply beside Delete, "show more" under a
+     thread - is too small to hit with a thumb. The invisible layer makes it
+     44px tall without moving anything on the page, and stops short of the
+     13px gaps these buttons keep, so two of them never overlap. */
+  .tap-area {
+    position: relative;
+  }
+  .tap-area::after {
+    content: "";
+    position: absolute;
+    inset: -12px -6px;
+  }
 }
 
 /* Wraps the card link plus the owner buttons, so both reveal and lift together */

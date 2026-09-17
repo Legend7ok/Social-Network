@@ -1,0 +1,56 @@
+{% load user_display %}
+{% comment %}
+  One comment with its thread and its answer box. Only a member answers - a
+  guest's Reply opens the sign-in dialog instead - and only a comment still
+  on the page: under a tombstone the thread stays readable but closed.
+{% endcomment %}
+<article id="comment-{{ comment.id }}" class="flex gap-[13px]"
+         {% if request.user.is_authenticated and not comment.removed_at %}x-data="replyBox"{% endif %}>
+  {% if comment.removed_at %}
+    <div class="w-[35px] h-[35px] rounded-full bg-surface-input border border-white/[0.08] shrink-0"></div>
+  {% else %}
+    {% include 'comments/partials/avatar.html' with person=comment.user %}
+  {% endif %}
+
+  <div class="min-w-0 flex-1">
+    {% if comment.removed_at %}
+      <p class="text-[14px] text-[#5E5C6A] italic leading-[35px]">Comment deleted</p>
+    {% else %}
+      <div class="flex items-baseline gap-[9px] min-w-0">
+        <a href="{% url 'user_detail' comment.user.username %}"
+           class="text-[14px] font-medium text-white hover:text-brand-light transition-colors truncate">
+          {{ comment.user|display_name }}
+        </a>
+        <span class="text-[12px] text-[#5E5C6A] shrink-0">{{ comment.created|timesince }} ago</span>
+      </div>
+      <p class="mt-[3px] text-[15px] text-[#9896A4] leading-relaxed break-words">{{ comment.body|linebreaksbr }}</p>
+      {% if request.user.is_authenticated %}
+      <div class="mt-[5px] flex items-center gap-[13px]">
+        <button type="button" @click="open('{{ comment.user.username|escapejs }}')"
+                class="tap-area text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+          Reply
+        </button>
+        {% if request.user.id == comment.user_id or request.user.id == image.user_id %}
+        <button type="button"
+                @click="$dispatch('confirm-comment-removal', { url: '{% url 'comments:remove' comment.id %}', target: '#comment-{{ comment.id }}' })"
+                class="tap-area text-[13px] text-[#5E5C6A] hover:text-red-400 transition-colors">
+          Delete
+        </button>
+        {% endif %}
+      </div>
+      {% else %}
+      <button type="button"
+              @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.', anchor: '#comments' })"
+              class="tap-area mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
+        Reply
+      </button>
+      {% endif %}
+    {% endif %}
+
+    {% include 'comments/partials/thread.html' with root=comment replies=comment.preview_replies more_replies=comment.more_replies %}
+
+    {% if request.user.is_authenticated and not comment.removed_at %}
+      {% include 'comments/partials/reply_form.html' with root=comment form=comment_form %}
+    {% endif %}
+  </div>
+</article>

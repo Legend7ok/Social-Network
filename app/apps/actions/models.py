@@ -13,6 +13,7 @@ class Action(models.Model):
         UPLOADED_IMAGE = "uploaded image"
         BOOKMARKED_IMAGE = "bookmarked image"
         LIKED_IMAGE = "likes"
+        COMMENTED_IMAGE = "commented on"
         FOLLOWED_USER = "is following"
 
     user = models.ForeignKey(

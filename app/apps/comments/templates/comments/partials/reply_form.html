@@ -1,0 +1,45 @@
+{% comment %}
+  The answer box under one comment, hidden until a Reply button opens it.
+  The text lives in replyBox rather than in the field, so it survives the
+  form being swapped for a copy with an error on it. A copy sent back after
+  an answer went through closes the box on arrival.
+{% endcomment %}
+<form method="post"
+      action="{% url 'comments:create' root.image_id %}"
+      hx-post="{% url 'comments:create' root.image_id %}"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-disabled-elt="find button[type='submit']"
+      x-data="commentForm"
+      x-show="replying"
+      x-cloak
+      {% if posted %}x-init="close()"{% endif %}
+      @htmx:response-error.camel="refused($event.detail.xhr.status)"
+      @htmx:send-error.camel="offline()"
+      class="mt-[13px]">
+  {% csrf_token %}
+  <input type="hidden" name="parent" value="{{ root.id }}">
+  <textarea name="body" rows="2" required
+            maxlength="{{ form.body.field.max_length }}"
+            aria-label="Reply"
+            placeholder="Write a reply"
+            x-model="draft"
+            class="w-full bg-surface-input border rounded-xl text-white text-[16px] sm:text-[14px] px-[18px] py-[11px] outline-none placeholder-[#5E5C6A] transition-colors resize-none leading-relaxed
+                   {% if form.body.errors %}border-red-700/60 focus:border-red-500{% else %}border-white/[0.15] focus:border-brand/60{% endif %}"></textarea>
+  {% for error in form.body.errors %}
+    <p class="mt-[7px] text-[13px] text-red-400">{{ error }}</p>
+  {% endfor %}
+
+  <div class="flex justify-end gap-[9px] mt-[9px]">
+    <button type="button" @click="close()"
+            class="px-[18px] py-[9px] rounded-xl border border-white/[0.15] text-[14px] text-[#9896A4] hover:text-white hover:border-white/[0.3] transition-all">
+      Cancel
+    </button>
+    <button type="submit"
+            class="flex items-center gap-[7px] px-[18px] py-[9px] rounded-xl bg-brand text-[14px] font-medium text-white hover:bg-brand-dark disabled:opacity-60 transition-colors">
+      <i class="ti ti-send text-[15px] [.htmx-request_&]:hidden"></i>
+      <i class="ti ti-loader-2 animate-spin text-[15px] hidden [.htmx-request_&]:inline-block"></i>
+      Reply
+    </button>
+  </div>
+</form>

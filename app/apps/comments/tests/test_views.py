@@ -1,0 +1,445 @@
+import pytest
+from django.conf import settings
+from django.urls import reverse
+from django.utils import timezone
+
+from apps.comments.models import Comment
+from apps.comments.selectors import PREVIEW_REPLIES
+from apps.images.models import Image
+
+pytestmark = pytest.mark.django_db
+
+
+def add_url(image):
+    return reverse("comments:create", args=[image.id])
+
+
+def list_url(image):
+    return reverse("comments:list", args=[image.id])
+
+
+def thread_url(comment):
+    return reverse("comments:thread", args=[comment.id])
+
+
+def remove_url(comment):
+    return reverse("comments:remove", args=[comment.id])
+
+
+def write(image, author, body="Nice one", parent=None):
+    return Comment.objects.create(image=image, user=author, body=body, parent=parent)
+
+
+def signed_in(client, person):
+    client.force_login(person)
+    return client
+
+
+def test_a_guest_is_sent_to_the_sign_in_page(client, image):
+    response = client.post(add_url(image), {"body": "Hello"})
+
+    assert response.status_code == 302
+    assert reverse("login") in response.url
+    assert Comment.objects.count() == 0
+
+
+def test_reading_the_address_is_refused(client, image, user):
+    author, _ = user
+
+    response = signed_in(client, author).get(add_url(image))
+
+    assert response.status_code == 405
+
+
+def test_a_comment_is_written_under_the_picture(client, image, second_user):
+    visitor, _ = second_user
+
+    response = signed_in(client, visitor).post(add_url(image), {"body": "Lovely light"})
+
+    comment = Comment.objects.get()
+    assert response.status_code == 302
+    assert response.url == image.get_absolute_url()
+    assert (comment.body, comment.user, comment.image, comment.parent) == (
+        "Lovely light",
+        visitor,
+        image,
+        None,
+    )
+
+
+def test_an_answer_hangs_on_the_comment_it_answers(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    root = write(image, author)
+
+    signed_in(client, answerer).post(
+        add_url(image), {"body": "Thanks", "parent": root.id}
+    )
+
+    assert Comment.objects.get(parent=root).body == "Thanks"
+
+
+def test_an_answer_to_an_answer_is_not_found(client, image, user, second_user):
+    """One level is the shape of the thread, and the page offers no such
+    button - a request asking for it was not built by the page."""
+    author, _ = user
+    answerer, _ = second_user
+    reply = write(image, answerer, parent=write(image, author))
+
+    response = signed_in(client, author).post(
+        add_url(image), {"body": "Again", "parent": reply.id}
+    )
+
+    assert response.status_code == 404
+    assert Comment.objects.count() == 2
+
+
+def test_an_answer_to_a_comment_under_another_picture_is_not_found(
+    client, image, user, second_user
+):
+    author, _ = user
+    stranger, _ = second_user
+    elsewhere = Image.objects.create(
+        user=stranger, title="Another", url="https://example.com/other.png"
+    )
+    root = write(elsewhere, stranger)
+
+    response = signed_in(client, author).post(
+        add_url(image), {"body": "Wrong page", "parent": root.id}
+    )
+
+    assert response.status_code == 404
+    assert Comment.objects.count() == 1
+
+
+def test_an_answer_to_a_comment_taken_down_is_not_found(client, image, user):
+    """Its words are gone from the page; answering them would put a reply
+    under a tombstone."""
+    author, _ = user
+    root = write(image, author)
+    root.removed_at = timezone.now()
+    root.save(update_fields=["removed_at"])
+
+    response = signed_in(client, author).post(
+        add_url(image), {"body": "Hello?", "parent": root.id}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "parent",
+    [
+        "not-a-number",
+        # isdigit() says yes to it, int() cannot read it.
+        "²",
+        # Past the length int() agrees to read at all.
+        "9" * 5000,
+        # A number, just not one the id column can hold.
+        "9" * 30,
+    ],
+)
+def test_a_made_up_parent_is_not_found(client, image, user, parent):
+    author, _ = user
+
+    response = signed_in(client, author).post(
+        add_url(image), {"body": "Hello", "parent": parent}
+    )
+
+    assert response.status_code == 404
+    assert Comment.objects.count() == 0
+
+
+def test_an_empty_comment_is_not_written(client, image, user):
+    author, _ = user
+
+    response = signed_in(client, author).post(add_url(image), {"body": "   "})
+
+    assert response.status_code == 302
+    assert Comment.objects.count() == 0
+
+
+def test_a_comment_under_a_missing_picture_is_not_found(client, image, user):
+    author, _ = user
+    missing = image.id
+    image.delete()
+
+    response = signed_in(client, author).post(
+        reverse("comments:create", args=[missing]), {"body": "Hello"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_the_writer_takes_their_own_comment_down(client, image, second_user):
+    visitor, _ = second_user
+    comment = write(image, visitor)
+
+    response = signed_in(client, visitor).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    image.refresh_from_db()
+    assert response.status_code == 302
+    assert comment.removed_at is not None
+    assert comment.removed_by == visitor
+    assert image.total_comments == 0
+
+
+def test_the_owner_of_the_picture_takes_someone_down(client, image, user, second_user):
+    """Whoever the picture belongs to answers for what sits under it."""
+    owner, _ = user
+    visitor, _ = second_user
+    comment = write(image, visitor)
+
+    signed_in(client, owner).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert comment.removed_by == owner
+
+
+def test_a_bystander_is_not_allowed_near_it(client, image, second_user, make_user):
+    visitor, _ = second_user
+    bystander, _ = make_user("carol", "carol@example.com", "testpass321")
+    comment = write(image, visitor)
+
+    response = signed_in(client, bystander).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert response.status_code == 404
+    assert comment.removed_at is None
+
+
+def test_a_guest_cannot_take_anything_down(client, image, user):
+    author, _ = user
+    comment = write(image, author)
+
+    response = client.post(remove_url(comment))
+
+    comment.refresh_from_db()
+    assert reverse("login") in response.url
+    assert comment.removed_at is None
+
+
+def test_reading_the_removal_address_is_refused(client, image, user):
+    author, _ = user
+    comment = write(image, author)
+
+    response = signed_in(client, author).get(remove_url(comment))
+
+    assert response.status_code == 405
+
+
+def test_pressing_it_twice_keeps_the_first_record(client, image, user, second_user):
+    """A second tab or an impatient hand must not rewrite the hour, and the
+    owner of the picture must not take the blame for what its writer did."""
+    owner, _ = user
+    visitor, _ = second_user
+    comment = write(image, visitor)
+    signed_in(client, visitor).post(remove_url(comment))
+    comment.refresh_from_db()
+    first_time = comment.removed_at
+
+    signed_in(client, owner).post(remove_url(comment))
+
+    comment.refresh_from_db()
+    image.refresh_from_db()
+    assert (comment.removed_at, comment.removed_by) == (first_time, visitor)
+    assert image.total_comments == 0
+
+
+def test_an_answer_can_be_taken_down_as_well(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    reply = write(image, answerer, body="Thanks", parent=write(image, author))
+
+    signed_in(client, answerer).post(remove_url(reply))
+
+    reply.refresh_from_db()
+    assert reply.removed_at is not None
+
+
+def test_taking_a_comment_down_leaves_its_answers_readable(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = write(image, author)
+    reply = write(image, answerer, body="Thanks", parent=root)
+
+    signed_in(client, author).post(remove_url(root))
+
+    reply.refresh_from_db()
+    assert reply.removed_at is None
+
+
+def test_a_guest_reads_the_conversation(client, image, user):
+    """The picture page is public and so is what people said under it."""
+    author, _ = user
+    write(image, author, body="Lovely light")
+
+    response = client.get(list_url(image))
+
+    assert response.status_code == 200
+    assert b"Lovely light" in response.content
+
+
+def test_a_page_holds_as_many_comments_as_the_setting_says(client, image, user):
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 3):
+        write(image, author, body=f"Comment {n}")
+
+    response = client.get(list_url(image))
+
+    assert response.content.count(b"<article") == settings.COMMENTS_PER_PAGE
+    assert b"hx-get" in response.content
+
+
+def test_the_cursor_carries_on_where_the_page_stopped(client, image, user):
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 1):
+        write(image, author, body=f"Comment {n}")
+
+    first = client.get(list_url(image))
+    after = first.context["next_cursor"]
+    second = client.get(list_url(image), {"after": after})
+
+    assert second.content.count(b"<article") == 1
+    # The oldest comment is the one left over: the newest came first.
+    assert b"Comment 0" in second.content
+    assert b"hx-get" not in second.content
+
+
+def test_the_end_of_the_conversation_answers_with_nothing(client, image, user):
+    """What is left can disappear between the page loading and the reader
+    reaching the bottom of it; htmx reads the empty answer as "that is all"."""
+    author, _ = user
+    for n in range(settings.COMMENTS_PER_PAGE + 1):
+        write(image, author, body=f"Comment {n}")
+    after = client.get(list_url(image)).context["next_cursor"]
+    Comment.objects.filter(body="Comment 0").delete()
+
+    response = client.get(list_url(image), {"after": after})
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+def test_a_comment_taken_down_shows_a_tombstone_while_answers_remain(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = write(image, author, body="Taken down")
+    write(image, answerer, body="Still here", parent=root)
+    signed_in(client, author).post(remove_url(root))
+
+    response = client.get(list_url(image))
+
+    assert b"Taken down" not in response.content
+    assert b"Comment deleted" in response.content
+    assert b"Still here" in response.content
+
+
+def test_the_conversation_of_a_missing_picture_is_not_found(client, image):
+    missing = image.id
+    image.delete()
+
+    assert client.get(reverse("comments:list", args=[missing])).status_code == 404
+
+
+def thread_of(image, author, answerer, count):
+    root = write(image, author, body="Root")
+    for n in range(count):
+        write(image, answerer, body=f"Reply {n}", parent=root)
+    return root
+
+
+def test_the_thread_starts_where_the_page_stopped_showing_it(
+    client, image, user, second_user
+):
+    """The first answers are already under the comment; asking for the thread
+    must not repeat them."""
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+
+    response = client.get(thread_url(root))
+
+    assert b"Reply 0" not in response.content
+    assert b"Reply 2" in response.content
+    assert b"Reply 3" in response.content
+
+
+def test_the_thread_reads_oldest_first(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+
+    content = client.get(thread_url(root)).content
+
+    assert content.index(b"Reply 2") < content.index(b"Reply 3")
+
+
+def test_the_next_page_of_a_long_thread_is_asked_for_by_number(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(
+        image, author, answerer, PREVIEW_REPLIES + settings.REPLIES_PER_PAGE + 1
+    )
+
+    first = client.get(thread_url(root))
+    second = client.get(thread_url(root), {"page": 2})
+
+    assert first.context["has_next"] is True
+    assert second.content.count(b"<article") == 1
+    assert second.context["has_next"] is False
+
+
+def test_a_page_past_the_end_of_a_thread_answers_with_nothing(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 1)
+
+    response = client.get(thread_url(root), {"page": 5})
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
+def test_answers_taken_down_stay_out_of_the_thread(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 2)
+    gone = Comment.objects.get(body="Reply 2")
+    signed_in(client, answerer).post(remove_url(gone))
+
+    response = client.get(thread_url(root))
+
+    assert b"Reply 2" not in response.content
+    assert b"Reply 3" in response.content
+
+
+def test_the_thread_of_a_comment_taken_down_is_still_readable(
+    client, image, user, second_user
+):
+    author, _ = user
+    answerer, _ = second_user
+    root = thread_of(image, author, answerer, PREVIEW_REPLIES + 1)
+    signed_in(client, author).post(remove_url(root))
+
+    response = client.get(thread_url(root))
+
+    assert response.status_code == 200
+    assert b"Reply 2" in response.content
+
+
+def test_a_reply_has_no_thread_of_its_own(client, image, user, second_user):
+    author, _ = user
+    answerer, _ = second_user
+    reply = write(image, answerer, body="Thanks", parent=write(image, author))
+
+    assert client.get(thread_url(reply)).status_code == 404
