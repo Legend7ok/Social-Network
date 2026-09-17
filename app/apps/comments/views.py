@@ -214,8 +214,13 @@ def _answered_comment(request, image):
     parent_id = request.POST.get("parent", "")
     if not parent_id:
         return None
-    if not parent_id.isdigit():
+    # Asked of int() itself rather than of isdigit(): that one also passes a
+    # superscript "²" and a string past Python's 4300-digit limit, neither of
+    # which int() can read, and the lookup below would answer both with a 500.
+    try:
+        parent_pk = int(parent_id)
+    except ValueError:
         raise Http404("No such comment")
     return get_object_or_404(
-        Comment.objects.visible(), pk=parent_id, image=image, parent__isnull=True
+        Comment.objects.visible(), pk=parent_pk, image=image, parent__isnull=True
     )

@@ -127,14 +127,27 @@ def test_an_answer_to_a_comment_taken_down_is_not_found(client, image, user):
     assert response.status_code == 404
 
 
-def test_a_made_up_parent_is_not_found(client, image, user):
+@pytest.mark.parametrize(
+    "parent",
+    [
+        "not-a-number",
+        # isdigit() says yes to it, int() cannot read it.
+        "²",
+        # Past the length int() agrees to read at all.
+        "9" * 5000,
+        # A number, just not one the id column can hold.
+        "9" * 30,
+    ],
+)
+def test_a_made_up_parent_is_not_found(client, image, user, parent):
     author, _ = user
 
     response = signed_in(client, author).post(
-        add_url(image), {"body": "Hello", "parent": "not-a-number"}
+        add_url(image), {"body": "Hello", "parent": parent}
     )
 
     assert response.status_code == 404
+    assert Comment.objects.count() == 0
 
 
 def test_an_empty_comment_is_not_written(client, image, user):
