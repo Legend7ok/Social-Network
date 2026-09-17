@@ -40,7 +40,7 @@
       </div>
       {% else %}
       <button type="button"
-              @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.' })"
+              @click="$dispatch('auth-required', { message: 'Sign in to join the conversation under this picture.', anchor: '#comments' })"
               class="tap-area mt-[5px] text-[13px] text-[#5E5C6A] hover:text-white transition-colors">
         Reply
       </button>

@@ -105,9 +105,28 @@ def test_a_guest_is_invited_to_sign_in_where_the_form_would_be(client, image):
     request is never sent, the press is answered instead."""
     content = client.get(detail_url(image)).content.decode()
 
-    assert "Add a comment" in content
+    assert 'placeholder="Add a comment"' in content
     assert SIGN_IN_PROMPT in content
     assert 'name="body"' not in content
+    # Nothing to type into: the field only opens the sign-in modal.
+    assert "readonly" in content
+    assert "anchor: '#comments'" in content
+    assert "encodeURIComponent(anchor)" in content
+
+
+def test_signing_in_from_the_modal_comes_back_down_to_the_comments(client, image, user):
+    """The anchor rides along in the return address; the sign-in view must
+    let it through rather than drop it as something unsafe."""
+    person, password = user
+    back = f"{detail_url(image)}#comments"
+
+    response = client.post(
+        reverse("login"),
+        {"username": person.username, "password": password, "next": back},
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == back
 
 
 def test_a_guests_reply_buttons_open_the_sign_in_dialog(
