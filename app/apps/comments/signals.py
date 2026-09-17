@@ -28,6 +28,9 @@ def _move_counter(image_id, up):
 
 @receiver(pre_save, sender=Comment, dispatch_uid="comments_remember_what_showed")
 def remember_what_showed(sender, instance, **kwargs):
+    if not instance.pk:
+        instance._was_showing = False
+        return
     stored = sender.objects.filter(pk=instance.pk).values_list("removed_at", flat=True)[
         :1
     ]

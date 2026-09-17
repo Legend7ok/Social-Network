@@ -20,6 +20,30 @@ def take_down(comment, by=None):
 
 
 @pytest.mark.django_db
+def test_a_new_comment_asks_nothing_of_the_table_before_it_is_written(
+    image, user, django_assert_max_num_queries
+):
+    """A row about to be inserted has no stored state to compare against. The
+    second half checks the check: saving a row that exists does read it, so a
+    match on nothing cannot pass for the first half."""
+    author, _ = user
+
+    def reads_stored_state(queries):
+        return any(
+            query["sql"].startswith('SELECT "comments_comment"."removed_at"')
+            for query in queries.captured_queries
+        )
+
+    with django_assert_max_num_queries(10) as on_create:
+        comment = write(image, author)
+    with django_assert_max_num_queries(10) as on_save:
+        comment.save()
+
+    assert not reads_stored_state(on_create)
+    assert reads_stored_state(on_save)
+
+
+@pytest.mark.django_db
 def test_a_comment_and_a_reply_both_count(image, user, second_user):
     """The number under a picture is the whole conversation, answers and all -
     that is what the heading over the block promises."""
